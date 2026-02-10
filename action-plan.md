@@ -6,6 +6,7 @@
 > - Addresses: [`unified-review.md`](unified-review.md) — all critical/high/medium issues raised in the peer review
 > - Revised: 2026-02-10 — incorporates second-round review feedback on validation bias, reproducibility, and statistical design
 > - Revised: 2026-02-10 — incorporates Gemini external review: LLM scoped to ablation study, added blind spots (genotype encoding, thermodynamics, debugger), parallel writing strategy
+> - Revised: 2026-02-10 — incorporates multi-framework analysis (First Principles, Inversion, Systems Thinking, Six Thinking Hats): functional analogy definition, criterion-ablation as core experiment, Day 1 feasibility spike, Week 4 paper milestone, integration regression tests
 
 ## Interview Summary
 
@@ -15,7 +16,7 @@
 | ALife立場 | **Weak ALife** — 生命の機能的モデルとして位置づける |
 | アーキテクチャ | **ハイブリッド** — swarmエージェントがorganism的上位構造を形成する二層構造 |
 | スケール | 小規模: 10-50エージェント/organism、環境に10-50 organisms |
-| 投稿先 | **ALIFE 2026 Full Paper (8p)**、締切 **2026-04-01** |
+| 投稿先 | **ALIFE 2026 Full Paper (8p)**、締切 **要確認: 公式サイトでは3/30の可能性あり（4/1と齟齬）** |
 | 計算環境 | Mac Mini M2 Pro |
 | 実装言語 | **Python + Rust ハイブリッド**（コアシミュレーション: Rust、実験管理/分析: Python） |
 | エージェントの脳 | **進化的NNコントローラー**（主軸）。ローカルLLMはablation study（1実験）のみ |
@@ -33,10 +34,22 @@
 
 ## レビュー指摘への対応方針
 
-### C1. 理論的基盤 → Phase 0で対処
+### C1. 理論的基盤 → Day 1-3で「Functional Analogy」の操作的定義を確立
 
-教科書的7基準を出発点としつつ、以下を文書化する:
+教科書的7基準を出発点としつつ、**コードを書く前に**以下を文書化する:
 
+**最優先 (Day 1-3): 「Functional Analogy」の操作的定義**
+
+> 計算プロセスが生物学的基準の**機能的アナロジー**であるとは、以下の3条件すべてを満たす場合をいう:
+> (a) そのプロセスが持続的リソース消費を要する**動的プロセス**であること
+> (b) その除去がorganismの自己維持に**測定可能な劣化**を引き起こすこと（→ criterion-ablation実験で検証）
+> (c) 他の少なくとも1つの基準と**フィードバックループ**を形成していること
+
+この定義により「simplified proxy」との差異が明確になる: proxyは条件(b)(c)を満たさない（除去しても他の基準に影響しない独立モジュール）。
+
+**この定義を各Go/No-Goチェックポイントで検証する**: 「この時点の実装について、なぜfunctional analogyでありsimplified proxyではないかを1段落で説明できるか？」
+
+**追加の文書化**:
 1. **基準体系の比較表**: 7基準 vs. NASA定義 vs. オートポイエーシス vs. Ruiz-Mirazo条件
 2. **7基準を採用する理由**: 「最も広く認知された基準であり、各基準が独立した計算プロセスとして実装可能」
 3. **Weak ALifeとしてのframing**: 「生命そのもの」ではなく「生命の機能的性質を再現するモデル」として位置づける
@@ -60,9 +73,9 @@
 - 複数比較補正: 7基準を同時検定するため Holm-Bonferroni 法を適用
 - 除外基準: シミュレーションが初期化後10ステップ以内にクラッシュした試行は除外し、除外率を報告
 
-### H1. 締切修正 → 即時
+### H1. 締切修正 → 即時確認が必要
 
-**2026-04-01** を正式な締切とする。本計画のスケジュールはこれに基づく。
+**要確認**: 公式サイト (https://2026.alife.org) で正確な締切を確認すること。文書間で4/6、4/1、3/30と齟齬あり。本計画は暫定的に **2026-04-01** をベースとするが、3/30の場合は全マイルストーンを2日前倒しする。
 
 ### H2. 比較設計 → 文献ベース比較に正式固定
 
@@ -87,7 +100,7 @@
 | 代謝ネットワークが1000ステップ維持不可 | グラフベース → 連続力学系ベース（ODEベース代謝） |
 | ハイブリッド二層構造が不安定 | Swarmを落とし、Agent-basedに単純化 |
 | 7基準統合が間に合わない | 論文を「代謝+恒常性+細胞組織化」の3基準に絞り、残りは将来研究 |
-| ローカルLLMがablation studyに使えない | ablation節を削除しNNのみで論文構成（将来研究に記載） |
+| Criterion-ablation実験で一部基準が有意差なし | 有意な基準のみで論文を構成。非有意基準はlimitationとして報告 |
 
 ### H4. スケジュール → 8週間計画（下記）
 
@@ -105,16 +118,29 @@
 
 ### Week 1 (02/10-02/16): Phase 0 — 理論基盤 + 環境構築
 
-**目標**: 理論的正当化の草稿 + 開発環境の準備
+**目標**: 理論的正当化の確立 + 計算実現可能性の検証 + 開発環境の準備
 
+**Day 1 (02/10) — 最優先タスク:**
+- [ ] **ALIFE 2026 公式締切の確認** (https://2026.alife.org)。3/30なら全マイルストーン2日前倒し
+- [ ] **計算実現可能性スパイク (4時間)**: Rustで2,500エージェント（50 org × 50 agents）+ trivial NN + 空間近接クエリをベンチマーク。目標: >100 timesteps/sec。Rustが未経験なら+2時間でツールチェーンセットアップを含む
+- [ ] **論文スケルトン (1ページ)**: タイトル、貢献文（3文）、主張構造、計画figureリスト、セクション構成
+
+**Day 1-3 (02/10-02/12) — 理論基盤:**
+- [ ] **「Functional Analogy」の操作的定義** (1ページ、上記C1参照) → ドメイン専門家レビュー
 - [ ] 基準体系比較表の作成（7基準 vs. NASA vs. オートポイエーシス vs. Ruiz-Mirazo）
-- [ ] 既存システム比較表の作成 + ルーブリック定義（Polyworld, ALIEN, Flow-Lenia, Avida, Lenia, Coralai）
-- [ ] オートポイエーシスとの理論的接続の草稿
+- [ ] **Criterion-ablation実験プロトコルの設計**: 各基準の「無効化」方法を事前定義（下記「Criterion-Ablation」参照）
+
+**Day 4-7 (02/13-02/16) — 環境構築:**
 - [ ] Rust + Python プロジェクトセットアップ（PyO3 or maturin）
 - [ ] 連続2D環境の基本フレームワーク実装
 - [ ] 再現性基盤の構築（下記「再現性仕様」参照）
 - [ ] **リアルタイムビジュアルデバッガー**の実装（egui or macroquad。開発効率に直結）
-- [ ] **Genotype-Phenotype マッピング**の設計（direct encoding + 冗長領域）
+- [ ] **Genotype-Phenotype マッピング**の設計（direct encoding + 冗長領域。**7基準すべてに対応する構造で設計**し、初期は2-3基準のみアクティブ。未使用セグメントはゼロ初期化）
+- [ ] 既存システム比較表の作成 + ルーブリック定義（Polyworld, ALIEN, Flow-Lenia, Avida, Lenia, Coralai）
+
+**Go/No-Go (Day 1, スパイク後)**:
+- 2,500エージェントが >100 timesteps/sec で動作するか？
+- No → アーキテクチャ再検討（エージェント数削減 or GPU活用）
 
 **Go/No-Go (Week 1末)**:
 - 進化的NNコントローラーの基本動作確認（50エージェントで実用速度か？）
@@ -144,8 +170,12 @@
 - Swarm境界が安定しているか？
 - No → 単一エージェント型の円形メンブレンにフォールバック
 
+**統合リグレッションテスト (Week 2以降、各基準追加後に実行)**:
+- [ ] 「organism 1000ステップ生存」テストが全既存基準で引き続きパスするか確認
+
 **Go/No-Go (Week 3末)**:
 - 単一organismが1000タイムステップ自律維持できるか？
+- functional analogy定義の条件(b): 代謝を無効化 → boundary崩壊が観察されるか？（相互依存性の初期検証）
 - No → 代謝をODEベースに切り替え（ピボットA）
 - No (代謝+境界の両方が不安定) → 手動設計による安定システムで「System Design論文」にピボット
 
@@ -161,8 +191,15 @@
 - [ ] 環境摂動テスト（リソース枯渇、温度変化的イベント）
 - [ ] 恒常性メトリクス: 摂動後の回復時間、内部状態の分散
 
+**統合リグレッションテスト**: 恒常性追加後、代謝+境界の1000ステップテストが引き続きパスするか確認
+
+**Week 4 論文マイルストーン（ハード）**:
+- [ ] 論文スケルトンを3-4ページに拡張: Methods + Experimental Setupが実質完成していること
+- **未達成 → Extended Abstract (2-4p) にピボットを即決定**。判断を先送りしない。
+
 **Go/No-Go (Week 4末)**:
 - organismが摂動から回復するか？
+- functional analogy条件(c): 恒常性 ↔ 代謝間のフィードバックループが観察されるか？
 - No → コントローラーを手動設計し、進化は後回し
 
 ### Week 5 (03/10-03/16): Phase 2 — 成長/発生 + 生殖
@@ -198,16 +235,17 @@
 
 ### Week 7 (03/24-03/28): Phase 4 — 評価 + ビジュアライゼーション (final test set)
 
-**目標**: 未使用シードによる本評価 + 論文用figure
+**目標**: Criterion-ablation実験 + 未使用シードによる本評価 + 論文用figure
 
+- [ ] **Criterion-ablation実験** (コア実験): 各基準を個別に無効化し、システム劣化を測定（下記「Criterion-Ablation」参照）。ablation条件 × n≥30シード = 本評価と並行実行
 - [ ] **Final test set** (seeds 100-199) による本評価の実施。calibrationで固定した閾値を適用
 - [ ] 各基準の統計検定（Mann-Whitney U, Holm-Bonferroni補正, Cohen's d報告）
-- [ ] **LLM ablation study**: NNコントローラーをローカルLLMに差し替えた単一条件実験（時間が許す場合のみ）
 - [ ] 既存システムとの文献ベース比較表の完成（ルーブリック適用、inter-rater κ算出）
 - [ ] **Killer figure作成**: 7生物学的基準 → 7計算的実装の対応マップ
 - [ ] 非公式知覚評価の実施（同僚5-10名にデモを見せる）
-- [ ] 論文用figure生成（シミュレーションスナップショット、メトリクス推移グラフ）
+- [ ] 論文用figure生成（シミュレーションスナップショット、メトリクス推移グラフ、**ablation結果表**）
 - [ ] 動画作成（補足資料用）
+- [ ] LLM ablation study（ストレッチゴール: 上記が全て完了した場合のみ）
 
 ### Week 7.5-8 (03/29-04/01): Phase 5 — 論文仕上げ
 
@@ -216,8 +254,8 @@
 並行執筆済みセクション（Methods, Experimental Setup, Related Work）を統合し、残りを執筆:
 
 - [ ] Abstract + Introduction（理論的基盤、C1対応）
-- [ ] Results（定量評価結果、C2対応）
-- [ ] Discussion（限界、LLM ablation結果（あれば）、将来研究）
+- [ ] Results（定量評価結果 + **criterion-ablation結果**、C2対応）
+- [ ] Discussion（限界、LLM ablation結果（あれば）、epistemological scope、将来研究）
 - [ ] 参考文献の書誌情報完備（L1対応）
 - [ ] 全体の統合・推敲
 - [ ] ドメイン専門家によるレビュー
@@ -267,7 +305,7 @@
 |--------|:------:|:----:|---------|
 | 代謝ネットワークが維持不可 | 高 | 中 | ODEベース代謝に切替 |
 | ハイブリッド二層が不安定 | 高 | 中 | Agent-basedに単純化 |
-| LLM ablation studyが実施不可 | 低 | 中 | ablation節を省略（将来研究に記載） |
+| LLM ablation studyが実施不可 | 低 | 中 | 省略（将来研究に記載。criterion-ablationが主軸なので影響小） |
 | Swarm境界が不安定 (Week 2 Day 3) | 中 | 中 | 単一エージェント型円形メンブレンにフォールバック |
 | 7基準統合が間に合わない | 高 | 中 | 3-5基準に絞る |
 | 8週間でFull Paper完成不可 | 中 | 中 | Extended Abstractに切替 |
@@ -286,8 +324,9 @@
 - calibration/test分離による統計的検証
 
 ### Tier 2: 目標（Full Paper相当）
-- **主張**: 「7基準すべてを統合した初のシステムを構築し、各基準が機能的に相互作用することを定量的に示した」
+- **主張**: 「7基準すべてを統合した初のシステムを構築し、criterion-ablation実験により各基準が機能的に必要かつ相互依存であることを定量的に示した」
 - 7基準すべてが同時に機能
+- **criterion-ablation**: 各基準の除去がシステム劣化を引き起こすことを統計的に確認
 - 集団進化で適応が観察される
 - final test setによるランダムベースラインとの統計的有意差（Holm-Bonferroni補正後）
 - 既存システムとの文献ベース比較（inter-rater κ ≥ 0.6）
