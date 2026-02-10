@@ -1,5 +1,10 @@
 # Digital Life: Functional Analogy of All Seven Biological Criteria in Computational Organisms
 
+> **Document Role:** Initial Project Proposition (1/3)
+> This is the foundational document that defines the research vision, technical approach, and prototyping roadmap.
+> - Reviewed in: [`unified-review.md`](unified-review.md) — identifies critical gaps, risks, and recommendations
+> - Addressed in: [`action-plan.md`](action-plan.md) — concrete 8-week plan incorporating review feedback and researcher decisions
+
 ## Project Overview
 
 **Core Question:** Can we build a computational system where autonomous digital entities satisfy all seven biological criteria for life — not as checkboxes, but through genuine functional analogy?

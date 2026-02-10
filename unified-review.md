@@ -1,5 +1,10 @@
 # 統合レビュー: Digital Life Project Overview
 
+> **Document Role:** Peer Review & Risk Analysis (2/3)
+> This document reviews [`digital-life-project-overview.md`](digital-life-project-overview.md) from a researcher's perspective, combining two independent reviews into a single prioritized analysis.
+> - Reviews: [`digital-life-project-overview.md`](digital-life-project-overview.md) — the initial project proposition
+> - Informed: [`action-plan.md`](action-plan.md) — action plan that addresses the issues raised here
+
 2つのレビューを統合し、重複を排除、優先度を再設定した。
 
 ---
