@@ -1,36 +1,55 @@
-# Repository Guidelines
+# AGENTS.md
 
-## Project Structure & Module Organization
-- Rust workspace root: `Cargo.toml` with three crates under `crates/`.
-- Core simulation logic lives in `crates/digital-life-core/src/` (world, metabolism, organism, NN, config).
-- Python bindings live in `crates/digital-life-py/src/lib.rs`, with importable Python package files under `python/digital_life/`.
-- CLI experimentation binary lives in `crates/spike/src/main.rs`.
-- Research/design docs are in the repo root (`action-plan.md`, `digital-life-project-overview.md`, `unified-review.md`).
+This file provides repository-specific instructions for coding agents and contributors.
 
-## Build, Test, and Development Commands
-- `cargo build --workspace`: build all Rust crates.
-- `cargo test --all-targets --all-features`: run full test suite (matches CI).
-- `cargo clippy --all-targets --all-features -- -D warnings`: lint; warnings fail builds.
-- `cargo fmt --all --check`: formatting check used in CI.
-- `cargo run -p digital-life-spike --bin spike`: run local simulation spike binary.
-- `uv run maturin develop --manifest-path crates/digital-life-py/Cargo.toml`: build/install Python extension for local Python usage.
+## Mission
 
-## Coding Style & Naming Conventions
-- Follow Rust defaults: 4-space indentation, `rustfmt`-formatted code, and `clippy`-clean changes.
-- Use `snake_case` for functions/tests, `CamelCase` for types, and clear domain names (`metabolism`, `homeostasis`, `world`).
-- Keep modules cohesive; prefer adding behavior to the most relevant crate/module instead of cross-cutting utility sprawl.
+Build and evolve the Digital Life simulation with reproducible, testable changes aligned with the seven-criteria research goals.
 
-## Testing Guidelines
-- Write tests close to code using `mod tests` in each module (current pattern across `world.rs`, `metabolism.rs`, `spatial.rs`, etc.).
-- Name tests by behavior, e.g. `graph_cycle_retains_mass_in_resource_pool`.
-- For changes affecting bindings, add Rust tests in `crates/digital-life-py/src/lib.rs` and rerun full workspace tests.
+## High-Confidence Commands
 
-## Commit & Pull Request Guidelines
-- Follow conventional-style commit prefixes seen in history: `feat:`, `fix:`, `refactor:`, `test:`.
-- Keep commits focused and logically scoped; include tests with behavior changes.
-- Open PRs against `main` with:
-  - concise problem/solution summary,
-  - linked issue(s) when applicable,
-  - test evidence (command + result),
-  - screenshots/log excerpts only when behavior is hard to explain textually.
-- Ensure CI passes (`fmt`, `clippy`, `test`) before requesting review.
+- Build workspace: `cargo build --workspace`
+- Run full checks: `cargo fmt --all --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test --all-targets --all-features`
+- Run spike benchmark: `cargo run -p digital-life-spike --release`
+- Build Python extension: `uv run maturin develop --manifest-path crates/digital-life-py/Cargo.toml`
+
+## Code Style and Quality Rules
+
+- Rust style is default `rustfmt` output with `clippy` warnings treated as errors.
+- Keep modules cohesive and domain-driven (`world`, `metabolism`, `organism`, `nn`, `spatial`).
+- Add/keep tests close to changed logic (`#[cfg(test)] mod tests`).
+- Prefer minimal, direct fixes over broad refactors unless required.
+
+## Testing Instructions
+
+- Baseline gate for all changes:
+  - `cargo fmt --all --check`
+  - `cargo clippy --all-targets --all-features -- -D warnings`
+  - `cargo test --all-targets --all-features`
+- For Python-binding changes, always run Rust tests in `crates/digital-life-py/src/lib.rs` through the full test command.
+
+## Repository Etiquette
+
+- Branch naming: `feat/<topic>`, `fix/<topic>`, `chore/<topic>`, `refactor/<topic>`, `test/<topic>`
+- Never push directly to `main`.
+- Keep commits small, logically grouped, and prefixed (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`).
+- PRs should include the problem, solution, and exact verification commands run.
+
+## Architecture Decisions to Preserve
+
+- Rust core simulation with Python bindings via PyO3/maturin.
+- Two metabolism modes are currently supported (`toy`, `graph`).
+- Criterion-ablation toggles are config-driven and should stay easy to test.
+- Simulation behavior should remain reproducible via deterministic seeds.
+
+## Environment and Tooling Quirks
+
+- Use `uv` for Python-related tooling; avoid ad-hoc global package installs.
+- Running `cargo run -p digital-life-spike` without `--release` yields non-representative performance.
+- Local build artifacts (`target/`, extension binaries) should remain untracked.
+
+## Non-Obvious Gotchas
+
+- `num_organisms * agents_per_organism` is bounded; exceeding limits is rejected by runtime checks.
+- JSON config compatibility matters: legacy config payloads should still deserialize with defaults when possible.
+- Research planning docs are in `docs/research/`; do not treat them as implementation truth over code/tests.

@@ -14,11 +14,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Document | Role |
 |----------|------|
-| `digital-life-project-overview.md` | Initial proposition: 7 criteria specs, risk assessment, prototyping roadmap |
-| `unified-review.md` | Peer review (Japanese): critical gaps, risks, prioritized recommendations |
-| `action-plan.md` | **Authoritative plan**: 7.5-week schedule, architectural decisions, pivot strategies, statistical design |
+| `docs/research/digital-life-project-overview.md` | Initial proposition: 7 criteria specs, risk assessment, prototyping roadmap |
+| `docs/research/unified-review.md` | Peer review (Japanese): critical gaps, risks, prioritized recommendations |
+| `docs/research/action-plan.md` | **Authoritative plan**: 7.5-week schedule, architectural decisions, pivot strategies, statistical design |
 
-When documents conflict, `action-plan.md` takes precedence — it incorporates all review feedback and researcher decisions.
+When documents conflict, `docs/research/action-plan.md` takes precedence — it incorporates all review feedback and researcher decisions.
 
 ## Architecture Decisions
 
@@ -68,4 +68,4 @@ This distinguishes the project from "simplified proxy" approaches. Verify at eve
 
 ## Language Notes
 
-Research documents are bilingual (Japanese + English). `unified-review.md` is primarily in Japanese. `action-plan.md` uses Japanese headers with English technical terms. When generating research content, match the language of the target document.
+Research documents are bilingual (Japanese + English). `docs/research/unified-review.md` is primarily in Japanese. `docs/research/action-plan.md` uses Japanese headers with English technical terms. When generating research content, match the language of the target document.
