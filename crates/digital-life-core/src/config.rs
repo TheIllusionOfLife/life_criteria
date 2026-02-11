@@ -9,6 +9,7 @@ pub struct SimConfig {
     pub sensing_radius: f64,
     pub max_speed: f64,
     pub dt: f64,
+    pub neighbor_norm: f32,
 }
 
 impl Default for SimConfig {
@@ -21,6 +22,7 @@ impl Default for SimConfig {
             sensing_radius: 5.0,
             max_speed: 2.0,
             dt: 0.1,
+            neighbor_norm: 50.0,
         }
     }
 }

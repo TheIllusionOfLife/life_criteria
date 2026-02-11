@@ -1,9 +1,10 @@
 use digital_life_core::agent::Agent;
+use digital_life_core::config::SimConfig;
 use digital_life_core::nn::NeuralNet;
 use digital_life_core::world::World;
 use rand::Rng;
-use rand_chacha::ChaCha12Rng;
 use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 
 const WORLD_SIZE: f64 = 100.0;
 const WARMUP_STEPS: usize = 10;
@@ -30,13 +31,18 @@ fn run_benchmark(num_organisms: usize, agents_per_organism: usize, seed: u64) {
     // Create NNs (one per organism)
     let nns: Vec<NeuralNet> = (0..num_organisms)
         .map(|_| {
-            let weights = (0..NeuralNet::WEIGHT_COUNT)
-                .map(|_| rng.random::<f32>() * 2.0 - 1.0);
+            let weights = (0..NeuralNet::WEIGHT_COUNT).map(|_| rng.random::<f32>() * 2.0 - 1.0);
             NeuralNet::from_weights(weights)
         })
         .collect();
 
-    let mut world = World::new(agents, nns, WORLD_SIZE, num_organisms);
+    let config = SimConfig {
+        world_size: WORLD_SIZE,
+        num_organisms,
+        agents_per_organism,
+        ..SimConfig::default()
+    };
+    let mut world = World::new(agents, nns, config);
 
     // Warmup
     for _ in 0..WARMUP_STEPS {
@@ -60,7 +66,9 @@ fn run_benchmark(num_organisms: usize, agents_per_organism: usize, seed: u64) {
     let avg_step_us = total_time as f64 / BENCHMARK_STEPS as f64;
     let steps_per_sec = 1_000_000.0 / avg_step_us;
 
-    println!("--- {total_agents} agents ({num_organisms} organisms x {agents_per_organism} agents) ---");
+    println!(
+        "--- {total_agents} agents ({num_organisms} organisms x {agents_per_organism} agents) ---"
+    );
     println!("  Avg step:      {avg_step_us:.0} us ({steps_per_sec:.1} steps/sec)");
     println!(
         "  Breakdown:     spatial={:.0} us, nn+query={:.0} us, state={:.0} us",
@@ -91,10 +99,10 @@ fn main() {
 
     // Multiple configurations
     let configs = [
-        (10, 10),    // 100 agents
-        (25, 25),    // 625 agents
-        (50, 50),    // 2500 agents (target)
-        (50, 100),   // 5000 agents (stress test)
+        (10, 10),  // 100 agents
+        (25, 25),  // 625 agents
+        (50, 50),  // 2500 agents (target)
+        (50, 100), // 5000 agents (stress test)
     ];
 
     for (orgs, apg) in configs {

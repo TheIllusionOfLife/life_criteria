@@ -12,8 +12,8 @@ const OUTPUT_SIZE: usize = 4;
 pub struct NeuralNet {
     // weights: input→hidden (8×16) + hidden bias (16) + hidden→output (16×4) + output bias (4)
     // Total: 128 + 16 + 64 + 4 = 212 parameters
-    pub w_ih: [[f32; HIDDEN_SIZE]; INPUT_SIZE], // 8×16
-    pub b_h: [f32; HIDDEN_SIZE],                // 16
+    pub w_ih: [[f32; HIDDEN_SIZE]; INPUT_SIZE],  // 8×16
+    pub b_h: [f32; HIDDEN_SIZE],                 // 16
     pub w_ho: [[f32; OUTPUT_SIZE]; HIDDEN_SIZE], // 16×4
     pub b_o: [f32; OUTPUT_SIZE],                 // 4
 }

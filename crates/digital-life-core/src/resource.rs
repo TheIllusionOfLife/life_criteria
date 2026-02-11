@@ -3,10 +3,10 @@
 
 #[derive(Clone, Debug)]
 pub struct ResourceField {
-    pub width: usize,
-    pub height: usize,
-    pub cell_size: f64,
-    pub data: Vec<f32>,
+    width: usize,
+    height: usize,
+    cell_size: f64,
+    data: Vec<f32>,
 }
 
 impl ResourceField {
@@ -26,15 +26,35 @@ impl ResourceField {
 
     /// Get resource value at position. Coordinates are clamped to grid bounds.
     pub fn get(&self, x: f64, y: f64) -> f32 {
-        let cx = ((x / self.cell_size).max(0.0) as usize).min(self.width - 1);
-        let cy = ((y / self.cell_size).max(0.0) as usize).min(self.height - 1);
+        let (cx, cy) = self.clamp_coords(x, y);
         self.data[cy * self.width + cx]
     }
 
     /// Set resource value at position. Coordinates are clamped to grid bounds.
     pub fn set(&mut self, x: f64, y: f64, value: f32) {
+        let (cx, cy) = self.clamp_coords(x, y);
+        self.data[cy * self.width + cx] = value;
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn cell_size(&self) -> f64 {
+        self.cell_size
+    }
+
+    pub fn data(&self) -> &[f32] {
+        &self.data
+    }
+
+    fn clamp_coords(&self, x: f64, y: f64) -> (usize, usize) {
         let cx = ((x / self.cell_size).max(0.0) as usize).min(self.width - 1);
         let cy = ((y / self.cell_size).max(0.0) as usize).min(self.height - 1);
-        self.data[cy * self.width + cx] = value;
+        (cx, cy)
     }
 }

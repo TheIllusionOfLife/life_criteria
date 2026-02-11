@@ -4,12 +4,12 @@
 
 #[derive(Clone, Debug)]
 pub struct Genome {
-    pub data: Vec<f32>,
+    data: Vec<f32>,
     /// Segment layout: (start, len) for each criterion's parameters.
     /// Index 0 = NN weights, 1 = metabolic network, 2 = homeostasis params,
     /// 3 = developmental program, 4 = reproduction params, 5 = sensory params,
     /// 6 = evolution/mutation params
-    pub segments: [(usize, usize); 7],
+    segments: [(usize, usize); 7],
 }
 
 impl Genome {
@@ -39,5 +39,13 @@ impl Genome {
     pub fn nn_weights(&self) -> &[f32] {
         let (start, len) = self.segments[0];
         &self.data[start..start + len]
+    }
+
+    pub fn data(&self) -> &[f32] {
+        &self.data
+    }
+
+    pub fn segments(&self) -> &[(usize, usize); 7] {
+        &self.segments
     }
 }

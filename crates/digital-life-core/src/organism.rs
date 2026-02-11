@@ -11,7 +11,13 @@ pub struct Organism {
 }
 
 impl Organism {
-    pub fn new(id: u16, agent_start: usize, agent_count: usize, nn: NeuralNet, genome: Genome) -> Self {
+    pub fn new(
+        id: u16,
+        agent_start: usize,
+        agent_count: usize,
+        nn: NeuralNet,
+        genome: Genome,
+    ) -> Self {
         Self {
             id,
             agent_start,
