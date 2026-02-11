@@ -29,7 +29,7 @@ impl World {
         world_size: f64,
         num_organisms: usize,
     ) -> Self {
-        debug_assert!(
+        assert!(
             agents
                 .iter()
                 .all(|a| (a.organism_id as usize) < nns.len()),
@@ -58,7 +58,7 @@ impl World {
             let _neighbors = spatial::query_neighbors(&tree, agent.position, SENSING_RADIUS);
             let neighbor_count = _neighbors.len() as f32;
 
-            // Build NN input: position(2) + velocity(2) + internal_state(4)
+            // Build NN input: position(2) + velocity(2) + internal_state(3) + neighbor_count(1)
             let input: [f32; 8] = [
                 (agent.position[0] / self.world_size) as f32,
                 (agent.position[1] / self.world_size) as f32,
@@ -67,7 +67,6 @@ impl World {
                 agent.internal_state[0],
                 agent.internal_state[1],
                 agent.internal_state[2],
-                // Encode neighbor count as last input (normalized)
                 neighbor_count / 50.0,
             ];
 
@@ -109,6 +108,70 @@ impl World {
             nn_query_us,
             state_update_us,
             total_us: total_start.elapsed().as_micros() as u64,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::nn::NeuralNet;
+
+    fn make_world(num_agents: usize, world_size: f64) -> World {
+        let agents: Vec<Agent> = (0..num_agents)
+            .map(|i| Agent::new(i as u32, 0, [50.0, 50.0]))
+            .collect();
+        let nn = NeuralNet::from_weights(
+            std::iter::repeat_n(0.1f32, NeuralNet::WEIGHT_COUNT),
+        );
+        World::new(agents, vec![nn], world_size, 1)
+    }
+
+    #[test]
+    fn toroidal_wrapping_keeps_positions_in_bounds() {
+        let mut world = make_world(1, 100.0);
+        world.agents[0].velocity = [100.0, 100.0]; // will overshoot in one step
+        world.step();
+        let pos = world.agents[0].position;
+        assert!(
+            pos[0] >= 0.0 && pos[0] < 100.0,
+            "x={} out of bounds", pos[0]
+        );
+        assert!(
+            pos[1] >= 0.0 && pos[1] < 100.0,
+            "y={} out of bounds", pos[1]
+        );
+    }
+
+    #[test]
+    fn step_returns_nonzero_timings() {
+        let mut world = make_world(10, 100.0);
+        let t = world.step();
+        assert!(t.total_us > 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "organism_ids must be valid")]
+    fn new_panics_on_invalid_organism_id() {
+        let agents = vec![Agent::new(0, 5, [0.0, 0.0])]; // organism_id=5, but only 1 NN
+        let nn = NeuralNet::from_weights(
+            std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT),
+        );
+        World::new(agents, vec![nn], 100.0, 1);
+    }
+
+    #[test]
+    fn internal_state_stays_clamped() {
+        let mut world = make_world(1, 100.0);
+        // Run many steps — state should remain in [0, 1]
+        for _ in 0..100 {
+            world.step();
+        }
+        for &s in &world.agents[0].internal_state {
+            assert!(
+                (0.0..=1.0).contains(&s),
+                "internal_state {s} out of [0,1] range"
+            );
         }
     }
 }

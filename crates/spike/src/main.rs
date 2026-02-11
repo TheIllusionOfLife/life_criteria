@@ -79,6 +79,11 @@ fn run_benchmark(num_organisms: usize, agents_per_organism: usize, seed: u64) {
 }
 
 fn main() {
+    if cfg!(debug_assertions) {
+        eprintln!("WARNING: running in debug mode. Results are not representative.");
+        eprintln!("         Use: cargo run -p digital-life-spike --release");
+        eprintln!();
+    }
     println!("=== Digital Life Feasibility Spike ===");
     println!("Warmup: {WARMUP_STEPS} steps, Benchmark: {BENCHMARK_STEPS} steps");
     println!("Target: >={TARGET_SPS} steps/sec for 2500 agents");

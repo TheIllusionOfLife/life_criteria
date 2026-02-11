@@ -1,8 +1,8 @@
-/// Trivial feedforward neural network: 8 inputs → 16 hidden (tanh) → 4 outputs (tanh).
-/// Stack-allocated, no heap. 212 weights total.
-///
-/// Inputs:  position(2) + velocity(2) + internal_state(4) = 8
-/// Outputs: velocity_delta(2) + state_delta(2) = 4
+//! Trivial feedforward neural network: 8 inputs → 16 hidden (tanh) → 4 outputs (tanh).
+//! Stack-allocated, no heap. 212 weights total.
+//!
+//! Inputs:  position(2) + velocity(2) + internal_state(3) + neighbor_count(1) = 8
+//! Outputs: velocity_delta(2) + state_delta(2) = 4
 
 const INPUT_SIZE: usize = 8;
 const HIDDEN_SIZE: usize = 16;
@@ -90,4 +90,41 @@ impl NeuralNet {
 
     pub const WEIGHT_COUNT: usize =
         INPUT_SIZE * HIDDEN_SIZE + HIDDEN_SIZE + HIDDEN_SIZE * OUTPUT_SIZE + OUTPUT_SIZE;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn weight_count_matches_dimensions() {
+        assert_eq!(NeuralNet::WEIGHT_COUNT, 8 * 16 + 16 + 16 * 4 + 4);
+        assert_eq!(NeuralNet::WEIGHT_COUNT, 212);
+    }
+
+    #[test]
+    fn forward_output_bounded_by_tanh() {
+        let nn = NeuralNet::from_weights((0..NeuralNet::WEIGHT_COUNT).map(|i| (i as f32) * 0.01));
+        let input = [1.0f32; INPUT_SIZE];
+        let output = nn.forward(&input);
+        for &o in &output {
+            assert!((-1.0..=1.0).contains(&o), "output {o} outside tanh range");
+        }
+    }
+
+    #[test]
+    fn zero_weights_produce_zero_output() {
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+        let input = [1.0f32; INPUT_SIZE];
+        let output = nn.forward(&input);
+        for &o in &output {
+            assert!((o.abs()) < 1e-7, "expected ~0 with zero weights, got {o}");
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "insufficient weights")]
+    fn from_weights_panics_on_short_iterator() {
+        NeuralNet::from_weights(std::iter::repeat_n(0.0f32, 10));
+    }
 }
