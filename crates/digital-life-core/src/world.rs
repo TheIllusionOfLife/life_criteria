@@ -18,19 +18,25 @@ pub struct StepTimings {
 pub struct World {
     pub agents: Vec<Agent>,
     pub nns: Vec<NeuralNet>, // one per organism
+    // Keep config private to preserve constructor invariants.
     config: SimConfig,
     metabolic_states: Vec<MetabolicState>,
     metabolism: MetabolismEngine,
     resource_field: ResourceField,
+    org_pos_sums: Vec<[f64; 2]>,
+    org_counts: Vec<usize>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WorldInitError {
     InvalidWorldSize,
     InvalidDt,
     InvalidMaxSpeed,
     InvalidSensingRadius,
     InvalidNeighborNorm,
+    WorldSizeTooLarge { max: f64, actual: f64 },
+    AgentCountOverflow,
+    TooManyAgents { max: usize, actual: usize },
     NumOrganismsMismatch { expected: usize, actual: usize },
     AgentCountMismatch { expected: usize, actual: usize },
     InvalidOrganismId,
@@ -47,6 +53,15 @@ impl fmt::Display for WorldInitError {
             }
             WorldInitError::InvalidNeighborNorm => {
                 write!(f, "neighbor_norm must be positive and finite")
+            }
+            WorldInitError::WorldSizeTooLarge { max, actual } => {
+                write!(f, "world_size ({actual}) exceeds supported maximum ({max})")
+            }
+            WorldInitError::AgentCountOverflow => {
+                write!(f, "num_organisms * agents_per_organism overflows usize")
+            }
+            WorldInitError::TooManyAgents { max, actual } => {
+                write!(f, "total agents ({actual}) exceeds supported maximum ({max})")
             }
             WorldInitError::NumOrganismsMismatch { expected, actual } => write!(
                 f,
@@ -66,6 +81,9 @@ impl fmt::Display for WorldInitError {
 impl Error for WorldInitError {}
 
 impl World {
+    pub const MAX_WORLD_SIZE: f64 = 2048.0;
+    pub const MAX_TOTAL_AGENTS: usize = 250_000;
+
     pub fn new(agents: Vec<Agent>, nns: Vec<NeuralNet>, config: SimConfig) -> Self {
         Self::try_new(agents, nns, config).unwrap_or_else(|e| panic!("{e}"))
     }
@@ -77,8 +95,9 @@ impl World {
     ) -> Result<Self, WorldInitError> {
         Self::validate_config_for_state(&agents, &nns, &config)?;
         let world_size = config.world_size;
+        let num_organisms = nns.len();
 
-        let metabolic_states = vec![MetabolicState::default(); nns.len()];
+        let metabolic_states = vec![MetabolicState::default(); num_organisms];
         Ok(Self {
             agents,
             nns,
@@ -86,6 +105,8 @@ impl World {
             metabolic_states,
             metabolism: MetabolismEngine::default(),
             resource_field: ResourceField::new(world_size, 1.0, 1.0),
+            org_pos_sums: vec![[0.0, 0.0]; num_organisms],
+            org_counts: vec![0; num_organisms],
         })
     }
 
@@ -96,6 +117,12 @@ impl World {
     ) -> Result<(), WorldInitError> {
         if !(config.world_size.is_finite() && config.world_size > 0.0) {
             return Err(WorldInitError::InvalidWorldSize);
+        }
+        if config.world_size > Self::MAX_WORLD_SIZE {
+            return Err(WorldInitError::WorldSizeTooLarge {
+                max: Self::MAX_WORLD_SIZE,
+                actual: config.world_size,
+            });
         }
         if !(config.dt.is_finite() && config.dt > 0.0) {
             return Err(WorldInitError::InvalidDt);
@@ -115,7 +142,16 @@ impl World {
                 actual: nns.len(),
             });
         }
-        let expected_agent_count = config.num_organisms * config.agents_per_organism;
+        let expected_agent_count = config
+            .num_organisms
+            .checked_mul(config.agents_per_organism)
+            .ok_or(WorldInitError::AgentCountOverflow)?;
+        if expected_agent_count > Self::MAX_TOTAL_AGENTS {
+            return Err(WorldInitError::TooManyAgents {
+                max: Self::MAX_TOTAL_AGENTS,
+                actual: expected_agent_count,
+            });
+        }
         if agents.len() != expected_agent_count {
             return Err(WorldInitError::AgentCountMismatch {
                 expected: expected_agent_count,
@@ -234,20 +270,20 @@ impl World {
         }
 
         if self.config.enable_metabolism {
-            let mut pos_acc = vec![[0.0f64, 0.0f64]; self.nns.len()];
-            let mut counts = vec![0usize; self.nns.len()];
+            self.org_pos_sums.fill([0.0, 0.0]);
+            self.org_counts.fill(0);
             for agent in &self.agents {
                 let idx = agent.organism_id as usize;
-                pos_acc[idx][0] += agent.position[0];
-                pos_acc[idx][1] += agent.position[1];
-                counts[idx] += 1;
+                self.org_pos_sums[idx][0] += agent.position[0];
+                self.org_pos_sums[idx][1] += agent.position[1];
+                self.org_counts[idx] += 1;
             }
 
             for (org_id, state) in self.metabolic_states.iter_mut().enumerate() {
-                let center = if counts[org_id] > 0 {
+                let center = if self.org_counts[org_id] > 0 {
                     [
-                        pos_acc[org_id][0] / counts[org_id] as f64,
-                        pos_acc[org_id][1] / counts[org_id] as f64,
+                        self.org_pos_sums[org_id][0] / self.org_counts[org_id] as f64,
+                        self.org_pos_sums[org_id][1] / self.org_counts[org_id] as f64,
                     ]
                 } else {
                     [0.0, 0.0]
@@ -352,6 +388,18 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "exceeds supported maximum")]
+    fn new_panics_on_excessive_world_size() {
+        let agents = vec![Agent::new(0, 0, [0.0, 0.0])];
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+        World::new(
+            agents,
+            vec![nn],
+            make_config(World::MAX_WORLD_SIZE + 1.0, 0.1),
+        );
+    }
+
+    #[test]
     #[should_panic(expected = "num_organisms")]
     fn new_panics_on_num_organisms_mismatch() {
         let agents = vec![Agent::new(0, 0, [0.0, 0.0])];
@@ -441,6 +489,30 @@ mod tests {
             Err(other) => panic!("unexpected error: {other}"),
             Ok(_) => panic!("expected try_new to fail for agent count mismatch"),
         }
+    }
+
+    #[test]
+    fn try_new_rejects_agent_count_overflow() {
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+        let cfg = SimConfig {
+            num_organisms: 3,
+            agents_per_organism: usize::MAX / 2 + 1,
+            ..SimConfig::default()
+        };
+        let result = World::try_new(Vec::new(), vec![nn.clone(), nn.clone(), nn], cfg);
+        assert!(matches!(result, Err(WorldInitError::AgentCountOverflow)));
+    }
+
+    #[test]
+    fn try_new_rejects_too_many_agents() {
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+        let cfg = SimConfig {
+            num_organisms: 1,
+            agents_per_organism: World::MAX_TOTAL_AGENTS + 1,
+            ..SimConfig::default()
+        };
+        let result = World::try_new(Vec::new(), vec![nn], cfg);
+        assert!(matches!(result, Err(WorldInitError::TooManyAgents { .. })));
     }
 
     #[test]

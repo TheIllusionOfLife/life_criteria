@@ -3,6 +3,7 @@ use crate::nn::NeuralNet;
 
 #[derive(Clone, Debug)]
 pub struct Organism {
+    // Fields are private by design; use accessors to preserve invariants.
     id: u16,
     agent_start: usize,
     agent_count: usize,

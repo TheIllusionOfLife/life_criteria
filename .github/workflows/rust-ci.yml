@@ -21,7 +21,7 @@ jobs:
           toolchain: stable
 
       - name: Cache cargo registry and build artifacts
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
 
       - name: Check formatting
         run: cargo fmt --all --check
