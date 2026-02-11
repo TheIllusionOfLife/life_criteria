@@ -55,10 +55,6 @@ pub fn query_neighbors(
     self_id: u32,
     world_size: f64,
 ) -> Vec<u32> {
-    assert!(
-        world_size.is_finite() && world_size > 0.0,
-        "world_size must be positive and finite"
-    );
     let mut result = Vec::new();
     for_each_unique_neighbor(tree, center, radius, self_id, world_size, |id| {
         result.push(id);
@@ -75,6 +71,10 @@ fn for_each_unique_neighbor(
     world_size: f64,
     mut visitor: impl FnMut(u32),
 ) {
+    assert!(
+        world_size.is_finite() && world_size > 0.0,
+        "world_size must be positive and finite"
+    );
     let (x_offsets, x_len) = wrap_offsets(center[0], radius, world_size);
     let (y_offsets, y_len) = wrap_offsets(center[1], radius, world_size);
     let r_sq = radius * radius;

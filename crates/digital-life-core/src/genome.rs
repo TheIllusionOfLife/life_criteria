@@ -37,7 +37,16 @@ impl Genome {
     }
 
     pub fn nn_weights(&self) -> &[f32] {
-        let (start, len) = self.segments[0];
+        self.segment_data(0)
+    }
+
+    /// Returns the parameter slice for a criterion segment (0..=6).
+    pub fn segment_data(&self, criterion: usize) -> &[f32] {
+        assert!(
+            criterion < self.segments.len(),
+            "criterion index out of range"
+        );
+        let (start, len) = self.segments[criterion];
         &self.data[start..start + len]
     }
 

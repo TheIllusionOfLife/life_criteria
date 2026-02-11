@@ -3,11 +3,12 @@ use crate::nn::NeuralNet;
 
 #[derive(Clone, Debug)]
 pub struct Organism {
-    pub id: u16,
-    pub agent_start: usize,
-    pub agent_count: usize,
-    pub nn: NeuralNet,
-    pub genome: Genome,
+    // Fields are private by design; use accessors to preserve invariants.
+    id: u16,
+    agent_start: usize,
+    agent_count: usize,
+    nn: NeuralNet,
+    genome: Genome,
 }
 
 impl Organism {
@@ -29,5 +30,25 @@ impl Organism {
 
     pub fn agent_range(&self) -> std::ops::Range<usize> {
         self.agent_start..self.agent_start + self.agent_count
+    }
+
+    pub fn id(&self) -> u16 {
+        self.id
+    }
+
+    pub fn agent_start(&self) -> usize {
+        self.agent_start
+    }
+
+    pub fn agent_count(&self) -> usize {
+        self.agent_count
+    }
+
+    pub fn nn(&self) -> &NeuralNet {
+        &self.nn
+    }
+
+    pub fn genome(&self) -> &Genome {
+        &self.genome
     }
 }

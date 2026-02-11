@@ -10,3 +10,4 @@ crate-type = ["cdylib"]
 [dependencies]
 digital-life-core = { path = "../digital-life-core" }
 pyo3.workspace = true
+serde_json.workspace = true
