@@ -1,4 +1,5 @@
 use crate::genome::Genome;
+use crate::metabolism::MetabolicState;
 use crate::nn::NeuralNet;
 
 #[derive(Clone, Debug)]
@@ -51,4 +52,19 @@ impl Organism {
     pub fn genome(&self) -> &Genome {
         &self.genome
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct OrganismRuntime {
+    pub id: u16,
+    pub stable_id: u64,
+    pub generation: u32,
+    pub age_steps: usize,
+    pub alive: bool,
+    pub boundary_integrity: f32,
+    pub metabolic_state: MetabolicState,
+    pub genome: Genome,
+    pub ancestor_genome: Genome,
+    pub nn: NeuralNet,
+    pub agent_ids: Vec<u32>,
 }

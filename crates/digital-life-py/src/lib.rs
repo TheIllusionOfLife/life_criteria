@@ -56,6 +56,17 @@ fn run_experiment_json(config_json: &str, steps: usize, sample_every: usize) -> 
     run_experiment_json_impl(config_json, steps, sample_every).map_err(PyValueError::new_err)
 }
 
+#[pyfunction]
+fn run_evolution_experiment_json(
+    config_json: &str,
+    steps: usize,
+    sample_every: usize,
+) -> PyResult<String> {
+    // Alias current experiment runner while the evolution-specific parameter surface
+    // is still converging in the Rust core.
+    run_experiment_json_impl(config_json, steps, sample_every).map_err(PyValueError::new_err)
+}
+
 fn run_experiment_json_impl(
     config_json: &str,
     steps: usize,
@@ -132,6 +143,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(validate_config_json, m)?)?;
     m.add_function(wrap_pyfunction!(step_once, m)?)?;
     m.add_function(wrap_pyfunction!(run_experiment_json, m)?)?;
+    m.add_function(wrap_pyfunction!(run_evolution_experiment_json, m)?)?;
     Ok(())
 }
 
@@ -198,6 +210,22 @@ mod tests {
             serde_json::to_string(&SimConfig::default()).expect("config should serialize");
         let result = run_experiment_json_impl(&config_json, 10, 0);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn run_experiment_json_impl_includes_evolution_metrics() {
+        let config_json = serde_json::to_string(&SimConfig {
+            num_organisms: 1,
+            agents_per_organism: 8,
+            ..SimConfig::default()
+        })
+        .expect("config should serialize");
+        let output = run_experiment_json_impl(&config_json, 5, 1).expect("experiment should run");
+        let payload: serde_json::Value =
+            serde_json::from_str(&output).expect("output should be valid json");
+        let sample = &payload["samples"][0];
+        assert!(sample["birth_count"].is_number());
+        assert!(sample["mean_generation"].is_number());
     }
 
     #[test]
