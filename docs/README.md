@@ -14,4 +14,4 @@
 - `research/unified-review.md`
 - `research/action-plan.md`
 
-Research docs are historical/strategy artifacts for this project phase. Operational development rules live in root-level docs.
+Research docs are historical/strategy artifacts for this project phase, with one explicit exception for conflicts: when conflicts arise, prioritize `docs/research/action-plan.md` as the authoritative source for technical decisions and implementation guidance. Operational development rules otherwise live in root-level docs.
