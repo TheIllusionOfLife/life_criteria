@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # Rust
 /target/
 **/*.rs.bk
@@ -7,11 +10,19 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 dist/
+build/
 *.so
 *.dylib
 
-# IDE
+# maturin/PyO3 artifacts
+/python/digital_life/*.so
+/python/digital_life/*.dylib
+
+# IDE/editor
 .idea/
 .vscode/
 *.swp
