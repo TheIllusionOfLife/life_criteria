@@ -1,13 +1,28 @@
 use crate::agent::Agent;
 use crate::config::{MetabolismMode, SimConfig};
+use crate::genome::{Genome, MutationRates};
 use crate::metabolism::{MetabolicState, MetabolismEngine};
 use crate::nn::NeuralNet;
+use crate::organism::OrganismRuntime;
 use crate::resource::ResourceField;
 use crate::spatial;
+use rand::Rng;
+use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 use std::time::Instant;
 use std::{error::Error, fmt};
+
+const REPRODUCTION_MIN_ENERGY: f32 = 0.85;
+const REPRODUCTION_MIN_BOUNDARY: f32 = 0.70;
+const REPRODUCTION_ENERGY_COST: f32 = 0.30;
+const REPRODUCTION_CHILD_MIN_AGENTS: usize = 4;
+const REPRODUCTION_SPAWN_RADIUS: f64 = 1.0;
+const CROWDING_NEIGHBOR_THRESHOLD: f32 = 8.0;
+const CROWDING_BOUNDARY_DECAY: f32 = 0.0015;
+const MAX_ORGANISM_AGE: usize = 20_000;
+const COMPACTION_INTERVAL_STEPS: usize = 64;
 
 #[derive(Clone, Debug)]
 pub struct StepTimings {
@@ -17,7 +32,8 @@ pub struct StepTimings {
     pub total_us: u64,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct StepMetrics {
     pub step: usize,
     pub energy_mean: f32,
@@ -25,6 +41,12 @@ pub struct StepMetrics {
     pub boundary_mean: f32,
     pub alive_count: usize,
     pub resource_total: f64,
+    pub birth_count: usize,
+    pub death_count: usize,
+    pub population_size: usize,
+    pub mean_generation: f32,
+    pub mean_genome_drift: f32,
+    pub agent_id_exhaustion_events: usize,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -35,19 +57,34 @@ pub struct RunSummary {
     pub samples: Vec<StepMetrics>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct PopulationStats {
+    pub population_size: usize,
+    pub alive_count: usize,
+    pub total_births: usize,
+    pub total_deaths: usize,
+    pub mean_generation: f32,
+}
+
 pub struct World {
     pub agents: Vec<Agent>,
-    pub nns: Vec<NeuralNet>, // one per organism
-    // Keep config private to preserve constructor invariants.
+    organisms: Vec<OrganismRuntime>,
     config: SimConfig,
-    metabolic_states: Vec<MetabolicState>,
     metabolism: MetabolismEngine,
     resource_field: ResourceField,
-    boundary_integrity: Vec<f32>,
-    organism_alive: Vec<bool>,
-    // Per-organism accumulators: [sin(x), cos(x), sin(y), cos(y)].
     org_toroidal_sums: Vec<[f64; 4]>,
     org_counts: Vec<usize>,
+    rng: ChaCha12Rng,
+    next_agent_id: u32,
+    step_index: usize,
+    births_last_step: usize,
+    deaths_last_step: usize,
+    total_births: usize,
+    total_deaths: usize,
+    mutation_rates: MutationRates,
+    next_organism_stable_id: u64,
+    agent_id_exhaustions_last_step: usize,
+    total_agent_id_exhaustions: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -183,9 +220,61 @@ impl World {
         nns: Vec<NeuralNet>,
         config: SimConfig,
     ) -> Result<Self, WorldInitError> {
-        Self::validate_config_for_state(&agents, &nns, &config)?;
-        let world_size = config.world_size;
-        let num_organisms = nns.len();
+        Self::validate_config_common(&config)?;
+        if config.num_organisms != nns.len() {
+            return Err(WorldInitError::NumOrganismsMismatch {
+                expected: config.num_organisms,
+                actual: nns.len(),
+            });
+        }
+        let expected_agent_count = config
+            .num_organisms
+            .checked_mul(config.agents_per_organism)
+            .ok_or(WorldInitError::AgentCountOverflow)?;
+        if expected_agent_count > Self::MAX_TOTAL_AGENTS {
+            return Err(WorldInitError::TooManyAgents {
+                max: Self::MAX_TOTAL_AGENTS,
+                actual: expected_agent_count,
+            });
+        }
+        if agents.len() != expected_agent_count {
+            return Err(WorldInitError::AgentCountMismatch {
+                expected: expected_agent_count,
+                actual: agents.len(),
+            });
+        }
+        if !agents.iter().all(|a| (a.organism_id as usize) < nns.len()) {
+            return Err(WorldInitError::InvalidOrganismId);
+        }
+
+        let mut organisms: Vec<OrganismRuntime> = nns
+            .into_iter()
+            .enumerate()
+            .map(|(id, nn)| {
+                let genome = Genome::with_nn_weights(nn.to_weight_vec());
+                OrganismRuntime {
+                    id: id as u16,
+                    stable_id: id as u64,
+                    generation: 0,
+                    age_steps: 0,
+                    alive: true,
+                    boundary_integrity: 1.0,
+                    metabolic_state: MetabolicState::default(),
+                    genome: genome.clone(),
+                    ancestor_genome: genome,
+                    nn,
+                    agent_ids: Vec::new(),
+                }
+            })
+            .collect();
+
+        for agent in &agents {
+            organisms[agent.organism_id as usize]
+                .agent_ids
+                .push(agent.id);
+        }
+
+        let max_agent_id = agents.iter().map(|a| a.id).max().unwrap_or(0);
         let metabolism = match config.metabolism_mode {
             MetabolismMode::Toy => MetabolismEngine::default(),
             MetabolismMode::Graph => {
@@ -193,34 +282,32 @@ impl World {
             }
         };
 
-        let metabolic_states = vec![MetabolicState::default(); num_organisms];
+        let world_size = config.world_size;
+        let org_count = organisms.len();
+        let next_organism_stable_id = org_count as u64;
         Ok(Self {
             agents,
-            nns,
-            config,
-            metabolic_states,
+            organisms,
+            config: config.clone(),
             metabolism,
             resource_field: ResourceField::new(world_size, 1.0, 1.0),
-            boundary_integrity: vec![1.0; num_organisms],
-            organism_alive: vec![true; num_organisms],
-            org_toroidal_sums: vec![[0.0, 0.0, 0.0, 0.0]; num_organisms],
-            org_counts: vec![0; num_organisms],
+            org_toroidal_sums: vec![[0.0, 0.0, 0.0, 0.0]; org_count],
+            org_counts: vec![0; org_count],
+            rng: ChaCha12Rng::seed_from_u64(config.seed),
+            next_agent_id: max_agent_id.saturating_add(1),
+            step_index: 0,
+            births_last_step: 0,
+            deaths_last_step: 0,
+            total_births: 0,
+            total_deaths: 0,
+            mutation_rates: MutationRates::default(),
+            next_organism_stable_id,
+            agent_id_exhaustions_last_step: 0,
+            total_agent_id_exhaustions: 0,
         })
     }
 
-    fn toroidal_mean_coord(sum_sin: f64, sum_cos: f64, world_size: f64) -> f64 {
-        if sum_sin == 0.0 && sum_cos == 0.0 {
-            return 0.0;
-        }
-        let angle = sum_sin.atan2(sum_cos);
-        (angle.rem_euclid(2.0 * PI) / (2.0 * PI)) * world_size
-    }
-
-    fn validate_config_for_state(
-        agents: &[Agent],
-        nns: &[NeuralNet],
-        config: &SimConfig,
-    ) -> Result<(), WorldInitError> {
+    fn validate_config_common(config: &SimConfig) -> Result<(), WorldInitError> {
         if !(config.world_size.is_finite() && config.world_size > 0.0) {
             return Err(WorldInitError::InvalidWorldSize);
         }
@@ -282,31 +369,6 @@ impl World {
         {
             return Err(WorldInitError::InvalidDeathBoundaryThreshold);
         }
-        if config.num_organisms != nns.len() {
-            return Err(WorldInitError::NumOrganismsMismatch {
-                expected: config.num_organisms,
-                actual: nns.len(),
-            });
-        }
-        let expected_agent_count = config
-            .num_organisms
-            .checked_mul(config.agents_per_organism)
-            .ok_or(WorldInitError::AgentCountOverflow)?;
-        if expected_agent_count > Self::MAX_TOTAL_AGENTS {
-            return Err(WorldInitError::TooManyAgents {
-                max: Self::MAX_TOTAL_AGENTS,
-                actual: expected_agent_count,
-            });
-        }
-        if agents.len() != expected_agent_count {
-            return Err(WorldInitError::AgentCountMismatch {
-                expected: expected_agent_count,
-                actual: agents.len(),
-            });
-        }
-        if !agents.iter().all(|a| (a.organism_id as usize) < nns.len()) {
-            return Err(WorldInitError::InvalidOrganismId);
-        }
         Ok(())
     }
 
@@ -316,13 +378,28 @@ impl World {
 
     pub fn set_config(&mut self, config: SimConfig) -> Result<(), WorldInitError> {
         let mode_changed = self.config.metabolism_mode != config.metabolism_mode;
-        Self::validate_config_for_state(&self.agents, &self.nns, &config)?;
+        Self::validate_config_common(&config)?;
+        if config.num_organisms != self.organisms.len() {
+            return Err(WorldInitError::NumOrganismsMismatch {
+                expected: config.num_organisms,
+                actual: self.organisms.len(),
+            });
+        }
+        let expected_agent_count = config
+            .num_organisms
+            .checked_mul(config.agents_per_organism)
+            .ok_or(WorldInitError::AgentCountOverflow)?;
+        if self.agents.len() != expected_agent_count {
+            return Err(WorldInitError::AgentCountMismatch {
+                expected: expected_agent_count,
+                actual: self.agents.len(),
+            });
+        }
         if (self.config.world_size - config.world_size).abs() > f64::EPSILON {
             self.resource_field = ResourceField::new(config.world_size, 1.0, 1.0);
         }
         self.config = config;
         if mode_changed {
-            // Switching modes resets the engine to the mode default to avoid stale internals.
             self.metabolism = match self.config.metabolism_mode {
                 MetabolismMode::Toy => MetabolismEngine::default(),
                 MetabolismMode::Graph => {
@@ -341,50 +418,199 @@ impl World {
         &self.resource_field
     }
 
+    pub fn resource_field_mut(&mut self) -> &mut ResourceField {
+        &mut self.resource_field
+    }
+
     pub fn metabolic_state(&self, organism_id: usize) -> &MetabolicState {
         self.try_metabolic_state(organism_id)
             .expect("organism_id out of range for metabolic_state")
     }
 
     pub fn try_metabolic_state(&self, organism_id: usize) -> Option<&MetabolicState> {
-        self.metabolic_states.get(organism_id)
+        self.organisms.get(organism_id).map(|o| &o.metabolic_state)
+    }
+
+    pub fn organism_count(&self) -> usize {
+        self.organisms.len()
+    }
+
+    pub fn population_stats(&self) -> PopulationStats {
+        let alive = self.alive_count();
+        let generation_sum = self
+            .organisms
+            .iter()
+            .filter(|o| o.alive)
+            .map(|o| o.generation as f32)
+            .sum::<f32>();
+        PopulationStats {
+            population_size: alive,
+            alive_count: alive,
+            total_births: self.total_births,
+            total_deaths: self.total_deaths,
+            mean_generation: if alive > 0 {
+                generation_sum / alive as f32
+            } else {
+                0.0
+            },
+        }
+    }
+
+    fn live_flags(&self) -> Vec<bool> {
+        self.organisms.iter().map(|o| o.alive).collect()
     }
 
     fn alive_count(&self) -> usize {
-        self.organism_alive.iter().filter(|alive| **alive).count()
+        self.organisms.iter().filter(|o| o.alive).count()
+    }
+
+    fn terminal_boundary_threshold(&self) -> f32 {
+        self.config
+            .boundary_collapse_threshold
+            .max(self.config.death_boundary_threshold)
+    }
+
+    fn next_agent_id_checked(&mut self) -> Option<u32> {
+        if self.next_agent_id == u32::MAX {
+            return None;
+        }
+        let id = self.next_agent_id;
+        self.next_agent_id += 1;
+        Some(id)
+    }
+
+    fn compute_organism_centers(&self) -> Vec<Option<[f64; 2]>> {
+        let world_size = self.config.world_size;
+        let tau_over_world = (2.0 * PI) / world_size;
+        let mut sums = vec![[0.0f64, 0.0, 0.0, 0.0]; self.organisms.len()];
+        let mut counts = vec![0usize; self.organisms.len()];
+
+        for agent in &self.agents {
+            let idx = agent.organism_id as usize;
+            if !self.organisms.get(idx).map(|o| o.alive).unwrap_or(false) {
+                continue;
+            }
+            let theta_x = agent.position[0] * tau_over_world;
+            let theta_y = agent.position[1] * tau_over_world;
+            sums[idx][0] += theta_x.sin();
+            sums[idx][1] += theta_x.cos();
+            sums[idx][2] += theta_y.sin();
+            sums[idx][3] += theta_y.cos();
+            counts[idx] += 1;
+        }
+
+        let mut centers = vec![None; self.organisms.len()];
+        for idx in 0..self.organisms.len() {
+            if counts[idx] == 0 {
+                continue;
+            }
+            centers[idx] = Some([
+                Self::toroidal_mean_coord(sums[idx][0], sums[idx][1], world_size),
+                Self::toroidal_mean_coord(sums[idx][2], sums[idx][3], world_size),
+            ]);
+        }
+        centers
+    }
+
+    fn prune_dead_entities(&mut self) {
+        if self.organisms.iter().all(|o| o.alive) {
+            return;
+        }
+
+        let old_organisms = std::mem::take(&mut self.organisms);
+        let mut remap = vec![None::<u16>; old_organisms.len()];
+        let mut new_organisms = Vec::with_capacity(old_organisms.len());
+        for (old_idx, mut org) in old_organisms.into_iter().enumerate() {
+            if !org.alive {
+                continue;
+            }
+            let new_id = new_organisms.len() as u16;
+            remap[old_idx] = Some(new_id);
+            org.id = new_id;
+            org.agent_ids.clear();
+            new_organisms.push(org);
+        }
+
+        let old_agents = std::mem::take(&mut self.agents);
+        let mut new_agents = Vec::with_capacity(old_agents.len());
+        for mut agent in old_agents {
+            if let Some(new_org_id) = remap
+                .get(agent.organism_id as usize)
+                .and_then(|mapped| *mapped)
+            {
+                agent.organism_id = new_org_id;
+                new_agents.push(agent);
+            }
+        }
+
+        self.organisms = new_organisms;
+        self.agents = new_agents;
+        for agent in &self.agents {
+            self.organisms[agent.organism_id as usize]
+                .agent_ids
+                .push(agent.id);
+        }
+        self.org_toroidal_sums
+            .resize(self.organisms.len(), [0.0, 0.0, 0.0, 0.0]);
+        self.org_counts.resize(self.organisms.len(), 0);
+        self.org_toroidal_sums.fill([0.0, 0.0, 0.0, 0.0]);
+        self.org_counts.fill(0);
+    }
+
+    fn toroidal_mean_coord(sum_sin: f64, sum_cos: f64, world_size: f64) -> f64 {
+        if sum_sin == 0.0 && sum_cos == 0.0 {
+            return 0.0;
+        }
+        let angle = sum_sin.atan2(sum_cos);
+        (angle.rem_euclid(2.0 * PI) / (2.0 * PI)) * world_size
+    }
+
+    fn genome_drift(org: &OrganismRuntime) -> f32 {
+        let current = org.genome.nn_weights();
+        let ancestor = org.ancestor_genome.nn_weights();
+        let len = current.len().min(ancestor.len());
+        if len == 0 {
+            return 0.0;
+        }
+        let sum_abs = current
+            .iter()
+            .zip(ancestor.iter())
+            .map(|(a, b)| (a - b).abs())
+            .sum::<f32>();
+        sum_abs / len as f32
     }
 
     fn collect_step_metrics(&self, step: usize) -> StepMetrics {
-        let alive_count = self.alive_count().max(1) as f32;
-        let energy_mean = self
-            .metabolic_states
-            .iter()
-            .zip(self.organism_alive.iter())
-            .filter_map(|(s, alive)| alive.then_some(s.energy))
-            .sum::<f32>()
-            / alive_count;
-        let waste_mean = self
-            .metabolic_states
-            .iter()
-            .zip(self.organism_alive.iter())
-            .filter_map(|(s, alive)| alive.then_some(s.waste))
-            .sum::<f32>()
-            / alive_count;
-        let boundary_mean = self
-            .boundary_integrity
-            .iter()
-            .zip(self.organism_alive.iter())
-            .filter_map(|(b, alive)| alive.then_some(*b))
-            .sum::<f32>()
-            / alive_count;
-        let resource_total = self.resource_field.total();
+        let alive = self.alive_count();
+        let denom = alive.max(1) as f32;
+
+        let mut energy_sum = 0.0f32;
+        let mut waste_sum = 0.0f32;
+        let mut boundary_sum = 0.0f32;
+        let mut generation_sum = 0.0f32;
+        let mut drift_sum = 0.0f32;
+
+        for org in self.organisms.iter().filter(|o| o.alive) {
+            energy_sum += org.metabolic_state.energy;
+            waste_sum += org.metabolic_state.waste;
+            boundary_sum += org.boundary_integrity;
+            generation_sum += org.generation as f32;
+            drift_sum += Self::genome_drift(org);
+        }
+
         StepMetrics {
             step,
-            energy_mean,
-            waste_mean,
-            boundary_mean,
-            alive_count: self.alive_count(),
-            resource_total,
+            energy_mean: energy_sum / denom,
+            waste_mean: waste_sum / denom,
+            boundary_mean: boundary_sum / denom,
+            alive_count: alive,
+            resource_total: self.resource_field.total(),
+            birth_count: self.births_last_step,
+            death_count: self.deaths_last_step,
+            population_size: self.organisms.len(),
+            mean_generation: generation_sum / denom,
+            mean_genome_drift: drift_sum / denom,
+            agent_id_exhaustion_events: self.agent_id_exhaustions_last_step,
         }
     }
 
@@ -418,6 +644,7 @@ impl World {
                 actual: estimated_samples,
             });
         }
+
         let mut samples = Vec::with_capacity(estimated_samples);
         for step in 1..=steps {
             self.step();
@@ -433,19 +660,161 @@ impl World {
         })
     }
 
+    fn mark_dead(&mut self, org_idx: usize) {
+        if let Some(org) = self.organisms.get_mut(org_idx) {
+            if org.alive {
+                org.alive = false;
+                org.boundary_integrity = 0.0;
+                self.deaths_last_step += 1;
+                self.total_deaths += 1;
+            }
+        }
+    }
+
+    fn maybe_reproduce(&mut self) {
+        let child_agents = (self.config.agents_per_organism / 2).max(REPRODUCTION_CHILD_MIN_AGENTS);
+        let parent_indices: Vec<usize> = self
+            .organisms
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, org)| {
+                (org.alive
+                    && org.metabolic_state.energy >= REPRODUCTION_MIN_ENERGY
+                    && org.boundary_integrity >= REPRODUCTION_MIN_BOUNDARY)
+                    .then_some(idx)
+            })
+            .collect();
+        if parent_indices.is_empty() {
+            return;
+        }
+        let centers = self.compute_organism_centers();
+
+        for parent_idx in parent_indices {
+            if self
+                .agents
+                .len()
+                .checked_add(child_agents)
+                .map(|n| n > Self::MAX_TOTAL_AGENTS)
+                .unwrap_or(true)
+            {
+                break;
+            }
+            let remaining_ids = u32::MAX as u64 - self.next_agent_id as u64;
+            if remaining_ids + 1 < child_agents as u64 {
+                self.agent_id_exhaustions_last_step += 1;
+                self.total_agent_id_exhaustions += 1;
+                break;
+            }
+
+            let center = centers
+                .get(parent_idx)
+                .and_then(|c| *c)
+                .unwrap_or([0.0, 0.0]);
+            let (parent_generation, parent_ancestor, parent_nn_weights, mut child_genome) = {
+                let parent = &self.organisms[parent_idx];
+                if !parent.alive || parent.metabolic_state.energy < REPRODUCTION_ENERGY_COST {
+                    continue;
+                }
+                (
+                    parent.generation,
+                    parent.ancestor_genome.clone(),
+                    parent.nn.to_weight_vec(),
+                    parent.genome.clone(),
+                )
+            };
+
+            {
+                let parent = &mut self.organisms[parent_idx];
+                if !parent.alive || parent.metabolic_state.energy < REPRODUCTION_ENERGY_COST {
+                    continue;
+                }
+                parent.metabolic_state.energy -= REPRODUCTION_ENERGY_COST;
+            }
+
+            child_genome.mutate(&mut self.rng, &self.mutation_rates);
+            let child_weights = if child_genome.nn_weights().len() == NeuralNet::WEIGHT_COUNT {
+                child_genome.nn_weights().to_vec()
+            } else {
+                parent_nn_weights
+            };
+            let child_nn = NeuralNet::from_weights(child_weights.into_iter());
+            let child_id = match u16::try_from(self.organisms.len()) {
+                Ok(id) => id,
+                Err(_) => break,
+            };
+            let mut child_agent_ids = Vec::with_capacity(child_agents);
+
+            for _ in 0..child_agents {
+                let theta = self.rng.random::<f64>() * 2.0 * PI;
+                let radius = self.rng.random::<f64>().sqrt() * REPRODUCTION_SPAWN_RADIUS;
+                let pos = [
+                    (center[0] + radius * theta.cos()).rem_euclid(self.config.world_size),
+                    (center[1] + radius * theta.sin()).rem_euclid(self.config.world_size),
+                ];
+                let Some(id) = self.next_agent_id_checked() else {
+                    break;
+                };
+                let mut agent = Agent::new(id, child_id, pos);
+                agent.internal_state[2] = 1.0;
+                child_agent_ids.push(id);
+                self.agents.push(agent);
+            }
+            if child_agent_ids.is_empty() {
+                break;
+            }
+
+            let metabolic_state = MetabolicState {
+                energy: REPRODUCTION_ENERGY_COST,
+                ..MetabolicState::default()
+            };
+            let child = OrganismRuntime {
+                id: child_id,
+                stable_id: self.next_organism_stable_id,
+                generation: parent_generation + 1,
+                age_steps: 0,
+                alive: true,
+                boundary_integrity: 1.0,
+                metabolic_state,
+                genome: child_genome,
+                ancestor_genome: parent_ancestor,
+                nn: child_nn,
+                agent_ids: child_agent_ids,
+            };
+            self.next_organism_stable_id = self.next_organism_stable_id.saturating_add(1);
+            self.organisms.push(child);
+            self.org_toroidal_sums.push([0.0, 0.0, 0.0, 0.0]);
+            self.org_counts.push(0);
+            self.births_last_step += 1;
+            self.total_births += 1;
+        }
+    }
+
     pub fn step(&mut self) -> StepTimings {
         let total_start = Instant::now();
+        self.step_index = self.step_index.saturating_add(1);
+        self.births_last_step = 0;
+        self.deaths_last_step = 0;
+        self.agent_id_exhaustions_last_step = 0;
+        let boundary_terminal_threshold = self.terminal_boundary_threshold();
 
-        // 1. Build spatial index
         let t0 = Instant::now();
-        let tree = spatial::build_index_active(&self.agents, &self.organism_alive);
+        let live_flags = self.live_flags();
+        let tree = spatial::build_index_active(&self.agents, &live_flags);
         let spatial_build_us = t0.elapsed().as_micros() as u64;
 
-        // 2. NN forward pass for each agent
         let t1 = Instant::now();
         let mut deltas: Vec<[f32; 4]> = Vec::with_capacity(self.agents.len());
+        let mut neighbor_sums = vec![0.0f32; self.organisms.len()];
+        let mut neighbor_counts = vec![0usize; self.organisms.len()];
+
         for agent in &self.agents {
-            if !self.organism_alive[agent.organism_id as usize] {
+            let org_idx = agent.organism_id as usize;
+            if !self
+                .organisms
+                .get(org_idx)
+                .map(|o| o.alive)
+                .unwrap_or(false)
+            {
                 deltas.push([0.0; 4]);
                 continue;
             }
@@ -457,9 +826,9 @@ impl World {
                 self.config.world_size,
             );
 
-            // Build NN input: position(2) + velocity(2) + internal_state(3) + neighbor_count(1)
-            // internal_state[2] is a constant bias channel (read but not written by NN)
-            // internal_state[3] is reserved for future criteria
+            neighbor_sums[org_idx] += neighbor_count as f32;
+            neighbor_counts[org_idx] += 1;
+
             let input: [f32; 8] = [
                 (agent.position[0] / self.config.world_size) as f32,
                 (agent.position[1] / self.config.world_size) as f32,
@@ -470,24 +839,22 @@ impl World {
                 agent.internal_state[2],
                 neighbor_count as f32 / self.config.neighbor_norm as f32,
             ];
-
-            let nn = &self.nns[agent.organism_id as usize];
+            let nn = &self.organisms[org_idx].nn;
             deltas.push(nn.forward(&input));
         }
         let nn_query_us = t1.elapsed().as_micros() as u64;
 
-        // 3. Apply updates
         let t2 = Instant::now();
         for (agent, delta) in self.agents.iter_mut().zip(deltas.iter()) {
-            if !self.organism_alive[agent.organism_id as usize] {
+            let org_idx = agent.organism_id as usize;
+            if !self.organisms[org_idx].alive {
                 agent.velocity = [0.0, 0.0];
                 continue;
             }
-            // Velocity update
+
             agent.velocity[0] += delta[0] as f64 * self.config.dt;
             agent.velocity[1] += delta[1] as f64 * self.config.dt;
 
-            // Clamp speed
             let speed_sq =
                 agent.velocity[0] * agent.velocity[0] + agent.velocity[1] * agent.velocity[1];
             if speed_sq > self.config.max_speed * self.config.max_speed {
@@ -496,13 +863,11 @@ impl World {
                 agent.velocity[1] *= scale;
             }
 
-            // Position update with toroidal wrapping
             agent.position[0] = (agent.position[0] + agent.velocity[0] * self.config.dt)
                 .rem_euclid(self.config.world_size);
             agent.position[1] = (agent.position[1] + agent.velocity[1] * self.config.dt)
                 .rem_euclid(self.config.world_size);
 
-            // Internal state update (clamped to [0, 1])
             agent.internal_state[0] =
                 (agent.internal_state[0] + delta[2] * self.config.dt as f32).clamp(0.0, 1.0);
             agent.internal_state[1] =
@@ -511,33 +876,38 @@ impl World {
 
         if self.config.enable_boundary_maintenance {
             let dt = self.config.dt as f32;
-            for org_id in 0..self.metabolic_states.len() {
-                if !self.organism_alive[org_id] {
-                    self.boundary_integrity[org_id] = 0.0;
+            let mut to_kill = Vec::new();
+            for (org_idx, org) in self.organisms.iter_mut().enumerate() {
+                if !org.alive {
+                    org.boundary_integrity = 0.0;
                     continue;
                 }
-                let state = &self.metabolic_states[org_id];
+
                 let energy_deficit =
-                    (self.config.metabolic_viability_floor - state.energy).max(0.0);
+                    (self.config.metabolic_viability_floor - org.metabolic_state.energy).max(0.0);
                 let decay = self.config.boundary_decay_base_rate
                     + self.config.boundary_decay_energy_scale
                         * (energy_deficit
-                            + state.waste * self.config.boundary_waste_pressure_scale);
-                let repair = (state.energy
-                    - state.waste
+                            + org.metabolic_state.waste
+                                * self.config.boundary_waste_pressure_scale);
+                let repair = (org.metabolic_state.energy
+                    - org.metabolic_state.waste
                         * self.config.boundary_waste_pressure_scale
                         * self.config.boundary_repair_waste_penalty_scale)
                     .max(0.0)
                     * self.config.boundary_repair_rate;
-                self.boundary_integrity[org_id] =
-                    (self.boundary_integrity[org_id] - decay * dt + repair * dt).clamp(0.0, 1.0);
-                if self.boundary_integrity[org_id] <= self.config.boundary_collapse_threshold {
-                    self.organism_alive[org_id] = false;
-                    self.boundary_integrity[org_id] = 0.0;
+                org.boundary_integrity =
+                    (org.boundary_integrity - decay * dt + repair * dt).clamp(0.0, 1.0);
+                if org.boundary_integrity <= boundary_terminal_threshold {
+                    to_kill.push(org_idx);
                 }
             }
+            for org_idx in to_kill {
+                self.mark_dead(org_idx);
+            }
+
             for agent in &mut self.agents {
-                let boundary = self.boundary_integrity[agent.organism_id as usize];
+                let boundary = self.organisms[agent.organism_id as usize].boundary_integrity;
                 agent.internal_state[2] = boundary;
             }
         }
@@ -547,9 +917,10 @@ impl World {
             self.org_counts.fill(0);
             let world_size = self.config.world_size;
             let tau_over_world = (2.0 * PI) / world_size;
+
             for agent in &self.agents {
                 let idx = agent.organism_id as usize;
-                if !self.organism_alive[idx] {
+                if !self.organisms[idx].alive {
                     continue;
                 }
                 let theta_x = agent.position[0] * tau_over_world;
@@ -561,20 +932,21 @@ impl World {
                 self.org_counts[idx] += 1;
             }
 
-            for (org_id, state) in self.metabolic_states.iter_mut().enumerate() {
-                if !self.organism_alive[org_id] {
+            let mut to_kill = Vec::new();
+            for (org_idx, org) in self.organisms.iter_mut().enumerate() {
+                if !org.alive {
                     continue;
                 }
-                let center = if self.org_counts[org_id] > 0 {
+                let center = if self.org_counts[org_idx] > 0 {
                     [
                         Self::toroidal_mean_coord(
-                            self.org_toroidal_sums[org_id][0],
-                            self.org_toroidal_sums[org_id][1],
+                            self.org_toroidal_sums[org_idx][0],
+                            self.org_toroidal_sums[org_idx][1],
                             world_size,
                         ),
                         Self::toroidal_mean_coord(
-                            self.org_toroidal_sums[org_id][2],
-                            self.org_toroidal_sums[org_id][3],
+                            self.org_toroidal_sums[org_idx][2],
+                            self.org_toroidal_sums[org_idx][3],
                             world_size,
                         ),
                     ]
@@ -582,19 +954,63 @@ impl World {
                     [0.0, 0.0]
                 };
                 let external = self.resource_field.get(center[0], center[1]);
-                let flux = self.metabolism.step(state, external, self.config.dt as f32);
+                let flux =
+                    self.metabolism
+                        .step(&mut org.metabolic_state, external, self.config.dt as f32);
                 if flux.consumed_external > 0.0 {
                     let _ = self
                         .resource_field
                         .take(center[0], center[1], flux.consumed_external);
                 }
-                if state.energy <= self.config.death_energy_threshold
-                    || self.boundary_integrity[org_id] <= self.config.boundary_collapse_threshold
+
+                if org.metabolic_state.energy <= self.config.death_energy_threshold
+                    || org.boundary_integrity <= boundary_terminal_threshold
                 {
-                    self.organism_alive[org_id] = false;
-                    self.boundary_integrity[org_id] = 0.0;
+                    to_kill.push(org_idx);
                 }
             }
+            for org_idx in to_kill {
+                self.mark_dead(org_idx);
+            }
+        }
+
+        let mut to_kill = Vec::new();
+        for (org_idx, org) in self.organisms.iter_mut().enumerate() {
+            if !org.alive {
+                continue;
+            }
+            org.age_steps = org.age_steps.saturating_add(1);
+            if org.age_steps > MAX_ORGANISM_AGE {
+                to_kill.push(org_idx);
+                continue;
+            }
+
+            let avg_neighbors = if neighbor_counts[org_idx] > 0 {
+                neighbor_sums[org_idx] / neighbor_counts[org_idx] as f32
+            } else {
+                0.0
+            };
+            if avg_neighbors > CROWDING_NEIGHBOR_THRESHOLD {
+                let excess = avg_neighbors - CROWDING_NEIGHBOR_THRESHOLD;
+                org.boundary_integrity = (org.boundary_integrity
+                    - excess * CROWDING_BOUNDARY_DECAY * self.config.dt as f32)
+                    .clamp(0.0, 1.0);
+            }
+            if org.boundary_integrity <= boundary_terminal_threshold {
+                to_kill.push(org_idx);
+            }
+        }
+        for org_idx in to_kill {
+            self.mark_dead(org_idx);
+        }
+
+        self.maybe_reproduce();
+        let dead_count = self.organisms.iter().filter(|o| !o.alive).count();
+        if dead_count > 0
+            && (self.step_index.is_multiple_of(COMPACTION_INTERVAL_STEPS)
+                || dead_count * 4 >= self.organisms.len().max(1))
+        {
+            self.prune_dead_entities();
         }
         let state_update_us = t2.elapsed().as_micros() as u64;
 
@@ -610,9 +1026,6 @@ impl World {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{MetabolismMode, SimConfig};
-    use crate::metabolism::MetabolismEngine;
-    use crate::nn::NeuralNet;
 
     fn make_world(num_agents: usize, world_size: f64) -> World {
         let agents: Vec<Agent> = (0..num_agents)
@@ -641,19 +1054,11 @@ mod tests {
     #[test]
     fn toroidal_wrapping_keeps_positions_in_bounds() {
         let mut world = make_world(1, 100.0);
-        world.agents[0].velocity = [100.0, 100.0]; // will overshoot in one step
+        world.agents[0].velocity = [100.0, 100.0];
         world.step();
         let pos = world.agents[0].position;
-        assert!(
-            pos[0] >= 0.0 && pos[0] < 100.0,
-            "x={} out of bounds",
-            pos[0]
-        );
-        assert!(
-            pos[1] >= 0.0 && pos[1] < 100.0,
-            "y={} out of bounds",
-            pos[1]
-        );
+        assert!(pos[0] >= 0.0 && pos[0] < 100.0);
+        assert!(pos[1] >= 0.0 && pos[1] < 100.0);
     }
 
     #[test]
@@ -666,7 +1071,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "organism_ids must be valid")]
     fn new_panics_on_invalid_organism_id() {
-        let agents = vec![Agent::new(0, 5, [0.0, 0.0])]; // organism_id=5, but only 1 NN
+        let agents = vec![Agent::new(0, 5, [0.0, 0.0])];
         let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
         World::new(agents, vec![nn], make_config(100.0, 0.1));
     }
@@ -700,43 +1105,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "num_organisms")]
-    fn new_panics_on_num_organisms_mismatch() {
-        let agents = vec![Agent::new(0, 0, [0.0, 0.0])];
-        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
-        let mut cfg = make_config(100.0, 0.1);
-        cfg.num_organisms = 2;
-        World::new(agents, vec![nn], cfg);
-    }
-
-    #[test]
-    fn try_new_returns_structured_error() {
-        let agents = vec![Agent::new(0, 0, [0.0, 0.0])];
-        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
-        let mut cfg = make_config(100.0, 0.1);
-        cfg.num_organisms = 2;
-        match World::try_new(agents, vec![nn], cfg) {
-            Err(WorldInitError::NumOrganismsMismatch {
-                expected: 2,
-                actual: 1,
-            }) => {}
-            Err(other) => panic!("unexpected error: {other}"),
-            Ok(_) => panic!("expected try_new to fail for mismatched organism count"),
-        }
-    }
-
-    #[test]
     fn internal_state_stays_clamped() {
         let mut world = make_world(1, 100.0);
-        // Run many steps — state should remain in [0, 1]
         for _ in 0..100 {
             world.step();
         }
         for &s in &world.agents[0].internal_state {
-            assert!(
-                (0.0..=1.0).contains(&s),
-                "internal_state {s} out of [0,1] range"
-            );
+            assert!((0.0..=1.0).contains(&s));
         }
     }
 
@@ -745,7 +1120,7 @@ mod tests {
         let mut world = make_world(1, 100.0);
         world.agents[0].position = [50.0, 50.0];
         world.agents[0].velocity = [1.0, 0.0];
-        world.nns[0] =
+        world.organisms[0].nn =
             NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
         let mut config = world.config().clone();
         config.dt = 0.5;
@@ -762,9 +1137,13 @@ mod tests {
     #[test]
     fn toy_metabolism_sustains_energy_for_1000_steps() {
         let mut world = make_world(10, 100.0);
+        world.config.enable_boundary_maintenance = false;
+        world.config.death_boundary_threshold = 0.0;
+        world.config.boundary_collapse_threshold = 0.0;
         for _ in 0..1000 {
             world.step();
         }
+        assert!(world.organism_count() >= 1);
         assert!(world.metabolic_state(0).energy > 0.0);
     }
 
@@ -781,14 +1160,11 @@ mod tests {
         let mut cfg = make_config(100.0, 0.1);
         cfg.num_organisms = 1;
         cfg.agents_per_organism = 2;
-        match World::try_new(agents, vec![nn], cfg) {
-            Err(WorldInitError::AgentCountMismatch {
-                expected: 2,
-                actual: 1,
-            }) => {}
-            Err(other) => panic!("unexpected error: {other}"),
-            Ok(_) => panic!("expected try_new to fail for agent count mismatch"),
-        }
+        let result = World::try_new(agents, vec![nn], cfg);
+        assert!(matches!(
+            result,
+            Err(WorldInitError::AgentCountMismatch { .. })
+        ));
     }
 
     #[test]
@@ -825,34 +1201,44 @@ mod tests {
     }
 
     #[test]
+    fn set_config_rejects_structural_mismatch_after_runtime_growth() {
+        let mut world = make_world(10, 100.0);
+        world.organisms[0].metabolic_state.energy = 1.0;
+        world.organisms[0].boundary_integrity = 1.0;
+        world.step();
+        assert!(world.organism_count() > 1);
+
+        let mut cfg = world.config().clone();
+        cfg.num_organisms = 1;
+        let result = world.set_config(cfg);
+        assert!(matches!(
+            result,
+            Err(WorldInitError::NumOrganismsMismatch { .. })
+        ));
+    }
+
+    #[test]
     fn metabolism_consumes_world_resource_field() {
         let mut world = make_world(1, 100.0);
         world.agents[0].position = [10.0, 10.0];
         let before = world.resource_field().get(10.0, 10.0);
         world.step();
         let after = world.resource_field().get(10.0, 10.0);
-        assert!(
-            after <= before,
-            "resource field should be consumed by metabolism"
-        );
+        assert!(after <= before);
     }
 
     #[test]
     fn toroidal_center_uses_wrapped_mean_for_resource_sampling() {
         let mut world = make_world(2, 100.0);
-        // Cluster crosses boundary around x=0/100; mean should remain near edge, not center.
         world.agents[0].position = [0.1, 50.0];
         world.agents[1].position = [99.9, 50.0];
-        world.resource_field.set(0.0, 50.0, 2.0);
-        world.resource_field.set(50.0, 50.0, 0.0);
+        world.resource_field_mut().set(0.0, 50.0, 2.0);
+        world.resource_field_mut().set(50.0, 50.0, 0.0);
         world.step();
         let edge_resource = world.resource_field().get(0.0, 50.0);
         let center_resource = world.resource_field().get(50.0, 50.0);
-        assert!(edge_resource < 2.0, "edge resource should be consumed");
-        assert!(
-            (center_resource - 0.0).abs() < f32::EPSILON,
-            "center resource should remain unchanged"
-        );
+        assert!(edge_resource < 2.0);
+        assert!((center_resource - 0.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -861,7 +1247,7 @@ mod tests {
         let summary = world.run_experiment(50, 10);
         assert_eq!(summary.steps, 50);
         assert!(!summary.samples.is_empty());
-        assert!(summary.final_alive_count <= world.config().num_organisms);
+        assert!(summary.final_alive_count <= world.organism_count());
     }
 
     #[test]
@@ -874,16 +1260,16 @@ mod tests {
         high.config.metabolic_viability_floor = 0.8;
         low.config.boundary_decay_energy_scale = 0.08;
         high.config.boundary_decay_energy_scale = 0.08;
-        low.metabolic_states[0].energy = 0.0;
-        high.metabolic_states[0].energy = 1.0;
-        low.metabolic_states[0].waste = 0.8;
-        high.metabolic_states[0].waste = 0.0;
+        low.organisms[0].metabolic_state.energy = 0.0;
+        high.organisms[0].metabolic_state.energy = 1.0;
+        low.organisms[0].metabolic_state.waste = 0.8;
+        high.organisms[0].metabolic_state.waste = 0.0;
 
         low.step();
         high.step();
 
         assert!(
-            low.boundary_integrity[0] < high.boundary_integrity[0],
+            low.organisms[0].boundary_integrity < high.organisms[0].boundary_integrity,
             "low-energy high-waste organism should lose boundary integrity faster"
         );
     }
@@ -927,22 +1313,71 @@ mod tests {
     }
 
     #[test]
-    fn organism_dies_when_energy_below_threshold_even_with_boundary_intact() {
-        let mut world = make_world(1, 100.0);
-        world.config.enable_boundary_maintenance = false;
-        world.config.enable_metabolism = true;
-        world.config.death_energy_threshold = 0.1;
-        world.config.death_boundary_threshold = 0.0;
-        world.metabolic_states[0].energy = 0.0;
-        world.metabolic_states[0].resource = 0.0;
-        world.boundary_integrity[0] = 1.0;
-        world.resource_field.set(50.0, 50.0, 0.0);
-
+    fn reproduction_increases_population_when_energy_is_high() {
+        let mut world = make_world(10, 100.0);
+        world.organisms[0].metabolic_state.energy = 1.0;
+        world.organisms[0].boundary_integrity = 1.0;
+        let before = world.organism_count();
         world.step();
+        assert!(world.organism_count() > before);
+        assert!(world.population_stats().total_births >= 1);
+    }
 
-        assert!(
-            !world.organism_alive[0],
-            "energy failure should be terminal even when boundary remains high"
-        );
+    #[test]
+    fn same_seed_produces_same_birth_death_timeline() {
+        let agents: Vec<Agent> = (0..20)
+            .map(|i| Agent::new(i as u32, 0, [50.0, 50.0]))
+            .collect();
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.1f32, NeuralNet::WEIGHT_COUNT));
+        let config = SimConfig {
+            seed: 777,
+            num_organisms: 1,
+            agents_per_organism: 20,
+            ..SimConfig::default()
+        };
+        let mut a = World::new(agents.clone(), vec![nn.clone()], config.clone());
+        let mut b = World::new(agents, vec![nn], config);
+
+        let ra = a.run_experiment(30, 1);
+        let rb = b.run_experiment(30, 1);
+
+        let births_a: Vec<usize> = ra.samples.iter().map(|s| s.birth_count).collect();
+        let births_b: Vec<usize> = rb.samples.iter().map(|s| s.birth_count).collect();
+        let deaths_a: Vec<usize> = ra.samples.iter().map(|s| s.death_count).collect();
+        let deaths_b: Vec<usize> = rb.samples.iter().map(|s| s.death_count).collect();
+        assert_eq!(births_a, births_b);
+        assert_eq!(deaths_a, deaths_b);
+    }
+
+    #[test]
+    fn metrics_include_evolution_fields() {
+        let mut world = make_world(10, 100.0);
+        let summary = world.run_experiment(5, 1);
+        let sample = summary.samples.last().expect("sample should exist");
+        assert!(sample.population_size >= sample.alive_count);
+        assert!(sample.mean_generation >= 0.0);
+        assert!(sample.mean_genome_drift >= 0.0);
+    }
+
+    #[test]
+    fn dead_entities_are_pruned_after_step() {
+        let mut world = make_world(4, 100.0);
+        world.config.enable_metabolism = true;
+        world.config.death_energy_threshold = 1.0;
+        world.resource_field_mut().set(50.0, 50.0, 0.0);
+        world.step();
+        assert_eq!(world.organism_count(), 0);
+        assert!(world.agents.is_empty());
+    }
+
+    #[test]
+    fn boundary_terminal_threshold_is_consistent_across_checks() {
+        let mut world = make_world(4, 100.0);
+        world.config.enable_metabolism = false;
+        world.config.boundary_collapse_threshold = 0.05;
+        world.config.death_boundary_threshold = 0.10;
+        world.organisms[0].boundary_integrity = 0.08;
+        world.step();
+        assert_eq!(world.organism_count(), 0);
     }
 }

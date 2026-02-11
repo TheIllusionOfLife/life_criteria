@@ -88,6 +88,20 @@ impl NeuralNet {
         output
     }
 
+    /// Flatten network parameters in the same order expected by `from_weights`.
+    pub fn to_weight_vec(&self) -> Vec<f32> {
+        let mut out = Vec::with_capacity(Self::WEIGHT_COUNT);
+        for row in &self.w_ih {
+            out.extend_from_slice(row);
+        }
+        out.extend_from_slice(&self.b_h);
+        for row in &self.w_ho {
+            out.extend_from_slice(row);
+        }
+        out.extend_from_slice(&self.b_o);
+        out
+    }
+
     pub const WEIGHT_COUNT: usize =
         INPUT_SIZE * HIDDEN_SIZE + HIDDEN_SIZE + HIDDEN_SIZE * OUTPUT_SIZE + OUTPUT_SIZE;
 }
@@ -126,5 +140,13 @@ mod tests {
     #[should_panic(expected = "insufficient weights")]
     fn from_weights_panics_on_short_iterator() {
         NeuralNet::from_weights(std::iter::repeat_n(0.0f32, 10));
+    }
+
+    #[test]
+    fn to_weight_vec_round_trips_into_equivalent_network() {
+        let nn = NeuralNet::from_weights((0..NeuralNet::WEIGHT_COUNT).map(|i| i as f32 * 0.01));
+        let round_trip = NeuralNet::from_weights(nn.to_weight_vec().into_iter());
+        let input = [0.25f32; INPUT_SIZE];
+        assert_eq!(nn.forward(&input), round_trip.forward(&input));
     }
 }
