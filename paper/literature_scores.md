@@ -39,7 +39,7 @@ Scoring rubric (1--5):
 - Response: 3 --- Creatures exhibit chemotaxis-like behavior, collision avoidance, and directed locomotion in response to other patterns, constituting a dynamic single-process response. However, there is no explicit sensory mechanism; responses emerge from the local CA update rule.
 - Evol: 2 --- Pattern discovery uses external genetic algorithms or interactive evolutionary computation; there is no intrinsic evolution within the simulation. The CA rule does not natively support heritable variation and selection among competing patterns.
 
-## ALIEN (Heinemann ~2021)
+## ALIEN (Heinemann 2008)
 
 - Cell.Org: 4 --- Organisms are networks of typed particles (nerve, sensor, muscle, constructor, attacker) connected by bonds; structures can be partially damaged, fuse, or fall apart. The multi-component architecture with specialized cell types constitutes multi-process boundary maintenance, though boundaries are not fully self-repairing autonomously.
 - Metab: 3 --- Cells possess internal energy that depletes through radiation and action execution; energy is absorbed from free energy particles. This is a dynamic single-currency energy flow (emission/absorption) without multi-step metabolic transformation pathways.
@@ -78,7 +78,7 @@ Scoring rubric (1--5):
 | Polyworld (1994) | 2 | 3 | 1 | 1 | 3 | 4 | 4 | 18 |
 | Avida (2004) | 2 | 3 | 1 | 2 | 4 | 3 | 5 | 20 |
 | Lenia (2019) | 3 | 1 | 2 | 2 | 2 | 3 | 2 | 15 |
-| ALIEN (~2021) | 4 | 3 | 2 | 3 | 4 | 4 | 4 | 24 |
+| ALIEN (2008) | 4 | 3 | 2 | 3 | 4 | 4 | 4 | 24 |
 | Flow-Lenia (2023) | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 21 |
 | Coralai (2024) | 3 | 3 | 2 | 3 | 3 | 3 | 3 | 20 |
 

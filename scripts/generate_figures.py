@@ -6,12 +6,11 @@ Outputs PDF figures to paper/figures/ for inclusion in the LaTeX manuscript.
 from pathlib import Path
 
 import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import numpy as np
-
-matplotlib.use("Agg")
 
 # Paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -127,13 +126,13 @@ def generate_timeseries(data: list[dict]) -> None:
             vals = groups[(condition, step)]
             arr = np.array(vals)
             means.append(arr.mean())
-            sems.append(arr.std(ddof=1) / np.sqrt(len(arr)))
+            sems.append(arr.std(ddof=1) / np.sqrt(len(arr)) if len(arr) >= 2 else 0.0)
 
         means = np.array(means)
         sems = np.array(sems)
         color = COLORS[condition]
         lw = 2.0 if condition == "normal" else 1.2
-        ls = "-" if condition == "normal" else "-"
+        ls = "-" if condition == "normal" else "--"
         ax.plot(steps, means, color=color, linewidth=lw, linestyle=ls,
                 label=LABELS[condition], zorder=10 if condition == "normal" else 5)
         ax.fill_between(steps, means - sems, means + sems,
