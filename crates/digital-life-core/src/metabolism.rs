@@ -150,7 +150,10 @@ pub fn decode_entry_node_id(segment: &[f32], node_count: usize) -> u16 {
 /// - [13]: conversion efficiency → sigmoid(x)*0.7+0.3 → [0.3, 1.0]
 /// - 14-15: reserved
 pub fn decode_metabolic_graph(segment: &[f32]) -> MetabolicGraph {
-    assert!(segment.len() >= 16, "segment must have at least 16 elements");
+    assert!(
+        segment.len() >= 16,
+        "segment must have at least 16 elements"
+    );
 
     let node_count = (sigmoid(segment[0]) * NODE_COUNT_SCALE + NODE_COUNT_OFFSET)
         .round()
