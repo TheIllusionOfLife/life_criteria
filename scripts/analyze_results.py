@@ -82,6 +82,40 @@ def cohens_d(a: np.ndarray, b: np.ndarray) -> float:
     return float((np.mean(a) - np.mean(b)) / pooled_sd)
 
 
+def cohens_d_ci(a: np.ndarray, b: np.ndarray, alpha: float = 0.05) -> tuple[float, float]:
+    """Compute Wald-type CI for Cohen's d with approximate standard error.
+
+    Uses the Hedges & Olkin (1985) approximation for the SE of d.
+    """
+    na, nb = len(a), len(b)
+    if na < 2 or nb < 2:
+        return (0.0, 0.0)
+    d = cohens_d(a, b)
+    df = na + nb - 2
+    se_d = np.sqrt((na + nb) / (na * nb) + d**2 / (2 * (na + nb - 2)))
+    t_lo = stats.t.ppf(alpha / 2, df)
+    t_hi = stats.t.ppf(1 - alpha / 2, df)
+    return (float(d + t_lo * se_d), float(d + t_hi * se_d))
+
+
+def bootstrap_cliffs_delta_ci(
+    a: np.ndarray, b: np.ndarray, n_boot: int = 2000, alpha: float = 0.05
+) -> tuple[float, float]:
+    """Compute bootstrap CI for Cliff's delta using percentile method."""
+    na, nb = len(a), len(b)
+    if na < 2 or nb < 2:
+        return (0.0, 0.0)
+    rng = np.random.default_rng(42)
+    boot_deltas = np.empty(n_boot)
+    for i in range(n_boot):
+        a_boot = a[rng.integers(0, na, size=na)]
+        b_boot = b[rng.integers(0, nb, size=nb)]
+        boot_deltas[i] = cliffs_delta(a_boot, b_boot)
+    lo = float(np.percentile(boot_deltas, 100 * alpha / 2))
+    hi = float(np.percentile(boot_deltas, 100 * (1 - alpha / 2)))
+    return (lo, hi)
+
+
 def cliffs_delta(a: np.ndarray, b: np.ndarray) -> float:
     """Compute Cliff's delta (nonparametric effect size).
 
@@ -120,6 +154,25 @@ def holm_bonferroni(p_values: list[float]) -> list[float]:
     return corrected
 
 
+def extract_alive_at_step(results: list[dict], target_step: int) -> np.ndarray:
+    """Extract alive_count at a specific step from each seed's samples.
+
+    Finds the sample closest to target_step. For step 500 with sample_every=50,
+    this is sample index 10.
+    """
+    counts = []
+    for r in results:
+        if "samples" not in r:
+            continue
+        best = None
+        for s in r["samples"]:
+            if best is None or abs(s["step"] - target_step) < abs(best["step"] - target_step):
+                best = s
+        if best is not None:
+            counts.append(best["alive_count"])
+    return np.array(counts)
+
+
 def distribution_stats(arr: np.ndarray) -> dict:
     """Compute median, IQR, mean, and SD for an array."""
     if len(arr) == 0:
@@ -154,12 +207,17 @@ def main():
     n_normal = len(normal_alive)
     print(f"Normal baseline: n={n_normal}, mean={np.mean(normal_alive):.1f}", file=sys.stderr)
 
+    # Load all condition data upfront (reused for short-horizon analysis)
+    condition_data: dict[str, list[dict]] = {}
+    for condition in CONDITIONS:
+        condition_data[condition] = load_condition(prefix, condition)
+
     # Compute stats for each ablation
     comparisons = []
     raw_p_values = []
 
     for condition in CONDITIONS:
-        results = load_condition(prefix, condition)
+        results = condition_data[condition]
         if not results:
             print(f"  {condition}: SKIPPED (no data)", file=sys.stderr)
             continue
@@ -175,7 +233,9 @@ def main():
             normal_alive, ablated_alive, alternative="greater"
         )
         d = cohens_d(normal_alive, ablated_alive)
+        d_ci = cohens_d_ci(normal_alive, ablated_alive)
         cliff_d = cliffs_delta(normal_alive, ablated_alive)
+        cliff_ci = bootstrap_cliffs_delta_ci(normal_alive, ablated_alive)
         ablated_auc = extract_auc(results)
         ablated_median_lifespan = extract_median_lifespan(results)
 
@@ -190,7 +250,11 @@ def main():
             "U": float(u_stat),
             "p_raw": float(p_value),
             "cohens_d": round(d, 4),
+            "cohens_d_ci_lo": round(d_ci[0], 4),
+            "cohens_d_ci_hi": round(d_ci[1], 4),
             "cliffs_delta": round(cliff_d, 4),
+            "cliffs_delta_ci_lo": round(cliff_ci[0], 4),
+            "cliffs_delta_ci_hi": round(cliff_ci[1], 4),
             "normal_auc_mean": round(float(np.mean(normal_auc)), 2),
             "ablation_auc_mean": round(float(np.mean(ablated_auc)), 2),
             "normal_median_lifespan": round(normal_median_lifespan, 1),
@@ -213,6 +277,42 @@ def main():
         if comp["significant"]:
             significant_count += 1
 
+    # Short-horizon analysis (T=500) for individual-level viability
+    short_horizon_step = 500
+    normal_alive_500 = extract_alive_at_step(normal_results, short_horizon_step)
+    short_horizon = []
+    short_raw_p = []
+    for condition in CONDITIONS:
+        results = condition_data[condition]
+        if not results:
+            continue
+        ablated_alive_500 = extract_alive_at_step(results, short_horizon_step)
+        if len(ablated_alive_500) < 2:
+            continue
+        u_stat_500, p_500 = stats.mannwhitneyu(
+            normal_alive_500, ablated_alive_500, alternative="greater"
+        )
+        short_horizon.append({
+            "condition": condition,
+            "normal_mean_500": round(float(np.mean(normal_alive_500)), 2),
+            "ablation_mean_500": round(float(np.mean(ablated_alive_500)), 2),
+            "U": float(u_stat_500),
+            "p_raw": float(p_500),
+        })
+        short_raw_p.append(p_500)
+    short_corrected = holm_bonferroni(short_raw_p)
+    for sh, p_corr in zip(short_horizon, short_corrected, strict=True):
+        sh["p_corrected"] = round(p_corr, 6)
+        sh["significant"] = bool(p_corr < alpha)
+    print(f"\nShort-horizon (T={short_horizon_step}):", file=sys.stderr)
+    for sh in short_horizon:
+        status = "SIG" if sh["significant"] else "n.s."
+        print(
+            f"  [{status}] {sh['condition']}: mean={sh['ablation_mean_500']:.1f}, "
+            f"p_corr={sh['p_corrected']:.6f}",
+            file=sys.stderr,
+        )
+
     output = {
         "experiment": "criterion_ablation",
         "n_per_condition": n_normal,
@@ -221,6 +321,10 @@ def main():
         "significant_count": significant_count,
         "total_comparisons": len(comparisons),
         "comparisons": comparisons,
+        "short_horizon": {
+            "step": short_horizon_step,
+            "comparisons": short_horizon,
+        },
     }
 
     print(json.dumps(output, indent=2))

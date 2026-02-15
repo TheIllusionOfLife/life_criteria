@@ -12,6 +12,7 @@ Build and evolve the Digital Life simulation with reproducible, testable changes
 - Run full checks: `./scripts/check.sh`
 - Run spike benchmark: `cargo run -p digital-life-spike --release`
 - Build Python extension: `uv run maturin develop --manifest-path crates/digital-life-py/Cargo.toml`
+- Compile paper: `cd paper && tectonic main.tex`
 
 ## Code Style and Quality Rules
 
@@ -42,8 +43,17 @@ Build and evolve the Digital Life simulation with reproducible, testable changes
 ## Environment and Tooling Quirks
 
 - Use `uv` for Python-related tooling; avoid ad-hoc global package installs.
+- Use `tectonic` for LaTeX compilation (not `latexmk` or `pdflatex`). Run `cd paper && tectonic main.tex` to produce the PDF.
 - Running `cargo run -p digital-life-spike` without `--release` yields non-representative performance.
 - Local build artifacts (`target/`, extension binaries) should remain untracked.
+
+## Paper (LaTeX) Guidelines
+
+- **Overfull \hbox/\vbox** = text overflows margins. **Must fix** (adjust column widths, abbreviate text, use `\footnotesize`, etc.).
+- **Underfull \hbox/\vbox** = extra whitespace from imperfect line/page breaking. **Ignorable** in two-column conference format.
+- After paper edits, verify zero overfull warnings: `cd paper && tectonic main.tex 2>&1 | grep -i overfull`
+- ALIFE 2026 format: 3–8 pages **excluding references/acknowledgements**. Uses `alifeconf.sty`, `natbib` + `apalike`.
+- When editing tables, test that no word in a `p{width}` column exceeds the column width — this is the most common cause of overfull hbox.
 
 ## Non-Obvious Gotchas
 
