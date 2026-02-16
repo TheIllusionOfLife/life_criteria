@@ -179,6 +179,10 @@ impl Default for SimConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SimConfigError {
+    InvalidNumOrganisms,
+    InvalidAgentsPerOrganism,
+    AgentCountOverflow,
+    TooManyAgents { max: usize, actual: usize },
     InvalidWorldSize,
     InvalidDt,
     InvalidMaxSpeed,
@@ -224,6 +228,10 @@ pub enum SimConfigError {
 impl std::fmt::Display for SimConfigError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            SimConfigError::InvalidNumOrganisms => write!(f, "num_organisms must be greater than 0"),
+            SimConfigError::InvalidAgentsPerOrganism => write!(f, "agents_per_organism must be greater than 0"),
+            SimConfigError::AgentCountOverflow => write!(f, "Total agent count overflow"),
+            SimConfigError::TooManyAgents { max, actual } => write!(f, "Too many agents: {} > max {}", actual, max),
             SimConfigError::InvalidWorldSize => write!(f, "world_size must be positive and finite"),
             SimConfigError::InvalidDt => write!(f, "dt must be positive and finite"),
             SimConfigError::InvalidMaxSpeed => write!(f, "max_speed must be positive and finite"),
@@ -374,7 +382,19 @@ impl std::error::Error for SimConfigError {}
 impl SimConfig {
     pub const MAX_WORLD_SIZE: f64 = 2048.0;
 
+    pub const MAX_TOTAL_AGENTS: usize = 250_000;
+
     pub fn validate(&self) -> Result<(), SimConfigError> {
+        if self.num_organisms == 0 {
+            return Err(SimConfigError::InvalidNumOrganisms);
+        }
+        if self.agents_per_organism == 0 {
+            return Err(SimConfigError::InvalidAgentsPerOrganism);
+        }
+        let total_agents = self.num_organisms.checked_mul(self.agents_per_organism).ok_or(SimConfigError::AgentCountOverflow)?;
+        if total_agents > Self::MAX_TOTAL_AGENTS {
+            return Err(SimConfigError::TooManyAgents { max: Self::MAX_TOTAL_AGENTS, actual: total_agents });
+        }
         if !(self.world_size.is_finite() && self.world_size > 0.0) {
             return Err(SimConfigError::InvalidWorldSize);
         }
@@ -599,5 +619,23 @@ mod tests {
         assert!(cfg.enable_reproduction);
         assert!(cfg.enable_evolution);
         assert!(cfg.enable_growth);
+    }
+
+    #[test]
+    fn validate_rejects_invalid_counts() {
+        let mut config = SimConfig::default();
+        config.num_organisms = 0;
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidNumOrganisms));
+
+        config.num_organisms = 1;
+        config.agents_per_organism = 0;
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidAgentsPerOrganism));
+
+        config.num_organisms = SimConfig::MAX_TOTAL_AGENTS + 1;
+        config.agents_per_organism = 1;
+        match config.validate() {
+            Err(SimConfigError::TooManyAgents { .. }) => (),
+            _ => panic!("Expected TooManyAgents error"),
+        }
     }
 }

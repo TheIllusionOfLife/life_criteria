@@ -45,44 +45,56 @@ enum Commands {
     DumpDefaultConfig,
 }
 
+fn create_agents(config: &SimConfig) -> Vec<Agent> {
+    let total_agents = config.num_organisms * config.agents_per_organism;
+    let mut rng = ChaCha12Rng::seed_from_u64(config.seed);
+    let mut agents = Vec::with_capacity(total_agents);
+    for org in 0..config.num_organisms {
+        for i in 0..config.agents_per_organism {
+            let id = (org * config.agents_per_organism + i) as u32;
+            let pos = [
+                rng.random::<f64>() * config.world_size,
+                rng.random::<f64>() * config.world_size,
+            ];
+            agents.push(Agent::new(id, org as u16, pos));
+        }
+    }
+    agents
+}
+
+fn create_nns(config: &SimConfig) -> Vec<NeuralNet> {
+    let mut rng = ChaCha12Rng::seed_from_u64(config.seed);
+    (0..config.num_organisms)
+        .map(|_| {
+            let weights = (0..NeuralNet::WEIGHT_COUNT).map(|_| rng.random::<f32>() * 2.0 - 1.0);
+            NeuralNet::from_weights(weights)
+        })
+        .collect()
+}
+
 fn run_benchmark(
     num_organisms: usize,
     agents_per_organism: usize,
     seed: u64,
     metabolism_mode: MetabolismMode,
 ) {
-    let total_agents = num_organisms * agents_per_organism;
-    let mut rng = ChaCha12Rng::seed_from_u64(seed);
-
-    // Create agents
-    let mut agents = Vec::with_capacity(total_agents);
-    for org in 0..num_organisms {
-        for i in 0..agents_per_organism {
-            let id = (org * agents_per_organism + i) as u32;
-            let pos = [
-                rng.random::<f64>() * WORLD_SIZE,
-                rng.random::<f64>() * WORLD_SIZE,
-            ];
-            agents.push(Agent::new(id, org as u16, pos));
-        }
-    }
-
-    // Create NNs (one per organism)
-    let nns: Vec<NeuralNet> = (0..num_organisms)
-        .map(|_| {
-            let weights = (0..NeuralNet::WEIGHT_COUNT).map(|_| rng.random::<f32>() * 2.0 - 1.0);
-            NeuralNet::from_weights(weights)
-        })
-        .collect();
-
     let config = SimConfig {
         world_size: WORLD_SIZE,
         num_organisms,
         agents_per_organism,
         metabolism_mode,
+        seed, // Use provided seed
         ..SimConfig::default()
     };
-    let mut world = World::new(agents, nns, config);
+
+    if let Err(e) = config.validate() {
+        eprintln!("Benchmark config validation error: {}", e);
+        return;
+    }
+
+    let agents = create_agents(&config);
+    let nns = create_nns(&config);
+    let mut world = World::new(agents, nns, config.clone());
 
     // Warmup
     for _ in 0..WARMUP_STEPS {
@@ -106,6 +118,7 @@ fn run_benchmark(
     let avg_step_us = total_time as f64 / BENCHMARK_STEPS as f64;
     let steps_per_sec = 1_000_000.0 / avg_step_us;
 
+    let total_agents = num_organisms * agents_per_organism;
     println!(
         "--- {total_agents} agents ({num_organisms} organisms x {agents_per_organism} agents) ---"
     );
@@ -180,31 +193,8 @@ fn main() {
             println!("Loaded config from {:?}", config);
             println!("Simulating for {} steps...", steps);
 
-            // Initialize world similar to benchmark but using config params
-             let total_agents = sim_config.num_organisms * sim_config.agents_per_organism;
-            let mut rng = ChaCha12Rng::seed_from_u64(sim_config.seed);
-
-            // Create agents
-            let mut agents = Vec::with_capacity(total_agents);
-            for org in 0..sim_config.num_organisms {
-                for i in 0..sim_config.agents_per_organism {
-                    let id = (org * sim_config.agents_per_organism + i) as u32;
-                    let pos = [
-                        rng.random::<f64>() * sim_config.world_size,
-                        rng.random::<f64>() * sim_config.world_size,
-                    ];
-                    agents.push(Agent::new(id, org as u16, pos));
-                }
-            }
-
-            // Create NNs (one per organism)
-            let nns: Vec<NeuralNet> = (0..sim_config.num_organisms)
-                .map(|_| {
-                    let weights = (0..NeuralNet::WEIGHT_COUNT).map(|_| rng.random::<f32>() * 2.0 - 1.0);
-                    NeuralNet::from_weights(weights)
-                })
-                .collect();
-
+            let agents = create_agents(&sim_config);
+            let nns = create_nns(&sim_config);
             let mut world = World::new(agents, nns, sim_config.clone());
             
             let summary = world.run_experiment(steps, 100);

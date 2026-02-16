@@ -236,7 +236,7 @@ impl Error for ExperimentError {}
 
 impl World {
     pub const MAX_WORLD_SIZE: f64 = 2048.0;
-    pub const MAX_TOTAL_AGENTS: usize = 250_000;
+
     pub const MAX_EXPERIMENT_STEPS: usize = 1_000_000;
     pub const MAX_EXPERIMENT_SAMPLES: usize = 50_000;
 
@@ -260,9 +260,9 @@ impl World {
             .num_organisms
             .checked_mul(config.agents_per_organism)
             .ok_or(WorldInitError::AgentCountOverflow)?;
-        if expected_agent_count > Self::MAX_TOTAL_AGENTS {
+        if expected_agent_count > SimConfig::MAX_TOTAL_AGENTS {
             return Err(WorldInitError::TooManyAgents {
-                max: Self::MAX_TOTAL_AGENTS,
+                max: SimConfig::MAX_TOTAL_AGENTS,
                 actual: expected_agent_count,
             });
         }
@@ -996,7 +996,7 @@ impl World {
                 .agents
                 .len()
                 .checked_add(child_agents)
-                .map(|n| n > Self::MAX_TOTAL_AGENTS)
+                .map(|n| n > SimConfig::MAX_TOTAL_AGENTS)
                 .unwrap_or(true)
             {
                 break;
@@ -1605,7 +1605,10 @@ mod tests {
             ..SimConfig::default()
         };
         let result = World::try_new(Vec::new(), vec![nn.clone(), nn.clone(), nn], cfg);
-        assert!(matches!(result, Err(WorldInitError::AgentCountOverflow)));
+        assert!(matches!(
+            result,
+            Err(WorldInitError::Config(SimConfigError::AgentCountOverflow))
+        ));
     }
 
     #[test]
@@ -1613,11 +1616,14 @@ mod tests {
         let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
         let cfg = SimConfig {
             num_organisms: 1,
-            agents_per_organism: World::MAX_TOTAL_AGENTS + 1,
+            agents_per_organism: SimConfig::MAX_TOTAL_AGENTS + 1,
             ..SimConfig::default()
         };
         let result = World::try_new(Vec::new(), vec![nn], cfg);
-        assert!(matches!(result, Err(WorldInitError::TooManyAgents { .. })));
+        assert!(matches!(
+            result,
+            Err(WorldInitError::Config(SimConfigError::TooManyAgents { .. }))
+        ));
     }
 
     #[test]
@@ -1626,7 +1632,7 @@ mod tests {
         let mut cfg = world.config().clone();
         cfg.dt = -0.1;
         let result = world.set_config(cfg);
-        assert!(matches!(result, Err(WorldInitError::InvalidDt)));
+        assert!(matches!(result, Err(WorldInitError::Config(SimConfigError::InvalidDt))));
     }
 
     #[test]
@@ -1732,7 +1738,7 @@ mod tests {
         let result = World::try_new(agents, vec![nn], cfg);
         assert!(matches!(
             result,
-            Err(WorldInitError::InvalidBoundaryDecayBaseRate)
+            Err(WorldInitError::Config(SimConfigError::InvalidBoundaryDecayBaseRate))
         ));
     }
 
@@ -1751,7 +1757,7 @@ mod tests {
         let result = World::try_new(agents, vec![nn], cfg);
         assert!(matches!(
             result,
-            Err(WorldInitError::InvalidMutationProbabilityBudget)
+            Err(WorldInitError::Config(SimConfigError::InvalidMutationProbabilityBudget))
         ));
     }
 
@@ -1769,7 +1775,7 @@ mod tests {
         let result = World::try_new(agents, vec![nn], cfg);
         assert!(matches!(
             result,
-            Err(WorldInitError::InvalidReproductionEnergyBalance)
+            Err(WorldInitError::Config(SimConfigError::InvalidReproductionEnergyBalance))
         ));
     }
 
@@ -2945,7 +2951,7 @@ mod tests {
         let result = world.set_config(world.config.clone());
         assert!(matches!(
             result,
-            Err(WorldInitError::ConflictingEnvironmentFeatures)
+            Err(WorldInitError::Config(SimConfigError::ConflictingEnvironmentFeatures))
         ));
     }
 }
