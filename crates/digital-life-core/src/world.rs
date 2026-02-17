@@ -12,6 +12,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
 use rstar::RTree;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::f64::consts::PI;
 use std::time::Instant;
 use std::{error::Error, fmt};
@@ -220,6 +221,7 @@ pub enum ExperimentError {
     InvalidSampleEvery,
     TooManySteps { max: usize, actual: usize },
     TooManySamples { max: usize, actual: usize },
+    TooManySnapshots { max: usize, actual: usize },
 }
 
 impl fmt::Display for ExperimentError {
@@ -235,6 +237,12 @@ impl fmt::Display for ExperimentError {
                     "sample count ({actual}) exceeds supported maximum ({max})"
                 )
             }
+            ExperimentError::TooManySnapshots { max, actual } => {
+                write!(
+                    f,
+                    "snapshot count ({actual}) exceeds supported maximum ({max})"
+                )
+            }
         }
     }
 }
@@ -246,6 +254,7 @@ impl World {
 
     pub const MAX_EXPERIMENT_STEPS: usize = 1_000_000;
     pub const MAX_EXPERIMENT_SAMPLES: usize = 50_000;
+    pub const MAX_EXPERIMENT_SNAPSHOTS: usize = 1_000;
 
     pub fn new(agents: Vec<Agent>, nns: Vec<NeuralNet>, config: SimConfig) -> Self {
         Self::try_new(agents, nns, config).unwrap_or_else(|e| panic!("{e}"))
@@ -924,6 +933,12 @@ impl World {
                 actual: steps,
             });
         }
+        if snapshot_steps.len() > Self::MAX_EXPERIMENT_SNAPSHOTS {
+            return Err(ExperimentError::TooManySnapshots {
+                max: Self::MAX_EXPERIMENT_SNAPSHOTS,
+                actual: snapshot_steps.len(),
+            });
+        }
         let estimated_samples = if steps == 0 {
             0
         } else {
@@ -941,13 +956,14 @@ impl World {
         let births_before = self.total_births;
         let mut samples = Vec::with_capacity(estimated_samples);
         let mut snapshots = Vec::with_capacity(snapshot_steps.len());
+        let snapshot_steps_set: HashSet<usize> = snapshot_steps.iter().copied().collect();
 
         for step in 1..=steps {
             self.step();
             if step % sample_every == 0 || step == steps {
                 samples.push(self.collect_step_metrics(step));
             }
-            if snapshot_steps.contains(&step) {
+            if snapshot_steps_set.contains(&step) {
                 snapshots.push(self.collect_organism_snapshots(step));
             }
         }
@@ -3064,6 +3080,18 @@ mod tests {
             Err(WorldInitError::Config(
                 SimConfigError::ConflictingEnvironmentFeatures
             ))
+        ));
+    }
+
+    #[test]
+    fn try_run_experiment_rejects_too_many_snapshots() {
+        let mut world = make_world(1, 100.0);
+        let max = World::MAX_EXPERIMENT_SNAPSHOTS;
+        let snapshot_steps = vec![0; max + 1];
+        let result = world.try_run_experiment_with_snapshots(max + 1, 1, &snapshot_steps);
+        assert!(matches!(
+            result,
+            Err(ExperimentError::TooManySnapshots { .. })
         ));
     }
 }
