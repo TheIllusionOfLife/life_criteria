@@ -789,13 +789,23 @@ impl World {
         let half = world_size * 0.5;
         let mut org_cohesions = Vec::new();
 
-        for org in self.organisms.iter().filter(|o| o.alive) {
-            let positions: Vec<[f64; 2]> = self
-                .agents
-                .iter()
-                .filter(|a| a.organism_id == org.id)
-                .map(|a| a.position)
-                .collect();
+        // Create a lookup table from organism ID to its index in self.organisms
+        // This ensures correctness even if organism IDs do not match their vector indices.
+        let max_org_id = self.organisms.iter().map(|o| o.id).max().unwrap_or(0);
+        let mut org_id_to_idx = vec![None; max_org_id as usize + 1];
+        for (idx, org) in self.organisms.iter().enumerate() {
+            org_id_to_idx[org.id as usize] = Some(idx);
+        }
+
+        let mut agent_positions_by_org: Vec<Vec<[f64; 2]>> = vec![Vec::new(); self.organisms.len()];
+        for agent in &self.agents {
+            if let Some(&Some(idx)) = org_id_to_idx.get(agent.organism_id as usize) {
+                agent_positions_by_org[idx].push(agent.position);
+            }
+        }
+
+        for (org_idx, _) in self.organisms.iter().enumerate().filter(|(_, o)| o.alive) {
+            let positions = &agent_positions_by_org[org_idx];
             let n = positions.len();
             if n < 2 {
                 continue;
