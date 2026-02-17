@@ -21,15 +21,16 @@ import time
 from pathlib import Path
 
 import digital_life
-
 from experiment_common import (
     CRITERION_TO_FLAG,
     PAIRS,
     log,
+    make_config,
     print_header,
     print_sample,
     run_single,
 )
+from experiment_manifest import write_manifest
 
 STEPS = 2000
 SAMPLE_EVERY = 50
@@ -46,7 +47,12 @@ def run_condition(cond_name: str, overrides: dict, out_dir: Path):
 
     for seed in SEEDS:
         t0 = time.perf_counter()
-        result = run_single(seed, {**GRAPH_OVERRIDES, **overrides}, steps=STEPS, sample_every=SAMPLE_EVERY)
+        result = run_single(
+            seed,
+            {**GRAPH_OVERRIDES, **overrides},
+            steps=STEPS,
+            sample_every=SAMPLE_EVERY,
+        )
         elapsed = time.perf_counter() - t0
         results.append(result)
 
@@ -75,6 +81,24 @@ def main():
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"
     out_dir.mkdir(exist_ok=True)
+    condition_overrides = {"normal": GRAPH_OVERRIDES.copy()}
+    for a, b in PAIRS:
+        cond_name = f"no_{a}_no_{b}"
+        condition_overrides[cond_name] = {
+            **GRAPH_OVERRIDES,
+            CRITERION_TO_FLAG[a]: False,
+            CRITERION_TO_FLAG[b]: False,
+        }
+    base_config = json.loads(make_config(SEEDS[0], GRAPH_OVERRIDES))
+    write_manifest(
+        out_dir / "pairwise_graph_manifest.json",
+        experiment_name="pairwise_graph_ablation",
+        steps=STEPS,
+        sample_every=SAMPLE_EVERY,
+        seeds=SEEDS,
+        base_config=base_config,
+        condition_overrides=condition_overrides,
+    )
 
     print_header()
     total_start = time.perf_counter()

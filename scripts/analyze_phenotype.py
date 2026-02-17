@@ -14,11 +14,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from experiment_common import log
 from sklearn.cluster import KMeans
 from sklearn.metrics import adjusted_rand_score, silhouette_score
 from sklearn.preprocessing import StandardScaler
-
-from experiment_common import log
 
 
 def load_evolution_data(exp_dir: Path) -> list[dict]:
@@ -402,8 +401,8 @@ def analyze_organism_level_persistence(exp_dir: Path) -> dict:
         "trait_names": trait_names,
         "early_traits": [[round(float(v), 4) for v in row] for row in early_traits],
         "late_traits": [[round(float(v), 4) for v in row] for row in late_traits],
-        "early_labels": [int(l) for l in early_labels],
-        "late_labels": [int(l) for l in late_labels],
+        "early_labels": [int(label) for label in early_labels],
+        "late_labels": [int(label) for label in late_labels],
     }
 
 

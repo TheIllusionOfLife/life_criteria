@@ -1,14 +1,18 @@
-"""Time-lagged cross-correlation analysis for criterion coupling evidence.
+"""Directed coupling analysis for criterion interactions.
 
-Computes Pearson and Spearman correlations between per-step criterion
-variables from normal-condition data to quantify functional coupling
-between criteria (Reviewer B §C2).
+Combines:
+1. Time-lagged correlation on population means (descriptive)
+2. Per-seed Granger-style F-tests (directed linear predictability)
+3. Per-seed transfer entropy with permutation significance (nonlinear directionality)
 
 Usage:
     uv run python scripts/analyze_coupling.py
 """
 
+from __future__ import annotations
+
 import json
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -19,134 +23,479 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = PROJECT_ROOT / "experiments" / "final_graph_normal.json"
 OUTPUT_PATH = PROJECT_ROOT / "experiments" / "coupling_analysis.json"
 
-# Variable pairs to analyze (var_a, var_b, label)
 PAIRS = [
-    ("energy_mean", "boundary_mean", "metabolism → cellular org"),
-    ("energy_mean", "internal_state_mean_0", "metabolism → homeostasis"),
-    ("boundary_mean", "internal_state_mean_0", "cellular org → homeostasis"),
+    ("energy_mean", "boundary_mean", "metabolism -> cellular org"),
+    ("energy_mean", "internal_state_mean_0", "metabolism -> homeostasis"),
+    ("boundary_mean", "internal_state_mean_0", "cellular org -> homeostasis"),
 ]
 
 MAX_LAG = 5
+TE_BINS = 5
+TE_PERMUTATIONS = 400
+MAX_DROPPED_SEED_FRACTION = 0.10
+INCLUDE_SEED_DETAILS = True
 
 
-def load_timeseries(path: Path) -> dict[str, np.ndarray]:
-    """Load normal-condition data and compute per-step population means.
+def holm_bonferroni(p_values: list[float]) -> list[float]:
+    """Apply Holm-Bonferroni correction and keep original order."""
+    n = len(p_values)
+    if n == 0:
+        return []
+    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
+    corrected = [0.0] * n
+    cumulative_max = 0.0
+    for rank, (orig_idx, p_val) in enumerate(indexed):
+        adjusted = p_val * (n - rank)
+        cumulative_max = max(cumulative_max, adjusted)
+        corrected[orig_idx] = min(cumulative_max, 1.0)
+    return corrected
 
-    Returns dict mapping variable name to 1D array indexed by step order.
-    """
+
+def fisher_combine(p_values: list[float]) -> float:
+    """Combine p-values using Fisher's method."""
+    if not p_values:
+        return 1.0
+    clipped = [min(max(p, 1e-12), 1.0) for p in p_values]
+    stat = -2.0 * sum(np.log(p) for p in clipped)
+    return float(stats.chi2.sf(stat, 2 * len(clipped)))
+
+
+def load_seed_timeseries(
+    path: Path,
+) -> tuple[list[int], list[dict[str, np.ndarray]], dict[str, int | float]]:
+    """Load per-seed time series from normal condition output."""
     with open(path) as f:
         results = json.load(f)
 
-    # Collect per-step values across all seeds
-    step_vals: dict[str, dict[int, list[float]]] = defaultdict(
-        lambda: defaultdict(list)
-    )
-    for r in results:
-        if "samples" not in r:
+    seed_series: list[dict[str, np.ndarray]] = []
+    steps_ref: list[int] | None = None
+    total_runs = len(results)
+    dropped_missing_samples = 0
+    dropped_step_mismatch = 0
+
+    for run in results:
+        samples = run.get("samples", [])
+        if not samples:
+            dropped_missing_samples += 1
             continue
-        for s in r["samples"]:
-            step = s["step"]
-            step_vals["energy_mean"][step].append(s["energy_mean"])
-            step_vals["boundary_mean"][step].append(s["boundary_mean"])
-            is_mean = s.get("internal_state_mean")
-            if is_mean and len(is_mean) > 0:
-                step_vals["internal_state_mean_0"][step].append(is_mean[0])
+        steps = [int(s["step"]) for s in samples]
+        if steps_ref is None:
+            steps_ref = steps
+        elif steps != steps_ref:
+            dropped_step_mismatch += 1
+            continue
 
-    # Average across seeds for each step, ordered by step
-    timeseries = {}
-    for var_name, step_map in step_vals.items():
-        steps = sorted(step_map.keys())
-        timeseries[var_name] = np.array([np.mean(step_map[s]) for s in steps])
+        energy = np.array([float(s["energy_mean"]) for s in samples], dtype=float)
+        boundary = np.array([float(s["boundary_mean"]) for s in samples], dtype=float)
+        internal = np.array(
+            [
+                float(s.get("internal_state_mean", [0.0])[0])
+                if s.get("internal_state_mean")
+                else 0.0
+                for s in samples
+            ],
+            dtype=float,
+        )
+        seed_series.append(
+            {
+                "energy_mean": energy,
+                "boundary_mean": boundary,
+                "internal_state_mean_0": internal,
+            }
+        )
 
-    return timeseries
+    accepted_runs = len(seed_series)
+    dropped_runs = dropped_missing_samples + dropped_step_mismatch
+    quality = {
+        "total_runs": total_runs,
+        "accepted_runs": accepted_runs,
+        "dropped_runs": dropped_runs,
+        "dropped_missing_samples": dropped_missing_samples,
+        "dropped_step_mismatch": dropped_step_mismatch,
+        "dropped_fraction": (dropped_runs / total_runs) if total_runs else 0.0,
+    }
+
+    if steps_ref is None:
+        return [], [], quality
+    return steps_ref, seed_series, quality
+
+
+def mean_timeseries(seed_series: list[dict[str, np.ndarray]], var_name: str) -> np.ndarray:
+    arr = np.stack([seed[var_name] for seed in seed_series], axis=0)
+    return arr.mean(axis=0)
 
 
 def cross_correlation(x: np.ndarray, y: np.ndarray, max_lag: int) -> list[dict]:
-    """Compute time-lagged Pearson and Spearman correlations.
-
-    Positive lag means x leads y (x[t] correlates with y[t+lag]).
-    """
-    results = []
+    """Compute lagged Pearson/Spearman correlations on aggregate means."""
+    rows: list[dict] = []
     for lag in range(max_lag + 1):
         if lag == 0:
-            x_slice = x
-            y_slice = y
+            x_slice, y_slice = x, y
         else:
-            x_slice = x[:-lag]
-            y_slice = y[lag:]
-
+            x_slice, y_slice = x[:-lag], y[lag:]
         if len(x_slice) < 3:
             continue
-
-        r_pearson, p_pearson = stats.pearsonr(x_slice, y_slice)
-        r_spearman, p_spearman = stats.spearmanr(x_slice, y_slice)
-
-        results.append(
+        r_p, p_p = stats.pearsonr(x_slice, y_slice)
+        r_s, p_s = stats.spearmanr(x_slice, y_slice)
+        rows.append(
             {
                 "lag": lag,
-                "pearson_r": round(float(r_pearson), 4),
-                "pearson_p": float(p_pearson),
-                "spearman_r": round(float(r_spearman), 4),
-                "spearman_p": float(p_spearman),
+                "pearson_r": round(float(r_p), 4),
+                "pearson_p": float(p_p),
+                "spearman_r": round(float(r_s), 4),
+                "spearman_p": float(p_s),
                 "n": len(x_slice),
             }
         )
-    return results
+    return rows
 
 
-def main():
-    """Run coupling analysis and output JSON results."""
+def _lag_matrix(series: np.ndarray, lag: int) -> np.ndarray:
+    """Build [t-1 .. t-lag] lag matrix aligned to y[t]."""
+    return np.column_stack([series[lag - i : len(series) - i] for i in range(1, lag + 1)])
+
+
+def granger_f_test(x: np.ndarray, y: np.ndarray, lag: int) -> tuple[float, float] | None:
+    """F-test for x -> y with lagged linear models."""
+    if lag <= 0 or len(x) != len(y):
+        return None
+    n_obs = len(y) - lag
+    if n_obs <= (2 * lag + 1):
+        return None
+
+    y_target = y[lag:]
+    y_lags = _lag_matrix(y, lag)
+    x_lags = _lag_matrix(x, lag)
+
+    x_restricted = np.column_stack([np.ones(n_obs), y_lags])
+    x_full = np.column_stack([np.ones(n_obs), y_lags, x_lags])
+
+    beta_r, *_ = np.linalg.lstsq(x_restricted, y_target, rcond=None)
+    beta_f, *_ = np.linalg.lstsq(x_full, y_target, rcond=None)
+
+    resid_r = y_target - x_restricted @ beta_r
+    resid_f = y_target - x_full @ beta_f
+
+    ssr_r = float(np.sum(resid_r**2))
+    ssr_f = float(np.sum(resid_f**2))
+
+    df1 = lag
+    df2 = n_obs - x_full.shape[1]
+    if df2 <= 0 or ssr_f <= 0.0:
+        return None
+
+    numerator = max(ssr_r - ssr_f, 0.0) / df1
+    denominator = ssr_f / df2
+    if denominator <= 0.0:
+        return None
+
+    f_stat = numerator / denominator
+    p_val = float(stats.f.sf(f_stat, df1, df2))
+    return float(f_stat), p_val
+
+
+def best_granger_with_lag_correction(x: np.ndarray, y: np.ndarray, max_lag: int) -> dict | None:
+    """Evaluate lags 1..max_lag and pick best lag with Bonferroni over lags."""
+    lag_rows = []
+    for lag in range(1, max_lag + 1):
+        test = granger_f_test(x, y, lag)
+        if test is None:
+            continue
+        f_stat, p_val = test
+        lag_rows.append({"lag": lag, "f_stat": f_stat, "p_raw": p_val})
+
+    if not lag_rows:
+        return None
+
+    p_corr = holm_bonferroni([row["p_raw"] for row in lag_rows])
+    for row, p_adjusted in zip(lag_rows, p_corr, strict=True):
+        row["p_corrected"] = p_adjusted
+
+    best = min(lag_rows, key=lambda row: row["p_corrected"])
+    return {
+        "best_lag": int(best["lag"]),
+        "best_f_stat": float(best["f_stat"]),
+        "best_p_corrected": float(best["p_corrected"]),
+        "lags": [
+            {
+                "lag": int(row["lag"]),
+                "f_stat": round(float(row["f_stat"]), 6),
+                "p_raw": float(row["p_raw"]),
+                "p_corrected": float(row["p_corrected"]),
+            }
+            for row in lag_rows
+        ],
+    }
+
+
+def discretize_series(values: np.ndarray, bins: int) -> np.ndarray:
+    """Quantile discretization to integer bins in [0, bins-1]."""
+    if len(values) == 0:
+        return np.array([], dtype=int)
+    quantiles = np.linspace(0.0, 1.0, bins + 1)
+    edges = np.quantile(values, quantiles)
+    edges = np.unique(edges)
+    if len(edges) <= 2:
+        return np.zeros_like(values, dtype=int)
+    idx = np.digitize(values, edges[1:-1], right=False)
+    return np.asarray(idx, dtype=int)
+
+
+def transfer_entropy_from_discrete(
+    x_prev: np.ndarray, y_prev: np.ndarray, y_curr: np.ndarray
+) -> float:
+    """Compute TE = I(Y_t ; X_{t-1} | Y_{t-1}) in bits."""
+    n = len(y_curr)
+    if n == 0:
+        return 0.0
+
+    x_bins = int(np.max(x_prev)) + 1 if len(x_prev) > 0 else 1
+    y_bins = int(np.max(np.concatenate((y_prev, y_curr)))) + 1
+
+    joint_y = np.bincount(y_prev, minlength=y_bins).astype(float)
+    joint_xy = np.bincount(
+        x_prev * y_bins + y_prev, minlength=x_bins * y_bins
+    ).astype(float).reshape(x_bins, y_bins)
+    joint_yy = np.bincount(
+        y_prev * y_bins + y_curr, minlength=y_bins * y_bins
+    ).astype(float).reshape(y_bins, y_bins)
+    joint_xxy = np.bincount(
+        (x_prev * y_bins + y_prev) * y_bins + y_curr,
+        minlength=x_bins * y_bins * y_bins,
+    ).astype(float).reshape(x_bins, y_bins, y_bins)
+
+    p_xxy = joint_xxy / n
+    p_yc_given_xy = np.divide(
+        joint_xxy,
+        joint_xy[:, :, None],
+        out=np.zeros_like(joint_xxy),
+        where=joint_xy[:, :, None] > 0,
+    )
+    p_yc_given_y = np.divide(
+        joint_yy[None, :, :],
+        joint_y[None, :, None],
+        out=np.zeros((1, y_bins, y_bins), dtype=float),
+        where=joint_y[None, :, None] > 0,
+    )
+
+    ratio = np.divide(
+        p_yc_given_xy,
+        p_yc_given_y,
+        out=np.zeros_like(joint_xxy),
+        where=p_yc_given_y > 0,
+    )
+    mask = (p_xxy > 0) & (ratio > 0)
+    if not np.any(mask):
+        return 0.0
+    te = np.sum(p_xxy[mask] * np.log2(ratio[mask]))
+    return float(max(float(te), 0.0))
+
+
+def transfer_entropy_lag1(
+    x: np.ndarray,
+    y: np.ndarray,
+    bins: int,
+    permutations: int,
+    rng: np.random.Generator,
+) -> dict | None:
+    """Estimate TE(X->Y) with permutation p-value."""
+    if len(x) < 4 or len(x) != len(y):
+        return None
+
+    # Use a shared discretization per full series to keep y(t-1), y(t) on
+    # the same state space.
+    x_disc = discretize_series(x, bins)
+    y_disc = discretize_series(y, bins)
+    x_prev = x_disc[:-1]
+    y_prev = y_disc[:-1]
+    y_curr = y_disc[1:]
+
+    observed = transfer_entropy_from_discrete(x_prev, y_prev, y_curr)
+
+    null_vals = np.empty(permutations, dtype=float)
+    for i in range(permutations):
+        perm_x_prev = rng.permutation(x_prev)
+        null_vals[i] = transfer_entropy_from_discrete(perm_x_prev, y_prev, y_curr)
+
+    p_val = float((np.sum(null_vals >= observed) + 1) / (permutations + 1))
+    return {
+        "te": float(observed),
+        "p_value": p_val,
+        "null_mean": float(np.mean(null_vals)),
+        "null_std": float(np.std(null_vals, ddof=1)) if permutations > 1 else 0.0,
+    }
+
+
+def bootstrap_ci(
+    values: np.ndarray, n_boot: int = 2000, alpha: float = 0.05
+) -> tuple[float, float]:
+    """Percentile bootstrap CI for mean over seeds."""
+    if len(values) == 0:
+        return (0.0, 0.0)
+    rng = np.random.default_rng(2026)
+    boot = np.empty(n_boot, dtype=float)
+    for i in range(n_boot):
+        sample = values[rng.integers(0, len(values), size=len(values))]
+        boot[i] = float(np.mean(sample))
+    lo = float(np.percentile(boot, 100 * alpha / 2))
+    hi = float(np.percentile(boot, 100 * (1 - alpha / 2)))
+    return lo, hi
+
+
+def main() -> None:
     if not DATA_PATH.exists():
         print(f"ERROR: {DATA_PATH} not found")
         return
 
-    timeseries = load_timeseries(DATA_PATH)
-    if not timeseries:
+    steps, seed_series, quality = load_seed_timeseries(DATA_PATH)
+    if not seed_series:
         print(f"ERROR: no timeseries data loaded from {DATA_PATH}")
         return
-    print(f"Loaded timeseries: {', '.join(timeseries.keys())}")
-    print(f"Steps per variable: {len(next(iter(timeseries.values())))}")
+    if quality["dropped_fraction"] > MAX_DROPPED_SEED_FRACTION:
+        print(
+            "ERROR: dropped-seed fraction exceeds threshold "
+            f"({quality['dropped_fraction']:.2%} > {MAX_DROPPED_SEED_FRACTION:.2%})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    output = {"pairs": []}
+    print(f"Loaded {len(seed_series)} seeds with {len(steps)} sampled steps")
+    print(
+        "Seed quality: total={} accepted={} dropped={} ({:.2f}%)".format(
+            quality["total_runs"],
+            quality["accepted_runs"],
+            quality["dropped_runs"],
+            100.0 * quality["dropped_fraction"],
+        )
+    )
+
+    output: dict[str, object] = {
+        "schema_version": 2,
+        "pairs": [],
+        "quality": quality,
+        "method": {
+            "max_lag": MAX_LAG,
+            "te_bins": TE_BINS,
+            "te_permutations": TE_PERMUTATIONS,
+            "pair_level_correction": "holm_bonferroni",
+            "seed_level_p_combination": "fisher",
+            "include_seed_details": INCLUDE_SEED_DETAILS,
+            "max_dropped_seed_fraction": MAX_DROPPED_SEED_FRACTION,
+        },
+    }
+
+    granger_pair_ps: list[float] = []
+    te_pair_ps: list[float] = []
+    pair_rows: list[dict] = []
+    te_rng = np.random.default_rng(42)
 
     for var_a, var_b, label in PAIRS:
-        if var_a not in timeseries or var_b not in timeseries:
-            print(f"  SKIP: {label} (missing variable)")
-            continue
+        mean_a = mean_timeseries(seed_series, var_a)
+        mean_b = mean_timeseries(seed_series, var_b)
+        corr_rows = cross_correlation(mean_a, mean_b, MAX_LAG)
+        best_corr = max(corr_rows, key=lambda row: abs(row["pearson_r"])) if corr_rows else None
 
-        correlations = cross_correlation(timeseries[var_a], timeseries[var_b], MAX_LAG)
+        seed_granger: list[dict] = []
+        seed_granger_p: list[float] = []
+        seed_granger_f: list[float] = []
 
-        if not correlations:
-            print(f"  SKIP: {label} (insufficient data for correlation)")
-            continue
+        seed_te: list[dict] = []
+        seed_te_p: list[float] = []
+        seed_te_values: list[float] = []
 
-        # Best lag (highest absolute Pearson r)
-        best = max(correlations, key=lambda c: abs(c["pearson_r"]))
+        for idx, run in enumerate(seed_series):
+            x = run[var_a]
+            y = run[var_b]
 
-        pair_result = {
+            g = best_granger_with_lag_correction(x, y, MAX_LAG)
+            if g is not None:
+                seed_granger.append({"seed_index": idx, **g})
+                seed_granger_p.append(g["best_p_corrected"])
+                seed_granger_f.append(g["best_f_stat"])
+
+            te = transfer_entropy_lag1(
+                x,
+                y,
+                bins=TE_BINS,
+                permutations=TE_PERMUTATIONS,
+                rng=te_rng,
+            )
+            if te is not None:
+                seed_te.append({"seed_index": idx, **te})
+                seed_te_p.append(te["p_value"])
+                seed_te_values.append(te["te"])
+
+        granger_pair_p = fisher_combine(seed_granger_p)
+        te_pair_p = fisher_combine(seed_te_p)
+
+        granger_pair_ps.append(granger_pair_p)
+        te_pair_ps.append(te_pair_p)
+
+        te_arr = np.array(seed_te_values, dtype=float)
+        te_ci = bootstrap_ci(te_arr)
+
+        row = {
+            "label": label,
             "var_a": var_a,
             "var_b": var_b,
-            "label": label,
-            "best_lag": best["lag"],
-            "best_pearson_r": best["pearson_r"],
-            "best_pearson_p": best["pearson_p"],
-            "correlations": correlations,
+            "lagged_correlation": {
+                "best_lag": best_corr["lag"] if best_corr else None,
+                "best_pearson_r": best_corr["pearson_r"] if best_corr else None,
+                "best_pearson_p": best_corr["pearson_p"] if best_corr else None,
+                "correlations": corr_rows,
+            },
+            "granger": {
+                "n_seed_tests": len(seed_granger),
+                "fisher_p_raw": granger_pair_p,
+                "median_best_f": round(float(np.median(seed_granger_f)), 6)
+                if seed_granger_f
+                else 0.0,
+                "significant_seed_fraction": round(
+                    float(np.mean(np.array(seed_granger_p) < 0.05)), 4
+                )
+                if seed_granger_p
+                else 0.0,
+            },
+            "transfer_entropy": {
+                "n_seed_tests": len(seed_te),
+                "fisher_p_raw": te_pair_p,
+                "mean_te": round(float(np.mean(te_arr)), 6) if len(te_arr) else 0.0,
+                "mean_te_ci95": [round(te_ci[0], 6), round(te_ci[1], 6)],
+                "significant_seed_fraction": round(
+                    float(np.mean(np.array(seed_te_p) < 0.05)), 4
+                )
+                if seed_te_p
+                else 0.0,
+            },
         }
-        output["pairs"].append(pair_result)
+        if INCLUDE_SEED_DETAILS:
+            row["granger"]["seed_tests"] = seed_granger
+            row["transfer_entropy"]["seed_tests"] = seed_te
+        pair_rows.append(row)
+        granger_median_f = float(row["granger"]["median_best_f"])
 
-        print(f"\n  {label}:")
-        for c in correlations:
-            marker = " <-- best" if c["lag"] == best["lag"] else ""
-            print(
-                f"    lag={c['lag']}: Pearson r={c['pearson_r']:.4f} "
-                f"(p={c['pearson_p']:.4e}), "
-                f"Spearman r={c['spearman_r']:.4f} "
-                f"(p={c['spearman_p']:.4e}){marker}"
-            )
+        print(f"\n{label}")
+        print(
+            f"  Granger fisher p={granger_pair_p:.4e}, "
+            f"median F={granger_median_f:.3f}"
+        )
+        print(
+            f"  TE fisher p={te_pair_p:.4e}, mean TE={row['transfer_entropy']['mean_te']:.4f}"
+        )
 
-    # --- Intervention-based causal effects ---
-    print("\n--- Intervention-based causal effects ---")
-    CRITERIA = [
+    granger_corr = holm_bonferroni(granger_pair_ps)
+    te_corr = holm_bonferroni(te_pair_ps)
+
+    for row, p_g, p_te in zip(pair_rows, granger_corr, te_corr, strict=True):
+        row["granger"]["fisher_p_corrected"] = round(float(p_g), 6)
+        row["granger"]["pair_significant"] = bool(p_g < 0.05)
+        row["transfer_entropy"]["fisher_p_corrected"] = round(float(p_te), 6)
+        row["transfer_entropy"]["pair_significant"] = bool(p_te < 0.05)
+
+    output["pairs"] = pair_rows
+
+    print("\n--- Intervention-based effect summaries ---")
+    criteria = [
         "metabolism",
         "boundary",
         "homeostasis",
@@ -155,67 +504,54 @@ def main():
         "evolution",
         "growth",
     ]
-    VARIABLES = ["energy_mean", "waste_mean", "boundary_mean", "internal_state_mean_0"]
+    variables = ["energy_mean", "waste_mean", "boundary_mean", "internal_state_mean_0"]
 
     def extract_final_step_means(path: Path) -> dict[str, float]:
-        """Extract population-mean values at the final sampled step, averaged across seeds."""
         if not path.exists():
             return {}
         with open(path) as f:
             results = json.load(f)
         vals: dict[str, list[float]] = defaultdict(list)
-        for r in results:
-            if "samples" not in r or not r["samples"]:
+        for run in results:
+            samples = run.get("samples", [])
+            if not samples:
                 continue
-            last = r["samples"][-1]
-            vals["energy_mean"].append(last["energy_mean"])
-            vals["waste_mean"].append(last["waste_mean"])
-            vals["boundary_mean"].append(last["boundary_mean"])
-            is_mean = last.get("internal_state_mean")
-            if is_mean and len(is_mean) > 0:
-                vals["internal_state_mean_0"].append(is_mean[0])
+            last = samples[-1]
+            vals["energy_mean"].append(float(last["energy_mean"]))
+            vals["waste_mean"].append(float(last["waste_mean"]))
+            vals["boundary_mean"].append(float(last["boundary_mean"]))
+            internal_state = last.get("internal_state_mean")
+            if internal_state and len(internal_state) > 0:
+                vals["internal_state_mean_0"].append(float(internal_state[0]))
         return {k: float(np.mean(v)) for k, v in vals.items() if v}
 
     normal_finals = extract_final_step_means(DATA_PATH)
-    if not normal_finals:
-        print("  WARNING: no normal baseline data for intervention analysis")
-    else:
+    if normal_finals:
         intervention_effects = {"matrix": [], "details": []}
-        for criterion in CRITERIA:
-            ablation_path = (
-                PROJECT_ROOT / "experiments" / f"final_graph_no_{criterion}.json"
-            )
+        for criterion in criteria:
+            ablation_path = PROJECT_ROOT / "experiments" / f"final_graph_no_{criterion}.json"
             ablated_finals = extract_final_step_means(ablation_path)
             if not ablated_finals:
-                print(f"  SKIP: no_{criterion} (missing data)")
                 continue
 
             row = {"ablated_criterion": criterion}
             detail = {"ablated_criterion": criterion, "effects": {}}
-            for var in VARIABLES:
+            for var in variables:
                 normal_val = normal_finals.get(var)
                 ablated_val = ablated_finals.get(var)
-                if (
-                    normal_val is not None
-                    and ablated_val is not None
-                    and normal_val != 0
-                ):
-                    pct_change = (normal_val - ablated_val) / abs(normal_val) * 100
-                    row[var] = round(pct_change, 2)
-                    detail["effects"][var] = {
-                        "normal": round(normal_val, 4),
-                        "ablated": round(ablated_val, 4),
-                        "pct_change": round(pct_change, 2),
-                    }
-                else:
+                if normal_val is None or ablated_val is None or normal_val == 0:
                     row[var] = None
+                    continue
+                pct_change = (normal_val - ablated_val) / abs(normal_val) * 100
+                row[var] = round(pct_change, 2)
+                detail["effects"][var] = {
+                    "normal": round(normal_val, 4),
+                    "ablated": round(ablated_val, 4),
+                    "pct_change": round(pct_change, 2),
+                }
 
             intervention_effects["matrix"].append(row)
             intervention_effects["details"].append(detail)
-            effects_str = ", ".join(
-                f"{v}={row[v]:.1f}%" for v in VARIABLES if row[v] is not None
-            )
-            print(f"  no_{criterion}: {effects_str}")
 
         output["intervention_effects"] = intervention_effects
 

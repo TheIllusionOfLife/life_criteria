@@ -15,13 +15,14 @@ import time
 from pathlib import Path
 
 import digital_life
-
 from experiment_common import (
     log,
+    make_config,
     print_header,
     print_sample,
     run_single,
 )
+from experiment_manifest import write_manifest
 
 STEPS = 10000
 SAMPLE_EVERY = 100
@@ -56,6 +57,16 @@ def main():
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"
     out_dir.mkdir(exist_ok=True)
+    base_config = json.loads(make_config(SEEDS[0], CONDITIONS["cyclic_evo_on"]))
+    write_manifest(
+        out_dir / "cyclic_manifest.json",
+        experiment_name="cyclic_environment",
+        steps=STEPS,
+        sample_every=SAMPLE_EVERY,
+        seeds=SEEDS,
+        base_config=base_config,
+        condition_overrides=CONDITIONS,
+    )
 
     print_header()
     total_start = time.perf_counter()

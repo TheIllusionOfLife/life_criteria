@@ -109,6 +109,7 @@ impl NeuralNet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn weight_count_matches_dimensions() {
@@ -148,5 +149,18 @@ mod tests {
         let round_trip = NeuralNet::from_weights(nn.to_weight_vec().into_iter());
         let input = [0.25f32; INPUT_SIZE];
         assert_eq!(nn.forward(&input), round_trip.forward(&input));
+    }
+
+    proptest! {
+        #[test]
+        fn proptest_forward_outputs_finite_and_bounded(
+            weights in proptest::collection::vec(-10.0f32..10.0f32, NeuralNet::WEIGHT_COUNT),
+            inputs in proptest::collection::vec(-5.0f32..5.0f32, INPUT_SIZE),
+        ) {
+            let nn = NeuralNet::from_weights(weights.into_iter());
+            let input: [f32; INPUT_SIZE] = inputs.try_into().expect("input size should match");
+            let output = nn.forward(&input);
+            prop_assert!(output.iter().all(|o| o.is_finite() && *o >= -1.0 && *o <= 1.0));
+        }
     }
 }

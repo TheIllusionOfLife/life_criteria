@@ -24,6 +24,13 @@ cargo build --workspace
 ./scripts/check.sh
 ```
 
+### Python Script Lint/Test
+
+```bash
+uv run ruff check scripts tests_python
+uv run pytest tests_python
+```
+
 ### Run the Feasibility Spike
 
 ```bash

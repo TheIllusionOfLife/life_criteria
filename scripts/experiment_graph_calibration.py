@@ -12,7 +12,6 @@ import time
 from pathlib import Path
 
 import digital_life
-
 from experiment_utils import log, run_single
 
 STEPS = 2000

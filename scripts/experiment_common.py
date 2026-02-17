@@ -62,11 +62,17 @@ def log(msg: str) -> None:
 
 def make_config(seed: int, overrides: dict) -> str:
     """Build a JSON config string with tuned baseline, seed, and overrides."""
+    config = make_config_dict(seed, overrides)
+    return json.dumps(config)
+
+
+def make_config_dict(seed: int, overrides: dict) -> dict:
+    """Build a config dict with tuned baseline, seed, and overrides."""
     config = json.loads(digital_life.default_config_json())
     config["seed"] = seed
     config.update(TUNED_BASELINE)
     config.update(overrides)
-    return json.dumps(config)
+    return config
 
 
 def run_single(seed: int, overrides: dict,

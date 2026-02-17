@@ -17,13 +17,14 @@ import time
 from pathlib import Path
 
 import digital_life
-
 from experiment_common import (
     log,
+    make_config,
     print_header,
     print_sample,
     run_single,
 )
+from experiment_manifest import write_manifest
 
 SAMPLE_EVERY = 100
 SEEDS = list(range(100, 130))  # test set: seeds 100-129, n=30
@@ -91,6 +92,24 @@ def main():
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"
     out_dir.mkdir(exist_ok=True)
+    write_manifest(
+        out_dir / "evolution_long_manifest.json",
+        experiment_name="evolution_long_run",
+        steps=LONG_STEPS,
+        sample_every=SAMPLE_EVERY,
+        seeds=SEEDS,
+        base_config=json.loads(make_config(SEEDS[0], {})),
+        condition_overrides=LONG_CONDITIONS,
+    )
+    write_manifest(
+        out_dir / "evolution_shift_manifest.json",
+        experiment_name="evolution_shift_run",
+        steps=SHIFT_STEPS,
+        sample_every=SAMPLE_EVERY,
+        seeds=SEEDS,
+        base_config=json.loads(make_config(SEEDS[0], SHIFT_CONDITIONS["shift_normal"])),
+        condition_overrides=SHIFT_CONDITIONS,
+    )
 
     print_header()
     total_start = time.perf_counter()

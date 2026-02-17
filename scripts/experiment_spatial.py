@@ -15,7 +15,6 @@ import time
 from pathlib import Path
 
 import digital_life
-
 from experiment_common import (
     log,
     run_single,

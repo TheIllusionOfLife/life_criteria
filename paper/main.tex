@@ -59,6 +59,10 @@ Biology textbooks identify seven criteria---cellular organization, metabolism,
 homeostasis, growth and development, reproduction, response to stimuli, and
 evolution \citep{urry_2020_campbell}---one of several such lists in biology education, which we adopt as a working set---but artificial life (ALife) research has
 struggled to integrate all seven into a single computational system.
+This choice is pragmatic rather than exclusive: we use the seven criteria as
+an operational bridge across broader frameworks (NASA's Darwinian criterion,
+autopoietic closure, and autonomy-centered minimal-life definitions), then
+test this bridge empirically via ablation.
 Most existing platforms implement a subset: evolutionary dynamics without
 metabolism \citep{ofria_2004_avida}, pattern formation without reproduction
 \citep{chan_2019_lenia}, or boundary self-organization without evolution
@@ -231,11 +235,11 @@ Swarm agents collectively define an organism's spatial extent.
 Boundary integrity $b$ decays each step at a base rate modulated by energy
 deficit and waste pressure:
 $\Delta b_{\text{decay}} = -r_b \cdot (1 + s_e \cdot (1 - e) + s_w \cdot w)$,
-where $r_b = 0.02$ is the base decay rate, $s_e = 0.5$ and $s_w = 0.3$ are
+where $r_b = 0.001$ is the base decay rate, $s_e = 0.02$ and $s_w = 0.5$ are
 scaling factors.
 Repair occurs proportionally to available energy:
 $\Delta b_{\text{repair}} = r_r \cdot e \cdot (1 - s_p \cdot w)$,
-with repair rate $r_r = 0.15$ and waste penalty $s_p = 0.4$.
+with repair rate $r_r = 0.05$ and waste penalty $s_p = 0.4$.
 When $b$ falls below a collapse threshold ($b < 0.1$), the organism dies.
 
 \paragraph{Metabolism.}
@@ -292,10 +296,10 @@ resource seeking.
 
 \paragraph{Evolution.}
 During reproduction, offspring genomes undergo point mutations
-(rate $= 0.01$ per gene, scale $= 0.1$), reset mutations
-(rate $= 0.001$), and scale mutations (rate $= 0.005$,
+(rate $= 0.02$ per gene, scale $= 0.15$), reset mutations
+(rate $= 0.002$), and scale mutations (rate $= 0.002$,
 factor $\in [0.8, 1.2]$).
-All gene values are clamped to $[-5, 5]$.
+All gene values are clamped to $[-2, 2]$.
 This produces heritable variation subject to differential survival.
 
 \subsection{Genome Encoding}
@@ -385,6 +389,9 @@ disabled processes are simply skipped.
 Each seed produces a deterministic, reproducible outcome within a given
 condition, though RNG call sequences differ across conditions when
 ablated processes (e.g., reproduction) skip conditional RNG draws.
+For each experiment family, we store a machine-readable run manifest
+(``*\_manifest.json'') containing exact parameters, seed lists, and config
+digests used by downstream analysis scripts.
 
 \subsection{Statistical Design}
 
@@ -513,25 +520,26 @@ energy funds repair, boundary collapse stops metabolism).
 Thus, each criterion qualifies as a functional analogy, not a simplified proxy.
 
 \paragraph{Quantitative coupling evidence.}
-Time-lagged cross-correlation of per-step population means under normal
+Time-lagged association analysis of per-step population means under normal
 conditions confirms the coupling pathways in Table~\ref{tab:criteria}
 (Figure~\ref{fig:coupling}).
-Energy and boundary integrity show strong anti-correlation
-($r=-0.85$, $p<0.001$, lag~0): repair continuously converts energy
-into boundary maintenance ($\Delta b_{\text{repair}} \propto e$),
-so higher boundary integrity corresponds to depleted energy reserves.
-Energy and internal state $s_0$ show strong positive correlation
-($r=0.81$, $p<0.001$, lag~3 steps), confirming that metabolic state
-drives homeostatic regulation with a short delay.
-Boundary integrity and $s_0$ show moderate correlation
-($r=-0.55$, $p<0.001$, lag~3), consistent with the
-homeostasis$\to$boundary pathway operating through repair efficacy.
+At lag~0, energy and boundary integrity are strongly anti-correlated
+($r=-0.78$, $p<10^{-8}$), consistent with repair expenditure coupling.
+To move beyond correlation, we run per-seed directed tests:
+Granger-style lagged F-tests (lags 1--5 with within-seed Holm correction)
+show significant directed predictability for all three hypothesized pathways
+(pair-level Fisher-combined $p_{\mathrm{corr}}<0.001$), while transfer-entropy
+estimates show positive directional information flow but are not significant
+after correction at this sample length. We therefore treat directional
+coupling as strongly supported by lagged linear predictability and as
+suggestive (but not yet decisive) under nonparametric information-theoretic
+tests.
 Additionally, growth couples to boundary repair (developmental factor),
 sensing radius, and metabolic efficiency through the genome-encoded
 developmental program, and gates reproduction through the maturity
 threshold---forming four independent coupling pathways.
 
-We further quantify coupling via intervention-based causal effects
+We further quantify coupling via intervention-based effect summaries
 (Table~\ref{tab:intervention}): ablating metabolism reduces waste
 production by 100\% and energy by 38\%, while \emph{increasing} boundary
 integrity by 41\% (no energy expenditure on repair attempts); ablating
@@ -685,10 +693,10 @@ Under environmental perturbation (resource halved at step~2,500 of
 
 Multiple lines of evidence confirm that evolutionary dynamics are
 adaptive rather than neutral drift. First, analytical heritability is
-high ($h^2 \approx 0.99$): given point mutation rate 0.01 per gene and
-scale 0.1, mutation variance ($V_m = 0.026$) is small relative to
-standing genetic variation ($V_g = 3.19$, measured as genome diversity
-at the final step). Second, genome drift trajectories diverge
+high ($h^2 \approx 0.96$): using the exact mutation parameters recorded
+in the experiment manifest (point mutation rate 0.02 per gene, scale 0.15),
+estimated mutation variance remains small relative to standing genetic
+variation (measured from final-step genome diversity). Second, genome drift trajectories diverge
 monotonically between evolved and non-evolved populations over 10,000
 steps (Figure~\ref{fig:evo_evidence}A; Cliff's $\delta$=1.00,
 $p < 0.001$), with evolved populations accumulating drift at a steady

@@ -16,9 +16,8 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from scipy import stats
-
 from analyze_results import bootstrap_cliffs_delta_ci, cliffs_delta, holm_bonferroni
+from scipy import stats
 
 EXP_DIR = Path("experiments")
 CONDITIONS = [

@@ -15,7 +15,6 @@ import time
 from pathlib import Path
 
 import digital_life
-
 from experiment_common import (
     log,
     print_header,
@@ -61,7 +60,12 @@ def main():
 
         for seed in SEEDS:
             t0 = time.perf_counter()
-            result = run_single(seed, {**GRAPH_OVERRIDES, **overrides}, steps=STEPS, sample_every=SAMPLE_EVERY)
+            result = run_single(
+                seed,
+                {**GRAPH_OVERRIDES, **overrides},
+                steps=STEPS,
+                sample_every=SAMPLE_EVERY,
+            )
             elapsed = time.perf_counter() - t0
             results.append(result)
 

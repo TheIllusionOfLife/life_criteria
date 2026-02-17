@@ -133,6 +133,7 @@ impl Default for MutationRates {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
     use rand::SeedableRng;
     use rand_chacha::ChaCha12Rng;
 
@@ -225,5 +226,29 @@ mod tests {
         g.mutate(&mut rng, &rates);
         let non_nn_changed = g.data()[212..].iter().any(|&v| v != 0.0);
         assert!(non_nn_changed, "mutation should affect non-NN segments too");
+    }
+
+    proptest! {
+        #[test]
+        fn proptest_mutation_always_stays_within_limit(seed: u64, steps in 1usize..64) {
+            let mut g = Genome::with_nn_weights(vec![0.0; 212]);
+            let rates = MutationRates {
+                point_rate: 0.4,
+                point_scale: 2.0,
+                reset_rate: 0.3,
+                scale_rate: 0.2,
+                scale_min: 0.2,
+                scale_max: 2.5,
+                value_limit: 1.5,
+            };
+            let mut rng = ChaCha12Rng::seed_from_u64(seed);
+            for _ in 0..steps {
+                g.mutate(&mut rng, &rates);
+            }
+            prop_assert!(g
+                .data()
+                .iter()
+                .all(|v| v.is_finite() && (-rates.value_limit..=rates.value_limit).contains(v)));
+        }
     }
 }

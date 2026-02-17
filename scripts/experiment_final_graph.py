@@ -12,8 +12,8 @@ import time
 from pathlib import Path
 
 import digital_life
-
-from experiment_utils import CONDITIONS, log, run_single
+from experiment_manifest import write_manifest
+from experiment_utils import CONDITIONS, log, make_config, run_single
 
 STEPS = 2000
 SAMPLE_EVERY = 50
@@ -58,6 +58,16 @@ def main():
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"
     out_dir.mkdir(exist_ok=True)
+    base_config = json.loads(make_config(SEEDS[0], GRAPH_OVERRIDES))
+    write_manifest(
+        out_dir / "final_graph_manifest.json",
+        experiment_name="final_graph_ablation",
+        steps=STEPS,
+        sample_every=SAMPLE_EVERY,
+        seeds=SEEDS,
+        base_config=base_config,
+        condition_overrides={name: {**GRAPH_OVERRIDES, **ov} for name, ov in CONDITIONS.items()},
+    )
 
     print_header()
     total_start = time.perf_counter()

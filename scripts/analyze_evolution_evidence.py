@@ -16,15 +16,16 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from analyze_results import bootstrap_cliffs_delta_ci, cliffs_delta
 from scipy import stats
 
-from analyze_results import bootstrap_cliffs_delta_ci, cliffs_delta
+try:
+    from .experiment_manifest import load_manifest
+except ImportError:
+    from experiment_manifest import load_manifest
 
 EXP_DIR = Path("experiments")
 
-# Mutation parameters from simulation config
-POINT_RATE = 0.01
-MUTATION_SCALE = 0.1
 GENOME_LENGTH = 256
 
 
@@ -37,14 +38,16 @@ def load_json(filename: str) -> list[dict]:
         return json.load(f)
 
 
-def analytical_heritability(results: list[dict]) -> dict:
+def analytical_heritability(
+    results: list[dict], point_rate: float, mutation_scale: float
+) -> dict:
     """Compute analytical h^2 from mutation params and standing variance.
 
     h^2 = 1 - V_mutation / (V_mutation + V_standing)
     where V_mutation = point_rate * genome_length * scale^2
     and V_standing is proxied by genome_diversity from the data.
     """
-    mutation_variance = POINT_RATE * GENOME_LENGTH * MUTATION_SCALE**2
+    mutation_variance = point_rate * GENOME_LENGTH * mutation_scale**2
 
     # Use genome_diversity from final sample of each seed as standing variance
     standing_vars = []
@@ -65,8 +68,8 @@ def analytical_heritability(results: list[dict]) -> dict:
 
     return {
         "analysis": "analytical_heritability",
-        "point_rate": POINT_RATE,
-        "mutation_scale": MUTATION_SCALE,
+        "point_rate": point_rate,
+        "mutation_scale": mutation_scale,
         "genome_length": GENOME_LENGTH,
         "mutation_variance": round(mutation_variance, 6),
         "standing_variance_mean": round(mean_standing, 4),
@@ -274,9 +277,30 @@ def main():
     evo_long_no_evo = load_json("evolution_long_no_evolution.json")
     cyclic_on = load_json("cyclic_cyclic_evo_on.json")
     cyclic_off = load_json("cyclic_cyclic_evo_off.json")
+    long_manifest_path = EXP_DIR / "evolution_long_manifest.json"
+    if not long_manifest_path.exists():
+        print(
+            f"ERROR: required manifest missing: {long_manifest_path}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    manifest = load_manifest(long_manifest_path)
+    base_cfg = manifest.get("base_config", {})
+    point_rate = float(base_cfg.get("mutation_point_rate", 0.0))
+    mutation_scale = float(base_cfg.get("mutation_point_scale", 0.0))
+    if point_rate <= 0.0 or mutation_scale <= 0.0:
+        print(
+            "ERROR: invalid mutation parameters in manifest base_config",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     print("\n1. Analytical heritability...", file=sys.stderr)
-    h2_result = analytical_heritability(evo_long_normal)
+    h2_result = analytical_heritability(
+        evo_long_normal,
+        point_rate=point_rate,
+        mutation_scale=mutation_scale,
+    )
 
     print("\n2. Selection differential...", file=sys.stderr)
     sel_result = selection_differential(normal_final)

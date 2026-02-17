@@ -15,8 +15,7 @@ import time
 from pathlib import Path
 
 import digital_life
-
-from experiment_common import TUNED_BASELINE, log, make_config
+from experiment_common import log, make_config
 
 STEPS = 5000
 SAMPLE_EVERY = 100

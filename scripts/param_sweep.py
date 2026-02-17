@@ -99,7 +99,7 @@ def main():
 
     all_metrics: list[ComboMetrics] = []
     for i, combo in enumerate(combos):
-        overrides = dict(zip(keys, combo))
+        overrides = dict(zip(keys, combo, strict=True))
         t0 = time.perf_counter()
         result = run(overrides)
         elapsed = time.perf_counter() - t0

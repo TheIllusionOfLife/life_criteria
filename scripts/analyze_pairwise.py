@@ -29,7 +29,10 @@ from pathlib import Path
 import numpy as np
 from scipy import stats
 
-from experiment_common import PAIRS, extract_final_alive, load_json
+try:
+    from .experiment_common import PAIRS, extract_final_alive, load_json
+except ImportError:
+    from experiment_common import PAIRS, extract_final_alive, load_json
 
 
 def compute_synergy(
@@ -78,8 +81,10 @@ def main():
         if results:
             alive = extract_final_alive(results)
             single_declines[criterion] = baseline_mean - float(np.mean(alive))
+            alive_mean = float(np.mean(alive))
+            decline = single_declines[criterion]
             print(
-                f"  no_{criterion}: mean={np.mean(alive):.1f}, decline={single_declines[criterion]:.1f}",
+                f"  no_{criterion}: mean={alive_mean:.1f}, decline={decline:.1f}",
                 file=sys.stderr,
             )
         else:
@@ -237,7 +242,7 @@ def main():
     print("\n--- Bootstrap CI for synergy (2000 resamples) ---", file=sys.stderr)
     rng = np.random.default_rng(42)
     N_BOOT = 2000
-    for entry, robust_entry in zip(pair_results, robust_synergy):
+    for entry, robust_entry in zip(pair_results, robust_synergy, strict=True):
         a, b = entry["pair"]
         if a not in single_alive or b not in single_alive:
             continue

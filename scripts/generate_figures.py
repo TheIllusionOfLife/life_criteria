@@ -8,12 +8,13 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
 import json
-import numpy as np
 from collections import defaultdict
+
+import matplotlib.lines as mlines
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -102,13 +103,21 @@ def parse_tsv(path: Path) -> list[dict]:
             if fields[0] not in VALID_CONDITIONS:
                 continue
             row = {}
-            for col, val in zip(header, fields):
+            for col, val in zip(header, fields, strict=True):
                 try:
                     row[col] = float(val)
                 except ValueError:
                     row[col] = val
             rows.append(row)
     return rows
+
+
+def get_coupling_best(pair: dict) -> tuple[float | None, int | None]:
+    """Read best r/lag from v2 coupling schema, with legacy fallback."""
+    lagged = pair.get("lagged_correlation", {})
+    r = lagged.get("best_pearson_r", pair.get("best_pearson_r"))
+    lag = lagged.get("best_lag", pair.get("best_lag"))
+    return r, lag
 
 
 def generate_timeseries(data: list[dict]) -> None:
@@ -951,7 +960,10 @@ def generate_coupling() -> None:
 
     n = len(criteria)
     angles = [2 * np.pi * i / n - np.pi / 2 for i in range(n)]
-    positions = {name: (np.cos(a), np.sin(a)) for name, a in zip(criteria, angles)}
+    positions = {
+        name: (np.cos(a), np.sin(a))
+        for name, a in zip(criteria, angles, strict=True)
+    }
 
     # Draw nodes
     node_colors = [
@@ -979,8 +991,9 @@ def generate_coupling() -> None:
     for pair in pairs:
         var_a = short_names.get(pair["var_a"], pair["var_a"])
         var_b = short_names.get(pair["var_b"], pair["var_b"])
-        r = pair["best_pearson_r"]
-        lag = pair["best_lag"]
+        r, lag = get_coupling_best(pair)
+        if r is None or lag is None:
+            continue
 
         if var_a not in positions or var_b not in positions:
             continue
@@ -1218,7 +1231,10 @@ def generate_lineage() -> None:
 
 
 def generate_orthogonal() -> None:
-    """Figure 14: Orthogonal outcome metrics — spatial cohesion and median lifespan per condition."""
+    """Figure 14: orthogonal outcome metrics.
+
+    Plots spatial cohesion and median lifespan per condition.
+    """
     exp_dir = PROJECT_ROOT / "experiments"
 
     # Panel A: spatial cohesion from final_graph_{condition}.json (last sample)
