@@ -445,15 +445,15 @@ def bootstrap_ci(
 
 
 def main(*, robustness_profile: str = "full") -> None:
-    if not DATA_PATH.exists():
-        print(f"ERROR: {DATA_PATH} not found")
-        return
     if robustness_profile not in ROBUSTNESS_PROFILES:
         valid_profiles = ", ".join(sorted(ROBUSTNESS_PROFILES.keys()))
         raise ValueError(
             f"Unknown robustness_profile '{robustness_profile}'. "
             f"Expected one of: {valid_profiles}."
         )
+    if not DATA_PATH.exists():
+        print(f"ERROR: {DATA_PATH} not found")
+        return
     profile = ROBUSTNESS_PROFILES[robustness_profile]
     bin_settings = profile["bin_settings"]
     permutation_settings = profile["permutation_settings"]
