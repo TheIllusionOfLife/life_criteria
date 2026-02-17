@@ -249,26 +249,46 @@ def transfer_entropy_from_discrete(
     if n == 0:
         return 0.0
 
-    joint_y = defaultdict(int)
-    joint_xy = defaultdict(int)
-    joint_yy = defaultdict(int)
-    joint_xxy = defaultdict(int)
+    x_bins = int(np.max(x_prev)) + 1 if len(x_prev) > 0 else 1
+    y_bins = int(np.max(np.concatenate((y_prev, y_curr)))) + 1
 
-    for xp, yp, yc in zip(x_prev, y_prev, y_curr, strict=True):
-        joint_y[(yp,)] += 1
-        joint_xy[(xp, yp)] += 1
-        joint_yy[(yp, yc)] += 1
-        joint_xxy[(xp, yp, yc)] += 1
+    joint_y = np.bincount(y_prev, minlength=y_bins).astype(float)
+    joint_xy = np.bincount(
+        x_prev * y_bins + y_prev, minlength=x_bins * y_bins
+    ).astype(float).reshape(x_bins, y_bins)
+    joint_yy = np.bincount(
+        y_prev * y_bins + y_curr, minlength=y_bins * y_bins
+    ).astype(float).reshape(y_bins, y_bins)
+    joint_xxy = np.bincount(
+        (x_prev * y_bins + y_prev) * y_bins + y_curr,
+        minlength=x_bins * y_bins * y_bins,
+    ).astype(float).reshape(x_bins, y_bins, y_bins)
 
-    te = 0.0
-    for (xp, yp, yc), count in joint_xxy.items():
-        p_xpy_p = count / n
-        p_yc_given_xpyp = count / joint_xy[(xp, yp)]
-        p_yc_given_yp = joint_yy[(yp, yc)] / joint_y[(yp,)]
-        ratio = p_yc_given_xpyp / p_yc_given_yp
-        if ratio > 0.0:
-            te += p_xpy_p * np.log2(ratio)
-    return float(max(te, 0.0))
+    p_xxy = joint_xxy / n
+    p_yc_given_xy = np.divide(
+        joint_xxy,
+        joint_xy[:, :, None],
+        out=np.zeros_like(joint_xxy),
+        where=joint_xy[:, :, None] > 0,
+    )
+    p_yc_given_y = np.divide(
+        joint_yy[None, :, :],
+        joint_y[None, :, None],
+        out=np.zeros((1, y_bins, y_bins), dtype=float),
+        where=joint_y[None, :, None] > 0,
+    )
+
+    ratio = np.divide(
+        p_yc_given_xy,
+        p_yc_given_y,
+        out=np.zeros_like(joint_xxy),
+        where=p_yc_given_y > 0,
+    )
+    mask = (p_xxy > 0) & (ratio > 0)
+    if not np.any(mask):
+        return 0.0
+    te = np.sum(p_xxy[mask] * np.log2(ratio[mask]))
+    return float(max(float(te), 0.0))
 
 
 def transfer_entropy_lag1(
