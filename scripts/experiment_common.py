@@ -44,6 +44,15 @@ PAIRS = [
     ("reproduction", "evolution"),
 ]
 
+# Standard criterion-ablation conditions shared across experiment drivers.
+CONDITIONS = {
+    "normal": {},
+    **{
+        f"no_{criterion}": {flag: False}
+        for criterion, flag in CRITERION_TO_FLAG.items()
+    },
+}
+
 # TSV column headers for experiment output
 TSV_COLUMNS = [
     "condition", "seed", "step",

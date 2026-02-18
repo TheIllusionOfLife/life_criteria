@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import json
+import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -351,3 +355,74 @@ steps.
     report = run_checks(paper, manifest, registry)
     assert report["ok"] is False
     assert any("invalid JSON in" in issue for issue in report["issues"])
+
+
+def test_experiment_niche_defaults_and_long_horizon_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = types.SimpleNamespace()
+    calls: list[tuple[int, int, list[int]]] = []
+
+    def fake_version() -> str:
+        return "test"
+
+    def fake_run_niche(
+        config_json: str, steps: int, sample_every: int, snapshot_steps_json: str
+    ) -> str:
+        _ = config_json
+        calls.append((steps, sample_every, json.loads(snapshot_steps_json)))
+        payload = {"final_alive_count": 1, "organism_snapshots": [{"organisms": [{"id": 1}]}]}
+        return json.dumps(payload)
+
+    fake.version = fake_version
+    fake.run_niche_experiment_json = fake_run_niche
+    monkeypatch.setitem(sys.modules, "digital_life", fake)
+    script_dir = Path(__file__).resolve().parents[1] / "scripts"
+    monkeypatch.syspath_prepend(str(script_dir))
+
+    mod = importlib.import_module("scripts.experiment_niche")
+    mod = importlib.reload(mod)
+
+    assert mod.SEEDS == list(range(100, 130))
+
+    monkeypatch.setattr(mod, "SEEDS", [100])
+    monkeypatch.setattr(mod, "make_config", lambda seed, overrides: "{}")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["experiment_niche.py", "--long-horizon", "--output", str(tmp_path / "custom_long.json")],
+    )
+    mod.main()
+    assert calls[-1][0] == mod.LONG_HORIZON_STEPS
+    assert calls[-1][1] == mod.SAMPLE_EVERY
+    assert calls[-1][2] == mod.LONG_HORIZON_SNAPSHOT_STEPS
+    assert (tmp_path / "custom_long.json").exists()
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["experiment_niche.py", "--output", str(tmp_path / "niche_normal.json")],
+    )
+    mod.main()
+    assert calls[-1][0] == mod.STEPS
+    assert calls[-1][1] == mod.SAMPLE_EVERY
+    assert calls[-1][2] == mod.SNAPSHOT_STEPS
+    assert (tmp_path / "niche_normal.json").exists()
+
+def test_experiment_regimes_seed_count_is_n30(monkeypatch: pytest.MonkeyPatch) -> None:
+    script_dir = Path(__file__).resolve().parents[1] / "scripts"
+    script_path = script_dir / "experiment_regimes.py"
+
+    fake_digital_life = types.SimpleNamespace(version=lambda: "test")
+    monkeypatch.setitem(sys.modules, "digital_life", fake_digital_life)
+    monkeypatch.syspath_prepend(str(script_dir))
+
+    spec = importlib.util.spec_from_file_location("experiment_regimes_under_test", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert hasattr(module, "SEEDS")
+    assert len(module.SEEDS) == 30
+    assert module.SEEDS[0] == 100
+    assert module.SEEDS[-1] == 129
