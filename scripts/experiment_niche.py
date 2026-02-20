@@ -6,6 +6,7 @@ Optional long-horizon sensitivity mode: 10,000 steps over n=30 seeds.
 Usage:
     uv run python scripts/experiment_niche.py
     uv run python scripts/experiment_niche.py --long-horizon
+    uv run python scripts/experiment_niche.py --long-horizon --seed-start 100 --seed-end 109
 
 Output:
     - default: experiments/niche_normal.json
@@ -45,11 +46,29 @@ def parse_args():
         type=Path,
         help="Optional output path. Defaults to mode-specific experiments/*.json file.",
     )
+    parser.add_argument(
+        "--seed-start",
+        type=int,
+        default=SEEDS[0],
+        help=f"Start seed (inclusive). Default: {SEEDS[0]}",
+    )
+    parser.add_argument(
+        "--seed-end",
+        type=int,
+        default=SEEDS[-1],
+        help=f"End seed (inclusive). Default: {SEEDS[-1]}",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    if args.seed_end < args.seed_start:
+        raise ValueError(
+            "Invalid seed range: "
+            f"seed-end ({args.seed_end}) must be >= seed-start ({args.seed_start})"
+        )
+    seeds = list(range(args.seed_start, args.seed_end + 1))
     steps = LONG_HORIZON_STEPS if args.long_horizon else STEPS
     default_name = "niche_normal_long.json" if args.long_horizon else "niche_normal.json"
     snapshot_steps = LONG_HORIZON_SNAPSHOT_STEPS if args.long_horizon else SNAPSHOT_STEPS
@@ -58,7 +77,7 @@ def main():
     mode = "long-horizon sensitivity" if args.long_horizon else "standard robustness"
     log(f"Ecological niche experiment (per-organism snapshots, {mode})")
     log(f"  Steps: {steps}, sample_every: {SAMPLE_EVERY}")
-    log(f"  Seeds: {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(f"  Seeds: {seeds[0]}-{seeds[-1]} (n={len(seeds)})")
     log(f"  Snapshot steps: {snapshot_steps}")
     log("")
 
@@ -70,7 +89,7 @@ def main():
     results = []
     total_start = time.perf_counter()
 
-    for seed in SEEDS:
+    for seed in seeds:
         config_json = make_config(seed, {})
         t0 = time.perf_counter()
         result_json = digital_life.run_niche_experiment_json(

@@ -38,9 +38,11 @@
       "manifest": "experiments/evolution_long_manifest.json",
       "source_files": [
         "experiments/phenotype_analysis.json",
-        "experiments/niche_normal.json"
+        "experiments/niche_normal.json",
+        "experiments/niche_normal_long.json",
+        "docs/research/zenodo_niche_long_horizon_metadata.json"
       ],
-      "notes": "Ecological persistence and ARI-based claim gating."
+      "notes": "Ecological persistence and long-horizon sensitivity (raw long-run artifacts tracked via Zenodo metadata/checksums)."
     },
     {
       "result_id": "pairwise_interaction",

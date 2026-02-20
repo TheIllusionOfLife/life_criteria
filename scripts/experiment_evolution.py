@@ -116,7 +116,9 @@ def main():
                 "paper_ref": "fig:persistent_clusters",
                 "source_files": [
                     "experiments/niche_normal.json",
+                    "experiments/niche_normal_long.json",
                     "experiments/phenotype_analysis.json",
+                    "docs/research/zenodo_niche_long_horizon_metadata.json",
                 ],
             },
         ],

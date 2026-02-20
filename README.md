@@ -32,6 +32,20 @@ uv run pytest tests_python
 uv run python scripts/check_manuscript_consistency.py
 ```
 
+### Long-Horizon Niche + Zenodo Metadata
+
+```bash
+uv run python scripts/experiment_niche.py --long-horizon
+uv run python scripts/analyze_phenotype.py > experiments/phenotype_analysis.json
+uv run python scripts/prepare_zenodo_metadata.py experiments/niche_normal_long.json \
+  --experiment-name niche_long_horizon \
+  --steps 10000 \
+  --seed-start 100 \
+  --seed-end 129 \
+  --paper-binding fig:persistent_clusters=experiments/phenotype_analysis.json \
+  --output docs/research/zenodo_niche_long_horizon_metadata.json
+```
+
 ### Run the Feasibility Spike
 
 ```bash

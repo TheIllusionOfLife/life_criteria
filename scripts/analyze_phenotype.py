@@ -9,6 +9,7 @@ Usage:
 Output: JSON analysis to stdout + progress to stderr.
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -30,6 +31,29 @@ PERSISTENCE_CLAIM_THRESHOLD = 0.30
 def persistence_claim_gate(ari: float, threshold: float = PERSISTENCE_CLAIM_THRESHOLD) -> bool:
     """Return True when ARI meets the threshold for stronger persistence claims."""
     return bool(ari >= threshold)
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line options."""
+    parser = argparse.ArgumentParser(
+        description="Analyze phenotype clustering and temporal persistence."
+    )
+    parser.add_argument(
+        "--exp-dir",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "experiments",
+        help="Experiments directory containing JSON inputs.",
+    )
+    parser.add_argument(
+        "--niche-long-path",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to long-horizon niche JSON. "
+            "Defaults to <exp-dir>/niche_normal_long.json if present."
+        ),
+    )
+    return parser.parse_args()
 
 
 def load_evolution_data(exp_dir: Path) -> list[dict]:
@@ -303,7 +327,7 @@ def analyze_temporal_persistence(exp_dir: Path) -> dict:
     }
 
 
-def analyze_organism_level_persistence(exp_dir: Path) -> dict:
+def analyze_organism_level_persistence(exp_dir: Path, niche_path: Path | None = None) -> dict:
     """Analyze persistence of per-organism phenotype clusters across time windows.
 
     Uses per-organism snapshots from the niche experiment to test whether
@@ -317,9 +341,9 @@ def analyze_organism_level_persistence(exp_dir: Path) -> dict:
       2. Cross-pair ARI (long gap) — do cluster assignments persist across
          thousands of steps (using organisms that survive both)?
     """
-    path = exp_dir / "niche_normal.json"
+    path = niche_path or exp_dir / "niche_normal.json"
     if not path.exists():
-        return {"error": "niche_normal.json not found"}
+        return {"error": f"{path.name} not found"}
 
     with open(path) as f:
         results = json.load(f)
@@ -327,12 +351,21 @@ def analyze_organism_level_persistence(exp_dir: Path) -> dict:
 
     trait_names = ["energy", "waste", "boundary_integrity", "maturity", "generation"]
 
-    # Snapshot layout: [early_a, early_b, late_a, late_b]
-    # Pair 1 (early): frames 0,1  —  Pair 2 (late): frames 2,3
-    early_a = _collect_organism_traits(results, 0, trait_names)
-    early_b = _collect_organism_traits(results, 1, trait_names)
-    late_a = _collect_organism_traits(results, 2, trait_names)
-    late_b = _collect_organism_traits(results, 3, trait_names)
+    frame_count = 0
+    if results:
+        frame_count = len(results[0].get("organism_snapshots", []))
+    if frame_count < 4:
+        return {"error": f"insufficient snapshots for persistence analysis: {frame_count}"}
+
+    # Pair 1 (early): frames 0,1
+    # Pair 2 (late): use final two frames so long-horizon runs compare truly late windows.
+    early_pair = (0, 1)
+    late_pair = (frame_count - 2, frame_count - 1)
+
+    early_a = _collect_organism_traits(results, early_pair[0], trait_names)
+    early_b = _collect_organism_traits(results, early_pair[1], trait_names)
+    late_a = _collect_organism_traits(results, late_pair[0], trait_names)
+    late_b = _collect_organism_traits(results, late_pair[1], trait_names)
 
     # Report frame steps
     frame_steps = []
@@ -405,6 +438,8 @@ def analyze_organism_level_persistence(exp_dir: Path) -> dict:
     return {
         "early_window": early_summary,
         "late_window": late_summary,
+        "early_pair_frames": list(early_pair),
+        "late_pair_frames": list(late_pair),
         "adjusted_rand_index": round(float(ari), 4),
         "claim_gate_threshold": PERSISTENCE_CLAIM_THRESHOLD,
         "claim_gate_passed": persistence_claim_gate(float(ari)),
@@ -421,9 +456,65 @@ def analyze_organism_level_persistence(exp_dir: Path) -> dict:
     }
 
 
+def analyze_long_horizon_sensitivity(exp_dir: Path, niche_long_path: Path | None = None) -> dict:
+    """Compare organism-level persistence between standard and long-horizon runs."""
+    standard_path = exp_dir / "niche_normal.json"
+    long_path = niche_long_path or exp_dir / "niche_normal_long.json"
+    if not long_path.exists():
+        return {
+            "available": False,
+            "reason": f"{long_path.name} not found",
+        }
+
+    standard = analyze_organism_level_persistence(exp_dir, standard_path)
+    if "error" in standard:
+        return {
+            "available": False,
+            "reason": f"standard run unavailable: {standard['error']}",
+        }
+
+    long_run = analyze_organism_level_persistence(exp_dir, long_path)
+    if "error" in long_run:
+        return {
+            "available": False,
+            "reason": f"long-horizon run unavailable: {long_run['error']}",
+        }
+
+    metrics = [
+        "adjusted_rand_index",
+        "late_pair_ari",
+        "cross_pair_ari",
+        "n_cross_pair_shared",
+    ]
+    comparison: dict[str, dict[str, float | int | None]] = {}
+    for metric in metrics:
+        standard_value = standard.get(metric)
+        long_value = long_run.get(metric)
+        delta = None
+        if isinstance(standard_value, (int, float)) and isinstance(long_value, (int, float)):
+            delta = round(float(long_value) - float(standard_value), 4)
+        comparison[metric] = {
+            "standard": standard_value,
+            "long_horizon": long_value,
+            "delta_long_minus_standard": delta,
+        }
+
+    return {
+        "available": True,
+        "standard_path": str(standard_path),
+        "long_horizon_path": str(long_path),
+        "standard_claim_gate_passed": standard.get("claim_gate_passed"),
+        "long_horizon_claim_gate_passed": long_run.get("claim_gate_passed"),
+        "comparison": comparison,
+        "standard_frame_steps": standard.get("frame_steps"),
+        "long_horizon_frame_steps": long_run.get("frame_steps"),
+    }
+
+
 def main():
     """Analyze phenotype clustering from evolution experiment data."""
-    exp_dir = Path(__file__).resolve().parent.parent / "experiments"
+    args = parse_args()
+    exp_dir = args.exp_dir
 
     log("Phenotype clustering analysis")
     log("Loading evolution experiment data...")
@@ -457,6 +548,8 @@ def main():
 
     log("Analyzing organism-level persistence...")
     organism_persistence = analyze_organism_level_persistence(exp_dir)
+    log("Analyzing long-horizon niche sensitivity...")
+    long_horizon_sensitivity = analyze_long_horizon_sensitivity(exp_dir, args.niche_long_path)
 
     output = {
         "analysis": "phenotype_clustering",
@@ -465,6 +558,7 @@ def main():
         **analysis,
         "temporal_persistence": temporal,
         "organism_level_persistence": organism_persistence,
+        "long_horizon_sensitivity": long_horizon_sensitivity,
     }
 
     print(json.dumps(output, indent=2))

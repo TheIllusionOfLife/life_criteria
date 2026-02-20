@@ -426,3 +426,113 @@ def test_experiment_regimes_seed_count_is_n30(monkeypatch: pytest.MonkeyPatch) -
     assert len(module.SEEDS) == 30
     assert module.SEEDS[0] == 100
     assert module.SEEDS[-1] == 129
+
+
+def test_experiment_niche_seed_range_batching(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = types.SimpleNamespace()
+    seen_seeds: list[int] = []
+
+    def fake_version() -> str:
+        return "test"
+
+    def fake_run_niche(
+        config_json: str, steps: int, sample_every: int, snapshot_steps_json: str
+    ) -> str:
+        _ = steps, sample_every, snapshot_steps_json
+        seen_seeds.append(json.loads(config_json)["seed"])
+        return json.dumps({"final_alive_count": 1, "organism_snapshots": []})
+
+    fake.version = fake_version
+    fake.run_niche_experiment_json = fake_run_niche
+    monkeypatch.setitem(sys.modules, "digital_life", fake)
+    script_dir = Path(__file__).resolve().parents[1] / "scripts"
+    monkeypatch.syspath_prepend(str(script_dir))
+
+    mod = importlib.import_module("scripts.experiment_niche")
+    mod = importlib.reload(mod)
+    monkeypatch.setattr(mod, "make_config", lambda seed, overrides: json.dumps({"seed": seed}))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "experiment_niche.py",
+            "--seed-start",
+            "105",
+            "--seed-end",
+            "107",
+            "--output",
+            str(tmp_path / "batch.json"),
+        ],
+    )
+    mod.main()
+
+    assert seen_seeds == [105, 106, 107]
+    assert (tmp_path / "batch.json").exists()
+
+
+def test_analyze_phenotype_long_horizon_sensitivity(tmp_path: Path) -> None:
+    from scripts.analyze_phenotype import analyze_long_horizon_sensitivity
+
+    exp_dir = tmp_path / "experiments"
+    exp_dir.mkdir(parents=True)
+
+    def make_seed(seed: int, steps: list[int], stable_ids: list[int]) -> dict:
+        frames = []
+        for step in steps:
+            frames.append(
+                {
+                    "step": step,
+                    "organisms": [
+                        {
+                            "stable_id": sid,
+                            "energy": 1.0 + sid * 0.01,
+                            "waste": 0.2,
+                            "boundary_integrity": 0.8,
+                            "maturity": 1.0,
+                            "generation": sid % 3,
+                        }
+                        for sid in stable_ids
+                    ],
+                }
+            )
+        return {"seed": seed, "organism_snapshots": frames}
+
+    standard = [make_seed(100, [2000, 2200, 4500, 4700], [1, 2, 3, 4, 5])]
+    long_horizon = [
+        make_seed(100, [2000, 2200, 4500, 4700, 7000, 7200, 9500, 9700], [1, 2, 3, 4, 5])
+    ]
+
+    (exp_dir / "niche_normal.json").write_text(json.dumps(standard))
+    (exp_dir / "niche_normal_long.json").write_text(json.dumps(long_horizon))
+
+    out = analyze_long_horizon_sensitivity(exp_dir)
+    assert out["available"] is True
+    assert out["long_horizon_path"].endswith("niche_normal_long.json")
+    assert "adjusted_rand_index" in out["comparison"]
+
+
+def test_prepare_zenodo_metadata_builds_checksums(tmp_path: Path) -> None:
+    from scripts.prepare_zenodo_metadata import build_metadata
+
+    artifact = tmp_path / "niche_normal_long.json"
+    artifact.write_text('{"ok": true}')
+    args = types.SimpleNamespace(
+        files=[artifact],
+        experiment_name="niche_long_horizon",
+        steps=10000,
+        seed_start=100,
+        seed_end=129,
+        entrypoint="uv run python scripts/experiment_niche.py --long-horizon",
+        paper_binding=["fig:persistent_clusters=experiments/phenotype_analysis.json"],
+        zenodo_doi="10.5072/zenodo.123456",
+    )
+
+    payload = build_metadata(args)
+    assert payload["experiment_name"] == "niche_long_horizon"
+    assert payload["steps"] == 10000
+    assert payload["seed_range"] == {"start": 100, "end": 129}
+    assert payload["zenodo_doi"] == "10.5072/zenodo.123456"
+    assert payload["artifacts"][0]["path"].endswith("niche_normal_long.json")
+    assert len(payload["artifacts"][0]["sha256"]) == 64

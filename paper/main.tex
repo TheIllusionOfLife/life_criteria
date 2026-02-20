@@ -791,17 +791,18 @@ integrity, genome diversity, generation count) reveals two emergent
 phenotypic clusters among evolved populations ($k$=2, silhouette=0.41;
 Figure~\ref{fig:phenotype}).
 To test whether individual organisms differentiate into persistent
-ecological strategies, we run 5,000-step simulations ($n$=10 seeds)
+ecological strategies, we run 5,000-step simulations ($n$=30 seeds)
 and collect per-organism trait snapshots (energy, waste, boundary
 integrity, maturity, generation) at paired time windows separated
 by 200 steps (steps 2,000/2,200 and 4,500/4,700).
-Organisms present in both snapshots of a pair ($n$=1,262 shared)
+Organisms present in both snapshots of a pair ($n$=3,703 shared)
 are matched by stable ID and clustered independently via $k$-means
 ($k$=2) on standardized traits (silhouette 0.39--0.51;
 Figure~\ref{fig:persistent_clusters}).
 Despite meaningful within-snapshot cluster separation (two distinct
 strategies: high-energy/low-boundary vs.\ low-energy/high-boundary),
-the adjusted Rand index between paired windows is low (ARI=0.04--0.09),
+the adjusted Rand index between paired windows is low
+(early-pair ARI=0.020, late-pair ARI=0.043),
 indicating that individual organisms transition between ecological
 roles even over short ($\sim$200-step) timescales.
 Using a pre-registered persistence threshold (stronger language allowed
@@ -811,6 +812,10 @@ ecological differentiation.
 Cross-pair analysis (steps 2,000 to 4,700) finds near-zero organism
 overlap, confirming that median lifespan ($\sim$245 steps) prevents
 long-horizon individual persistence.
+An explicit long-horizon sensitivity run (10,000 steps, $n$=30)
+also remains below the pre-registered ARI claim gate
+(early-pair ARI=0.020, late-pair ARI=0.039; threshold $\geq 0.30$),
+so the weak-persistence interpretation is robust to longer simulation horizons.
 This suggests that ecological strategy differentiation in our system
 is a population-level rather than individual-level phenomenon:
 organisms continuously explore the trait space, with the population
