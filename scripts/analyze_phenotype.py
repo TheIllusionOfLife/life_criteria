@@ -375,7 +375,7 @@ def analyze_organism_level_persistence(exp_dir: Path, niche_path: Path | None = 
     # Use early pair (a→b) for the main persistence analysis
     shared_keys, pair_traits_a, pair_traits_b = _extract_shared_traits(early_a, early_b)
 
-    log(f"  Early organisms: {len(early_a)}, Late: {len(early_b)}, Shared: {len(shared_keys)}")
+    log(f"  Early A organisms: {len(early_a)}, Early B: {len(early_b)}, Shared: {len(shared_keys)}")
 
     if pair_traits_a is None:
         return {
@@ -454,7 +454,11 @@ def analyze_organism_level_persistence(exp_dir: Path, niche_path: Path | None = 
     }
 
 
-def analyze_long_horizon_sensitivity(exp_dir: Path, niche_long_path: Path | None = None) -> dict:
+def analyze_long_horizon_sensitivity(
+    exp_dir: Path,
+    niche_long_path: Path | None = None,
+    standard_persistence: dict | None = None,
+) -> dict:
     """Compare organism-level persistence between standard and long-horizon runs."""
     standard_path = exp_dir / "niche_normal.json"
     long_path = niche_long_path or exp_dir / "niche_normal_long.json"
@@ -464,7 +468,7 @@ def analyze_long_horizon_sensitivity(exp_dir: Path, niche_long_path: Path | None
             "reason": f"{long_path.name} not found",
         }
 
-    standard = analyze_organism_level_persistence(exp_dir, standard_path)
+    standard = standard_persistence or analyze_organism_level_persistence(exp_dir, standard_path)
     if "error" in standard:
         return {
             "available": False,
@@ -547,7 +551,11 @@ def main():
     log("Analyzing organism-level persistence...")
     organism_persistence = analyze_organism_level_persistence(exp_dir)
     log("Analyzing long-horizon niche sensitivity...")
-    long_horizon_sensitivity = analyze_long_horizon_sensitivity(exp_dir, args.niche_long_path)
+    long_horizon_sensitivity = analyze_long_horizon_sensitivity(
+        exp_dir,
+        args.niche_long_path,
+        organism_persistence,
+    )
 
     output = {
         "analysis": "phenotype_clustering",

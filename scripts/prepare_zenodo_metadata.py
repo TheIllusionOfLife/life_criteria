@@ -77,17 +77,17 @@ def parse_args() -> argparse.Namespace:
         default=Path("zenodo_metadata.json"),
         help="Output JSON path (default: ./zenodo_metadata.json).",
     )
-    return parser.parse_args()
-
-
-def build_metadata(args: argparse.Namespace) -> dict:
+    args = parser.parse_args()
     if args.seed_end < args.seed_start:
-        raise ValueError(
+        parser.error(
             f"invalid seed range: seed-end ({args.seed_end}) < seed-start ({args.seed_start})"
         )
     if args.steps <= 0:
-        raise ValueError(f"invalid steps: expected positive int, got {args.steps}")
+        parser.error(f"invalid steps: expected positive int, got {args.steps}")
+    return args
 
+
+def build_metadata(args: argparse.Namespace) -> dict:
     artifact_entries = []
     for path in args.files:
         resolved = path.resolve()

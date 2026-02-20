@@ -70,6 +70,12 @@ def parse_args():
             f"{args.seed_start}-{args.seed_end} overlaps calibration seeds 0-99; "
             "use seeds >=100 for test experiments."
         )
+    if args.seed_end > 199:
+        parser.error(
+            "Invalid seed range: requested range "
+            f"{args.seed_start}-{args.seed_end} exceeds test seed upper bound; "
+            "Phase 4 seeds must be in 100-199."
+        )
     return args
 
 

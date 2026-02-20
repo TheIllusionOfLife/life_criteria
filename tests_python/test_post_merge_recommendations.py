@@ -501,6 +501,14 @@ def test_experiment_niche_rejects_invalid_seed_ranges(monkeypatch: pytest.Monkey
     with pytest.raises(SystemExit):
         mod.main()
 
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["experiment_niche.py", "--seed-start", "190", "--seed-end", "200"],
+    )
+    with pytest.raises(SystemExit):
+        mod.main()
+
 
 def test_analyze_phenotype_long_horizon_sensitivity(tmp_path: Path) -> None:
     from scripts.analyze_phenotype import analyze_long_horizon_sensitivity
@@ -568,3 +576,45 @@ def test_prepare_zenodo_metadata_builds_checksums(tmp_path: Path) -> None:
     assert len(payload["artifacts"][0]["sha256"]) == 64
     assert "metadata_generation_argv" in payload
     assert "argv" not in payload
+
+
+def test_prepare_zenodo_metadata_parse_args_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from scripts.prepare_zenodo_metadata import parse_args
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prepare_zenodo_metadata.py",
+            "artifact.json",
+            "--experiment-name",
+            "niche_long_horizon",
+            "--steps",
+            "0",
+            "--seed-start",
+            "100",
+            "--seed-end",
+            "129",
+        ],
+    )
+    with pytest.raises(SystemExit):
+        parse_args()
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prepare_zenodo_metadata.py",
+            "artifact.json",
+            "--experiment-name",
+            "niche_long_horizon",
+            "--steps",
+            "10000",
+            "--seed-start",
+            "130",
+            "--seed-end",
+            "129",
+        ],
+    )
+    with pytest.raises(SystemExit):
+        parse_args()
