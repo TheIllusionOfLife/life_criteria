@@ -33,6 +33,12 @@ build/
 /experiments/*_sweep_*.json
 /experiments/*_step0.json
 /experiments/*_midrun.json
+# Keep manifest-bound source artifacts trackable.
+!/experiments/final_graph_normal.json
+!/experiments/evolution_long_normal.json
+!/experiments/evolution_long_no_evolution.json
+!/experiments/niche_normal.json
+!/experiments/niche_normal_long.json
 
 # LaTeX build artifacts
 paper/*.aux
