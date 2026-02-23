@@ -1958,9 +1958,12 @@ if __name__ == "__main__":
     generate_architecture()
 
     print("Figure 2: Time-series plot")
-    data = parse_tsv(DATA_TSV)
-    print(f"  Parsed {len(data)} rows from {DATA_TSV.name}")
-    generate_timeseries(data)
+    if DATA_TSV.exists():
+        data = parse_tsv(DATA_TSV)
+        print(f"  Parsed {len(data)} rows from {DATA_TSV.name}")
+        generate_timeseries(data)
+    else:
+        print(f"  SKIP: {DATA_TSV} not found")
 
     print("Figure 3: Proxy control comparison")
     generate_proxy()
