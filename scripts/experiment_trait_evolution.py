@@ -67,7 +67,7 @@ def run_condition(cond_name: str, overrides: dict, out_dir: Path) -> None:
 def main() -> None:
     log(f"Digital Life v{digital_life.version()}")
     log(
-        f"Trait evolution experiment (generation-stratified selection differential)"
+        "Trait evolution experiment (generation-stratified selection differential)"
     )
     log(f"  Steps: {STEPS}, sample_every: {SAMPLE_EVERY}")
     log(f"  Seeds: {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")

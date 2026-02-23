@@ -1702,10 +1702,10 @@ def generate_midrun_ablation() -> None:
 
     fig, ax = plt.subplots(figsize=(7, 3.2))
 
-    bars1 = ax.bar(x - width / 2, step0_means, width, label="Step-0 ablation",
-                   color="#0072B2", alpha=0.7)
-    bars2 = ax.bar(x + width / 2, midrun_means, width, label="Mid-run ablation",
-                   color="#D55E00", alpha=0.7)
+    ax.bar(x - width / 2, step0_means, width, label="Step-0 ablation",
+           color="#0072B2", alpha=0.7)
+    ax.bar(x + width / 2, midrun_means, width, label="Mid-run ablation",
+           color="#D55E00", alpha=0.7)
 
     # Normal mean baseline
     ax.axhline(y=normal_mean, color="#000000", linestyle=":", linewidth=1.0,
@@ -1746,7 +1746,7 @@ def generate_invariance() -> None:
         effect_alt = data[criterion]["effect_alt"]
         direction_consistent = data[criterion]["direction_consistent"]
 
-        bars = ax.bar(
+        ax.bar(
             ["Default\nmode", "Alt.\nmode"],
             [effect_default, effect_alt],
             color=["#0072B2", "#D55E00"],
