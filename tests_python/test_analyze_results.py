@@ -18,6 +18,7 @@ def test_cohens_d():
     # d = (3 - 4) / 1.5811 = -0.6324
     assert np.isclose(d, -0.6324, atol=0.001)
 
+
 def test_cliffs_delta():
     a = np.array([1, 2, 3])
     b = np.array([2, 3, 4])
@@ -32,12 +33,13 @@ def test_cliffs_delta():
     # 3 vs 3: 0
     # 3 vs 4: -1
     # sum: -3 + -2 + 0 = -5. delta = -5/9 = -0.555
-    assert np.isclose(delta, -5.0/9.0, atol=0.001)
+    assert np.isclose(delta, -5.0 / 9.0, atol=0.001)
 
-@patch("scripts.analyze_results.load_condition")
-@patch("scripts.analyze_results.analyze_graded")
-@patch("scripts.analyze_results.analyze_cyclic")
-@patch("scripts.analyze_results.analyze_sham")
+
+@patch("analyses.results.load_condition")
+@patch("analyses.results.analyze_graded")
+@patch("analyses.results.analyze_cyclic")
+@patch("analyses.results.analyze_sham")
 def test_main_flow(mock_sham, mock_cyclic, mock_graded, mock_load, capsys):
     # Setup mock data: 5 seeds for each condition
     # Normal: all 100
@@ -73,7 +75,7 @@ def test_main_flow(mock_sham, mock_cyclic, mock_graded, mock_load, capsys):
     mock_sham.return_value = None
 
     # Mock argv
-    with patch.object(sys, 'argv', ["analyze_results.py", "experiments/test"]):
+    with patch.object(sys, "argv", ["analyze_results.py", "experiments/test"]):
         analyze_results.main()
 
     captured = capsys.readouterr()

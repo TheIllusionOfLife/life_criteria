@@ -42,8 +42,10 @@ CONDITIONS = {
 def main():
     """Run proxy control comparison experiment across 3 metabolism modes."""
     log(f"Digital Life v{digital_life.version()}")
-    log(f"Proxy control experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
-        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(
+        f"Proxy control experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
+        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"
+    )
     log("")
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"

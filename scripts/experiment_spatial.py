@@ -33,16 +33,22 @@ CONDITIONS = {
 }
 
 TSV_COLUMNS = [
-    "condition", "seed", "step",
-    "alive_count", "boundary_mean", "spatial_cohesion_mean",
+    "condition",
+    "seed",
+    "step",
+    "alive_count",
+    "boundary_mean",
+    "spatial_cohesion_mean",
 ]
 
 
 def main():
     """Run spatial cohesion experiment (2 conditions x 30 seeds)."""
     log(f"Digital Life v{digital_life.version()}")
-    log(f"Spatial cohesion: {STEPS} steps, sample every {SAMPLE_EVERY}, "
-        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(
+        f"Spatial cohesion: {STEPS} steps, sample every {SAMPLE_EVERY}, "
+        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"
+    )
     log("")
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"
@@ -64,7 +70,9 @@ def main():
 
             for s in result["samples"]:
                 vals = [
-                    cond_name, str(seed), str(s["step"]),
+                    cond_name,
+                    str(seed),
+                    str(s["step"]),
                     str(s["alive_count"]),
                     f"{s['boundary_mean']:.4f}",
                     f"{s.get('spatial_cohesion_mean', 0):.4f}",

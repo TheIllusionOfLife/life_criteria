@@ -54,8 +54,7 @@ SHIFT_CONDITIONS = {
 }
 
 
-def run_condition(cond_name: str, overrides: dict, steps: int,
-                  sample_every: int, out_dir: Path):
+def run_condition(cond_name: str, overrides: dict, steps: int, sample_every: int, out_dir: Path):
     """Run all seeds for a single condition and save results to JSON."""
     log(f"--- Condition: {cond_name} ({steps} steps) ---")
     results = []

@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 import digital_life
-
+import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -128,9 +126,7 @@ def test_run_experiment_json_sample_fields():
 def test_run_experiment_json_sample_count():
     """Number of samples must match ceil(steps / sample_every)."""
     steps, sample_every = 20, 5
-    result = json.loads(
-        digital_life.run_experiment_json(_make_config(), steps, sample_every)
-    )
+    result = json.loads(digital_life.run_experiment_json(_make_config(), steps, sample_every))
     expected = (steps + sample_every - 1) // sample_every
     assert len(result["samples"]) == expected
 

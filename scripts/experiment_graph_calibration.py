@@ -79,15 +79,19 @@ def main():
 
         summary = summarize_results(mode_name, results)
         summaries.append(summary)
-        log(f"  alive: mean={summary['alive_mean']:.1f} "
+        log(
+            f"  alive: mean={summary['alive_mean']:.1f} "
             f"[{summary['alive_min']}, {summary['alive_max']}]  "
-            f"energy_mean={summary['energy_mean']:.4f}")
+            f"energy_mean={summary['energy_mean']:.4f}"
+        )
         log("")
 
     log("=== Comparison ===")
     for s in summaries:
-        log(f"  {s['label']:6s}: alive_mean={s['alive_mean']:.1f}, "
-            f"energy_mean={s['energy_mean']:.4f}")
+        log(
+            f"  {s['label']:6s}: alive_mean={s['alive_mean']:.1f}, "
+            f"energy_mean={s['energy_mean']:.4f}"
+        )
 
     summary_path = safe_path(out_dir, "calibration_summary.json")
     with open(summary_path, "w") as f:

@@ -14,6 +14,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 def mean_final(rows: list[dict]) -> float:
     if not rows:
         logger.warning("mean_final: no rows provided (len=%d); returning 0.0", len(rows))

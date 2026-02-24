@@ -52,13 +52,15 @@ def analyze_lineage(results: list[dict]) -> dict:
 
         # Collect events with seed index for visualization
         for e in events:
-            all_events.append({
-                "seed": seed_idx,  # 0-based run index within the results list
-                "step": e["step"],
-                "generation": e["generation"],
-                "parent_stable_id": e["parent_stable_id"],
-                "child_stable_id": e["child_stable_id"],
-            })
+            all_events.append(
+                {
+                    "seed": seed_idx,  # 0-based run index within the results list
+                    "step": e["step"],
+                    "generation": e["generation"],
+                    "parent_stable_id": e["parent_stable_id"],
+                    "child_stable_id": e["child_stable_id"],
+                }
+            )
 
     output = {
         "n_seeds": len(results),

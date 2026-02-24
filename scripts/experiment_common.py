@@ -52,20 +52,29 @@ PAIRS = [
 # Standard criterion-ablation conditions shared across experiment drivers.
 CONDITIONS = {
     "normal": {},
-    **{
-        f"no_{criterion}": {flag: False}
-        for criterion, flag in CRITERION_TO_FLAG.items()
-    },
+    **{f"no_{criterion}": {flag: False} for criterion, flag in CRITERION_TO_FLAG.items()},
 }
 
 # TSV column headers for experiment output
 TSV_COLUMNS = [
-    "condition", "seed", "step",
-    "alive_count", "energy_mean", "waste_mean", "boundary_mean",
-    "birth_count", "death_count", "population_size",
-    "mean_generation", "mean_genome_drift",
-    "energy_std", "waste_std", "boundary_std",
-    "mean_age", "genome_diversity", "max_generation",
+    "condition",
+    "seed",
+    "step",
+    "alive_count",
+    "energy_mean",
+    "waste_mean",
+    "boundary_mean",
+    "birth_count",
+    "death_count",
+    "population_size",
+    "mean_generation",
+    "mean_genome_drift",
+    "energy_std",
+    "waste_std",
+    "boundary_std",
+    "mean_age",
+    "genome_diversity",
+    "max_generation",
 ]
 
 
@@ -89,8 +98,7 @@ def make_config_dict(seed: int, overrides: dict) -> dict:
     return config
 
 
-def run_single(seed: int, overrides: dict,
-               steps: int = 2000, sample_every: int = 50) -> dict:
+def run_single(seed: int, overrides: dict, steps: int = 2000, sample_every: int = 50) -> dict:
     """Run a single experiment and return parsed results."""
     config_json = make_config(seed, overrides)
     result_json = digital_life.run_experiment_json(config_json, steps, sample_every)
@@ -105,7 +113,9 @@ def print_header() -> None:
 def print_sample(condition: str, seed: int, s: dict) -> None:
     """Print a single sample row as TSV to stdout."""
     vals = [
-        condition, str(seed), str(s["step"]),
+        condition,
+        str(seed),
+        str(s["step"]),
         str(s["alive_count"]),
         f"{s['energy_mean']:.4f}",
         f"{s['waste_mean']:.4f}",

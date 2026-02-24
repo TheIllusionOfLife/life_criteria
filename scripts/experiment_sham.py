@@ -42,8 +42,10 @@ CONDITIONS = {
 def main():
     """Run sham ablation control experiment (2 conditions x 30 seeds)."""
     log(f"Digital Life v{digital_life.version()}")
-    log(f"Sham control: {STEPS} steps, sample every {SAMPLE_EVERY}, "
-        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(
+        f"Sham control: {STEPS} steps, sample every {SAMPLE_EVERY}, "
+        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"
+    )
     log("")
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"

@@ -41,8 +41,10 @@ CONDITIONS = {
 def main():
     """Run graded metabolic ablation experiment (5 levels x 30 seeds)."""
     log(f"Digital Life v{digital_life.version()}")
-    log(f"Graded ablation: {STEPS} steps, sample every {SAMPLE_EVERY}, "
-        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(
+        f"Graded ablation: {STEPS} steps, sample every {SAMPLE_EVERY}, "
+        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"
+    )
     log(f"Levels: {LEVELS}")
     log("")
 

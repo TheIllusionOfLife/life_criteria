@@ -76,9 +76,7 @@ def analyze_metric(
             print(f"  {name}/{condition}: SKIPPED", file=sys.stderr)
             continue
 
-        u_stat, p_value = stats.mannwhitneyu(
-            normal_vals, ablated, alternative="greater"
-        )
+        u_stat, p_value = stats.mannwhitneyu(normal_vals, ablated, alternative="greater")
         cliff_d = cliffs_delta(normal_vals, ablated)
         cliff_ci = bootstrap_cliffs_delta_ci(normal_vals, ablated)
 
@@ -98,8 +96,7 @@ def analyze_metric(
         )
         raw_p_values.append(p_value)
         print(
-            f"  {name}/{condition}: U={u_stat:.1f}, p={p_value:.6f}, "
-            f"cliff={cliff_d:.3f}",
+            f"  {name}/{condition}: U={u_stat:.1f}, p={p_value:.6f}, cliff={cliff_d:.3f}",
             file=sys.stderr,
         )
 
@@ -140,14 +137,10 @@ def main():
             lifespan_vals[condition] = extract_median_lifespan_per_seed(results)
 
     print("Analyzing spatial cohesion...", file=sys.stderr)
-    cohesion_results = analyze_metric(
-        "spatial_cohesion", normal_cohesion, cohesion_vals
-    )
+    cohesion_results = analyze_metric("spatial_cohesion", normal_cohesion, cohesion_vals)
 
     print("Analyzing persistence time (median lifespan)...", file=sys.stderr)
-    lifespan_results = analyze_metric(
-        "persistence_time", normal_lifespan, lifespan_vals
-    )
+    lifespan_results = analyze_metric("persistence_time", normal_lifespan, lifespan_vals)
 
     output = {
         "analysis": "orthogonal_outcome_measures",

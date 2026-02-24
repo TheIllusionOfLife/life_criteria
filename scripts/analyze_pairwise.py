@@ -68,9 +68,7 @@ def load_single_ablations(single_prefix: str) -> dict[str, list[float]]:
         path = Path(f"{single_prefix}_no_{criterion}.json")
         results = load_json(path)
         if results:
-            single_alive[criterion] = np.array(
-                extract_final_alive(results), dtype=float
-            )
+            single_alive[criterion] = np.array(extract_final_alive(results), dtype=float)
     return single_alive
 
 
@@ -332,9 +330,7 @@ def main():
         normal_alive, single_alive, pair_results, pairwise_prefix
     )
 
-    compute_bootstrap_ci(
-        pair_results, robust_synergy, normal_alive, single_alive, pairwise_prefix
-    )
+    compute_bootstrap_ci(pair_results, robust_synergy, normal_alive, single_alive, pairwise_prefix)
 
     output = {
         "experiment": "pairwise_ablation",

@@ -115,11 +115,9 @@ def _norm_cdf(z: float) -> float:
     if z < 0:
         return 1.0 - _norm_cdf(-z)
     t = 1.0 / (1.0 + 0.2316419 * z)
-    poly = t * (0.319381530
-                + t * (-0.356563782
-                       + t * (1.781477937
-                              + t * (-1.821255978
-                                     + t * 1.330274429))))
+    poly = t * (
+        0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429)))
+    )
     return 1.0 - (1.0 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * z * z) * poly
 
 
@@ -163,7 +161,7 @@ def compute_selection_differential(results: list[dict], final_step: int) -> dict
         q25 = max(1, n // 4)  # bottom 25%
 
         low_gen_orgs = sorted_orgs[:q25]
-        high_gen_orgs = sorted_orgs[n - q25:]  # top 25%
+        high_gen_orgs = sorted_orgs[n - q25 :]  # top 25%
 
         if len(low_gen_orgs) < 5 or len(high_gen_orgs) < 5:
             continue

@@ -80,9 +80,7 @@ def _check_timing(tex: str, manifest: dict) -> tuple[list[str], list[str]]:
             issues.append(f"steps invalid in manifest: {manifest_steps}")
         else:
             if manifest_steps_int != reported_steps:
-                issues.append(
-                    f"steps mismatch: paper={reported_steps} manifest={manifest_steps}"
-                )
+                issues.append(f"steps mismatch: paper={reported_steps} manifest={manifest_steps}")
     else:
         issues.append("could not parse timing steps from paper")
 
@@ -117,9 +115,7 @@ def _check_base_config(manifest: dict) -> tuple[list[str], list[str]]:
     if "mutation_scale" in base_cfg or "mutation_point_scale" in base_cfg:
         checks.append("manifest base_config mutation_scale")
     else:
-        issues.append(
-            "manifest missing base_config.mutation_scale (or mutation_point_scale)"
-        )
+        issues.append("manifest missing base_config.mutation_scale (or mutation_point_scale)")
     return issues, checks
 
 
@@ -208,8 +204,7 @@ def _check_freshness(manifest: dict, manifest_path: Path) -> tuple[list[str], li
             missing = [
                 k
                 for k in base_cfg
-                if key_map.get(k, k) not in generated_base_cfg
-                and k not in generated_base_cfg
+                if key_map.get(k, k) not in generated_base_cfg and k not in generated_base_cfg
             ]
             if missing:
                 issues.append(
@@ -265,11 +260,13 @@ def _load_documents(
 def run_checks(paper_path: Path, manifest_path: Path, registry_path: Path) -> dict:
     """Run consistency checks and return a machine-readable report."""
     # 1. Check file existence
-    file_issues = _check_files_exist({
-        "paper file": paper_path,
-        "manifest file": manifest_path,
-        "bindings registry": registry_path,
-    })
+    file_issues = _check_files_exist(
+        {
+            "paper file": paper_path,
+            "manifest file": manifest_path,
+            "bindings registry": registry_path,
+        }
+    )
     if file_issues:
         return {"ok": False, "issues": file_issues, "checks": []}
 
@@ -277,9 +274,7 @@ def run_checks(paper_path: Path, manifest_path: Path, registry_path: Path) -> di
     all_checks: list[str] = []
 
     # 2. Load Documents
-    tex, manifest, registry, load_issues = _load_documents(
-        paper_path, manifest_path, registry_path
-    )
+    tex, manifest, registry, load_issues = _load_documents(paper_path, manifest_path, registry_path)
     if load_issues:
         return {"ok": False, "issues": load_issues, "checks": all_checks}
 

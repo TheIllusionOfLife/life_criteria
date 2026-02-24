@@ -25,10 +25,18 @@ GRAPH_OVERRIDES = {"metabolism_mode": "graph"}
 def print_header():
     """Print TSV column header to stdout."""
     cols = [
-        "condition", "seed", "step",
-        "alive_count", "energy_mean", "waste_mean", "boundary_mean",
-        "birth_count", "death_count", "population_size",
-        "mean_generation", "mean_genome_drift",
+        "condition",
+        "seed",
+        "step",
+        "alive_count",
+        "energy_mean",
+        "waste_mean",
+        "boundary_mean",
+        "birth_count",
+        "death_count",
+        "population_size",
+        "mean_generation",
+        "mean_genome_drift",
     ]
     print("\t".join(cols))
 
@@ -36,7 +44,9 @@ def print_header():
 def print_sample(condition: str, seed: int, s: dict):
     """Print a single sample row as TSV to stdout."""
     vals = [
-        condition, str(seed), str(s["step"]),
+        condition,
+        str(seed),
+        str(s["step"]),
         str(s["alive_count"]),
         f"{s['energy_mean']:.4f}",
         f"{s['waste_mean']:.4f}",
@@ -52,8 +62,10 @@ def print_sample(condition: str, seed: int, s: dict):
 
 def main():
     log(f"Digital Life v{digital_life.version()}")
-    log(f"Final GraphMetabolism experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
-        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(
+        f"Final GraphMetabolism experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
+        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"
+    )
     log("")
 
     out_dir = Path(__file__).resolve().parent.parent / "experiments"

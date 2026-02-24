@@ -24,5 +24,15 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+# Figure modules intentionally use `from figures._shared import *` to access
+# shared constants (COLORS, LABELS, plt, FIG_DIR, …) without verbose explicit imports.
+"scripts/figures/*.py" = ["F403", "F405"]
+# figures/__init__.py must call matplotlib.use("Agg") and mkdir FIG_DIR before
+# importing any figure submodule that imports pyplot — E402 is intentional here.
+"scripts/figures/__init__.py" = ["E402", "F403", "F405"]
+# experiment_utils.py fires a DeprecationWarning before re-exporting — E402 is intentional.
+"scripts/experiment_utils.py" = ["E402"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]

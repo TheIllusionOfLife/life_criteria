@@ -73,10 +73,18 @@ def run_single(seed: int, overrides: dict) -> dict:
 def print_header():
     """Print TSV column header to stdout."""
     cols = [
-        "condition", "seed", "step",
-        "alive_count", "energy_mean", "waste_mean", "boundary_mean",
-        "birth_count", "death_count", "population_size",
-        "mean_generation", "mean_genome_drift",
+        "condition",
+        "seed",
+        "step",
+        "alive_count",
+        "energy_mean",
+        "waste_mean",
+        "boundary_mean",
+        "birth_count",
+        "death_count",
+        "population_size",
+        "mean_generation",
+        "mean_genome_drift",
     ]
     print("\t".join(cols))
 
@@ -84,7 +92,9 @@ def print_header():
 def print_sample(condition: str, seed: int, s: dict):
     """Print a single sample row as TSV to stdout."""
     vals = [
-        condition, str(seed), str(s["step"]),
+        condition,
+        str(seed),
+        str(s["step"]),
         str(s["alive_count"]),
         f"{s['energy_mean']:.4f}",
         f"{s['waste_mean']:.4f}",
@@ -206,9 +216,7 @@ def main():
     else:
         log(f"\n[PASS] Organisms survive: {normal['alive_mean']:.1f} alive at step {STEPS}")
 
-        ablation_conditions = [
-            name for name in CONDITIONS if name != "normal"
-        ]
+        ablation_conditions = [name for name in CONDITIONS if name != "normal"]
         for cond_name in ablation_conditions:
             ablated = next((s for s in summaries if s["condition"] == cond_name), None)
             if ablated is None:
@@ -216,12 +224,16 @@ def main():
                 continue
             if ablated["alive_mean"] < normal["alive_mean"]:
                 ratio = ablated["alive_mean"] / normal["alive_mean"]
-                log(f"[PASS] {cond_name} shows degradation: "
+                log(
+                    f"[PASS] {cond_name} shows degradation: "
                     f"{ablated['alive_mean']:.1f} vs {normal['alive_mean']:.1f} "
-                    f"({ratio:.1%} of normal)")
+                    f"({ratio:.1%} of normal)"
+                )
             else:
-                log(f"[WARN] No clear {cond_name} ablation effect: "
-                    f"{ablated['alive_mean']:.1f} vs {normal['alive_mean']:.1f}")
+                log(
+                    f"[WARN] No clear {cond_name} ablation effect: "
+                    f"{ablated['alive_mean']:.1f} vs {normal['alive_mean']:.1f}"
+                )
                 # no_growth and no_evolution are expected no-ops early on;
                 # no_homeostasis excluded temporarily until internal_state
                 # drives survival-relevant behavior beyond NN regulation.

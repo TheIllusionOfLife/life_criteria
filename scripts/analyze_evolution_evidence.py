@@ -38,9 +38,7 @@ def load_json(filename: str) -> list[dict]:
         return json.load(f)
 
 
-def analytical_heritability(
-    results: list[dict], point_rate: float, mutation_scale: float
-) -> dict:
+def analytical_heritability(results: list[dict], point_rate: float, mutation_scale: float) -> dict:
     """Compute analytical h^2 from mutation params and standing variance.
 
     h^2 = 1 - V_mutation / (V_mutation + V_standing)
@@ -131,9 +129,7 @@ def genome_drift_trajectories(normal: list[dict], no_evo: list[dict]) -> dict:
     # Final values per seed for statistical test
     final_normal = drift_normal[:, -1]
     final_no_evo = drift_no_evo[:, -1]
-    u_stat, p_val = stats.mannwhitneyu(
-        final_normal, final_no_evo, alternative="two-sided"
-    )
+    u_stat, p_val = stats.mannwhitneyu(final_normal, final_no_evo, alternative="two-sided")
     cliff_d = cliffs_delta(final_normal, final_no_evo)
 
     print(
@@ -240,9 +236,7 @@ def long_run_comparison(normal: list[dict], no_evo: list[dict]) -> dict:
     normal_alive = np.array([r["final_alive_count"] for r in normal])
     no_evo_alive = np.array([r["final_alive_count"] for r in no_evo])
 
-    u_stat, p_val = stats.mannwhitneyu(
-        normal_alive, no_evo_alive, alternative="greater"
-    )
+    u_stat, p_val = stats.mannwhitneyu(normal_alive, no_evo_alive, alternative="greater")
     cliff_d = cliffs_delta(normal_alive, no_evo_alive)
     cliff_ci = bootstrap_cliffs_delta_ci(normal_alive, no_evo_alive)
 

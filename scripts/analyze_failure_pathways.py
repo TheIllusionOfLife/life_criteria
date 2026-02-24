@@ -62,10 +62,7 @@ def main() -> None:
         action="append",
         default=[],
         metavar="NAME=FILENAME",
-        help=(
-            "Condition mapping (repeatable), e.g. "
-            "--condition normal=final_graph_normal.json"
-        ),
+        help=("Condition mapping (repeatable), e.g. --condition normal=final_graph_normal.json"),
     )
     args = parser.parse_args()
     base = Path(args.experiment_dir)
@@ -87,10 +84,7 @@ def main() -> None:
         if not (base / filename).exists()
     ]
     if missing:
-        parser.error(
-            "missing input files under "
-            f"{base}: " + ", ".join(missing)
-        )
+        parser.error(f"missing input files under {base}: " + ", ".join(missing))
 
     payload = {
         "experiment": "failure_pathways",

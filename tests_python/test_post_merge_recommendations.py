@@ -7,6 +7,7 @@ import sys
 import types
 from pathlib import Path
 
+import analyses.coupling.transfer_entropy as _te_module
 import numpy as np
 import pytest
 
@@ -84,7 +85,7 @@ def test_te_robustness_summary_excludes_none_surrogates(monkeypatch: pytest.Monk
             return None
         return {"te": 0.1, "p_value": 0.3, "null_mean": 0.0, "null_std": 0.0}
 
-    monkeypatch.setattr(analyze_coupling, "transfer_entropy_lag1", fake_te)
+    monkeypatch.setattr(_te_module, "transfer_entropy_lag1", fake_te)
 
     x = np.array([1, 2, 3, 4, 5, 6], dtype=float)
     y = np.array([2, 3, 4, 5, 6, 7], dtype=float)
@@ -274,9 +275,7 @@ def test_manuscript_consistency_checks_script_paper_refs(
     script_path = tmp_path / "experiment_dummy.py"
     script_path.write_text('..."paper_ref": "fig:dummy"...')
 
-    monkeypatch.setattr(
-        scripts.check_manuscript_consistency, "EXPERIMENT_SCRIPTS", [script_path]
-    )
+    monkeypatch.setattr(scripts.check_manuscript_consistency, "EXPERIMENT_SCRIPTS", [script_path])
 
     paper = tmp_path / "main.tex"
     manifest = tmp_path / "final_graph_manifest_reference.json"
@@ -408,6 +407,7 @@ def test_experiment_niche_defaults_and_long_horizon_output(
     assert calls[-1][1] == mod.SAMPLE_EVERY
     assert calls[-1][2] == mod.SNAPSHOT_STEPS
     assert (tmp_path / "niche_normal.json").exists()
+
 
 def test_experiment_regimes_seed_count_is_n30(monkeypatch: pytest.MonkeyPatch) -> None:
     script_dir = Path(__file__).resolve().parents[1] / "scripts"

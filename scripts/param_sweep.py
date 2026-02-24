@@ -55,9 +55,7 @@ def run(overrides: dict) -> dict:
     config = json.loads(digital_life.default_config_json())
     config["seed"] = SEED
     config.update(overrides)
-    return json.loads(
-        digital_life.run_experiment_json(json.dumps(config), STEPS, SAMPLE_EVERY)
-    )
+    return json.loads(digital_life.run_experiment_json(json.dumps(config), STEPS, SAMPLE_EVERY))
 
 
 def extract_metrics(overrides: dict, result: dict) -> ComboMetrics | None:
@@ -92,10 +90,21 @@ def main():
     log("")
 
     # Header
-    print("\t".join(keys + [
-        "final_alive", "peak_alive", "final_energy", "final_boundary",
-        "final_waste", "total_births", "total_deaths", "trajectory",
-    ]))
+    print(
+        "\t".join(
+            keys
+            + [
+                "final_alive",
+                "peak_alive",
+                "final_energy",
+                "final_boundary",
+                "final_waste",
+                "total_births",
+                "total_deaths",
+                "trajectory",
+            ]
+        )
+    )
 
     all_metrics: list[ComboMetrics] = []
     for i, combo in enumerate(combos):
@@ -123,7 +132,7 @@ def main():
         print("\t".join(row))
 
         if (i + 1) % 10 == 0:
-            log(f"  {i+1}/{len(combos)} done ({elapsed:.2f}s/run)")
+            log(f"  {i + 1}/{len(combos)} done ({elapsed:.2f}s/run)")
 
     # Find best configs
     log("\n" + "=" * 60)
@@ -135,8 +144,10 @@ def main():
         reverse=True,
     )
     for rank, m in enumerate(all_metrics[:10], 1):
-        log(f"\n#{rank}: alive={m.final_alive}, peak={m.peak_alive}, births={m.total_births}, "
-            f"energy={m.final_energy:.3f}, boundary={m.final_boundary:.3f}")
+        log(
+            f"\n#{rank}: alive={m.final_alive}, peak={m.peak_alive}, births={m.total_births}, "
+            f"energy={m.final_energy:.3f}, boundary={m.final_boundary:.3f}"
+        )
         for k, v in m.overrides.items():
             log(f"    {k}: {v}")
 

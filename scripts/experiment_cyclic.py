@@ -51,8 +51,10 @@ CONDITIONS = {
 def main():
     """Run cyclic environment experiment (2 conditions x 30 seeds)."""
     log(f"Digital Life v{digital_life.version()}")
-    log(f"Cyclic environment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
-        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
+    log(
+        f"Cyclic environment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
+        f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"
+    )
     log(f"Cycle period: {CYCLE_PERIOD}, normal rate: {NORMAL_RATE}, low rate: {LOW_RATE}")
     log("")
 
