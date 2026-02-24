@@ -6,7 +6,10 @@ import numpy as np
 
 # np.trapezoid was added in NumPy 2.0; np.trapz was removed in NumPy 2.0.
 # Support both to satisfy the project's numpy>=1.24 minimum.
-_trapezoid = getattr(np, "trapezoid", None) or getattr(np, "trapz")
+try:
+    _trapezoid = np.trapezoid  # type: ignore[attr-defined]
+except AttributeError:
+    _trapezoid = np.trapz  # type: ignore[attr-defined]  # NumPy < 2.0
 
 
 def extract_final_alive(results: list[dict]) -> np.ndarray:
