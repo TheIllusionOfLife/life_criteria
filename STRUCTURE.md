@@ -32,7 +32,7 @@
 
 ## Scripts Layout
 
-- `scripts/experiment_common.py`: shared config helpers, `run_single()`, `run_condition_common()`; loads `TUNED_BASELINE` from `configs/tuned_baseline.json`
+- `scripts/experiment_common.py`: shared config helpers and experiment runners; loads `TUNED_BASELINE` from `configs/tuned_baseline.json`; preferred entry point is `run_condition_suite()` (handles seed loop, JSON output, and TSV header); lower-level `run_single()` and `run_condition_common()` remain for custom experiments
 - `scripts/experiment_*.py`: per-experiment drivers (thin wrappers around `experiment_common`)
 - `scripts/analyze_*.py`: analysis scripts (statistics, coupling, phenotype)
 - `scripts/generate_figures.py`: figure dispatcher — calls per-figure functions

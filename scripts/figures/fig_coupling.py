@@ -41,12 +41,12 @@ def _draw_coupling_edges(
         x1, y1 = positions[var_a]
         x2, y2 = positions[var_b]
 
-        # Shorten arrow to not overlap nodes
+        # Shorten arrow to not overlap nodes; clamp so endpoints never cross midpoint.
         dx, dy = x2 - x1, y2 - y1
         dist = np.sqrt(dx**2 + dy**2)
         if dist < 0.01:
             continue
-        shrink = 0.22 / dist
+        shrink = min(0.22 / dist, 0.49)
         sx1, sy1 = x1 + dx * shrink, y1 + dy * shrink
         sx2, sy2 = x2 - dx * shrink, y2 - dy * shrink
 
@@ -147,7 +147,7 @@ def _draw_design_edges(
         dist = np.sqrt(dx**2 + dy**2)
         if dist < 0.01:
             continue
-        shrink = 0.22 / dist
+        shrink = min(0.22 / dist, 0.49)
         sx1, sy1 = x1 + dx * shrink, y1 + dy * shrink
         sx2, sy2 = x2 - dx * shrink, y2 - dy * shrink
         ax.annotate(
