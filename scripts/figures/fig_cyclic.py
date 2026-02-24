@@ -34,7 +34,10 @@ def generate_cyclic() -> None:
         steps = sorted(cond_data[cond].keys())
         means = [np.mean(cond_data[cond][s]) for s in steps]
         sems = [
-            np.std(cond_data[cond][s], ddof=1) / np.sqrt(len(cond_data[cond][s])) for s in steps
+            np.std(cond_data[cond][s], ddof=1) / np.sqrt(len(cond_data[cond][s]))
+            if len(cond_data[cond][s]) > 1
+            else 0.0
+            for s in steps
         ]
         means, sems = np.array(means), np.array(sems)
         lw = 2.0 if "evo_on" in cond else 1.2
@@ -77,7 +80,7 @@ def generate_cyclic_sweep() -> None:
     for period in periods:
         period_data[period] = {}
         for evo_label in ["evo_on", "evo_off"]:
-            path = exp_dir / f"cyclic_sweep_sweep_p{period}_{evo_label}.json"
+            path = exp_dir / f"cyclic_sweep_p{period}_{evo_label}.json"
             if not path.exists():
                 print(f"  SKIP: {path} not found")
                 return

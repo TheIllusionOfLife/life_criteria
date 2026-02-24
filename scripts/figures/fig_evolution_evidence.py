@@ -12,9 +12,7 @@ def generate_evolution_evidence() -> None:
         print(f"  SKIP: {evidence_path} not found")
         return
 
-    with open(evidence_path) as f:
-        import json
-
+    with open(evidence_path, encoding="utf-8") as f:
         evidence = json.load(f)
 
     drift = evidence.get("drift_trajectories", {})

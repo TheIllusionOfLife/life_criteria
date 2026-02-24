@@ -10,9 +10,7 @@ def generate_invariance() -> None:
         print(f"  SKIP: {analysis_path} not found")
         return
 
-    with open(analysis_path) as f:
-        import json
-
+    with open(analysis_path, encoding="utf-8") as f:
         data = json.load(f)
 
     fig, axes = plt.subplots(1, 2, figsize=(7, 3.0))

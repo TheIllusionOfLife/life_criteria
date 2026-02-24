@@ -11,9 +11,7 @@ def generate_phenotype() -> None:
         print(f"  SKIP: {analysis_path} not found")
         return
 
-    with open(analysis_path) as f:
-        import json
-
+    with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
 
     traits = np.array(analysis.get("traits", []))
@@ -68,9 +66,7 @@ def generate_persistent_clusters() -> None:
         print(f"  SKIP: {analysis_path} not found")
         return
 
-    with open(analysis_path) as f:
-        import json
-
+    with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
 
     olp = analysis.get("organism_level_persistence")

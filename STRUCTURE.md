@@ -14,7 +14,9 @@
 
 - `crates/digital-life-core/src/`
   - `constants.rs`: shared compile-time constants (MAX_WORLD_SIZE, RNG_DERIVATION_PRIME, …)
-  - `world.rs`: simulation world/state transitions (World struct, step orchestrator, experiment harnesses)
+  - `world/mod.rs`: World struct, `step()` orchestrator, experiment harnesses, reproduction helpers
+  - `world/phases/`: six simulation phase modules (nn_query, agent_state, boundary, metabolism, growth, environment)
+  - `world/tests.rs`: determinism, long-run stability, and regression tests for World
   - `metrics.rs`: step metric types and `collect_step_metrics()` — single source of truth for all metric structs
   - `metabolism.rs`: metabolism logic
   - `organism.rs`, `agent.rs`, `resource.rs`: organism-level model types

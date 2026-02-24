@@ -39,7 +39,7 @@ def generate_spatial() -> None:
     labels = [conditions[c][0] for c in cond_list]
     colors = [conditions[c][1] for c in cond_list]
 
-    bp = ax.boxplot(data_list, tick_labels=labels, patch_artist=True, widths=0.5)
+    bp = ax.boxplot(data_list, labels=labels, patch_artist=True, widths=0.5)
     for patch, color in zip(bp["boxes"], colors, strict=True):
         patch.set_facecolor(color)
         patch.set_alpha(0.3)

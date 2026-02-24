@@ -15,9 +15,7 @@ def generate_trait_evolution() -> None:
         print(f"  SKIP: {analysis_path} not found")
         return
 
-    with open(analysis_path) as f:
-        import json
-
+    with open(analysis_path, encoding="utf-8") as f:
         data = json.load(f)
 
     trajectory = data.get("trajectory", {})
@@ -75,7 +73,7 @@ def generate_trait_evolution() -> None:
             box_colors.append(color)
 
     if box_data:
-        bp = ax.boxplot(box_data, tick_labels=box_labels, patch_artist=True, widths=0.5)
+        bp = ax.boxplot(box_data, labels=box_labels, patch_artist=True, widths=0.5)
         for patch, color in zip(bp["boxes"], box_colors, strict=True):
             patch.set_facecolor(color)
             patch.set_alpha(0.35)

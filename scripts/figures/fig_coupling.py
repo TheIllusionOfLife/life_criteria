@@ -165,9 +165,7 @@ def generate_coupling() -> None:
         print(f"  SKIP: {analysis_path} not found")
         return
 
-    with open(analysis_path) as f:
-        import json
-
+    with open(analysis_path, encoding="utf-8") as f:
         analysis = json.load(f)
 
     pairs = analysis.get("pairs", [])

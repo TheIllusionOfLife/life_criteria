@@ -40,9 +40,6 @@ build/
 paper/main.pdf
 paper/figures/*.pdf
 
-# macOS junk in subdirectories
-docs/.DS_Store
-
 # LaTeX build artifacts
 paper/*.aux
 paper/*.bbl

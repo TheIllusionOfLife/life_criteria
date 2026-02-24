@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import matplotlib.patches as mpatches  # noqa: F401  (re-exported via * for figure modules)
 import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------

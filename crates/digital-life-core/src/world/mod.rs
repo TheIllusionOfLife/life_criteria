@@ -736,17 +736,17 @@ impl World {
                 break;
             }
 
-            let _child_id = match u16::try_from(self.organisms.len()) {
+            let child_id = match u16::try_from(self.organisms.len()) {
                 Ok(id) => id,
                 Err(_) => break,
             };
 
-            let _center = centers
+            let center = centers
                 .get(parent_idx)
                 .and_then(|c| *c)
                 .unwrap_or([0.0, 0.0]);
 
-            self.spawn_child(parent_idx, _child_id, _center, child_agents);
+            self.spawn_child(parent_idx, child_id, center, child_agents);
         }
     }
 
