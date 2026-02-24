@@ -58,7 +58,7 @@ fn step_once(
     let mut world = World::new(agents, nns, config)
         .map_err(|e| PyValueError::new_err(format!("invalid world configuration: {e}")))?;
     let timings = world.step();
-    Ok((world.agents.len(), timings.total_us))
+    Ok((world.agents().len(), timings.total_us))
 }
 
 #[pyfunction]

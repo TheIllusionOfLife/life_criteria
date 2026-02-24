@@ -30,11 +30,9 @@ build/
 /experiments/logs/
 /experiments/*_part_*.json
 # Keep manifest-bound source artifacts trackable.
-!/experiments/final_graph_normal.json
-!/experiments/evolution_long_normal.json
-!/experiments/evolution_long_no_evolution.json
-!/experiments/niche_normal.json
-!/experiments/niche_normal_long.json
+!/experiments/coupling_analysis.json
+!/experiments/final_graph_statistics.json
+!/experiments/final_statistics.json
 
 # Generated paper artifacts
 paper/main.pdf

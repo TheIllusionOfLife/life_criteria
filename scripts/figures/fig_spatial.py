@@ -25,7 +25,9 @@ def generate_spatial() -> None:
         for r in results:
             if r.get("samples"):
                 last = r["samples"][-1]
-                finals.append(last.get("spatial_cohesion_mean", 0.0))
+                val = last.get("spatial_cohesion_mean")
+                if val is not None:
+                    finals.append(val)
         cond_data[cond] = finals
 
     if not all(cond_data.values()):

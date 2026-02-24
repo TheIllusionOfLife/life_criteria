@@ -13,7 +13,7 @@
 ## Crates
 
 - `crates/digital-life-core/src/`
-  - `constants.rs`: shared compile-time constants (MAX_WORLD_SIZE, RNG_DERIVATION_PRIME, …)
+  - `constants.rs`: shared compile-time constants (MAX_WORLD_SIZE, RNG_DERIVATION_PRIME, GENOME_DIVERSITY_MAX_PAIRS)
   - `world/mod.rs`: World struct, `step()` orchestrator, experiment harnesses, reproduction helpers
   - `world/phases/`: six simulation phase modules (nn_query, agent_state, boundary, metabolism, growth, environment)
   - `world/tests.rs`: determinism, long-run stability, and regression tests for World

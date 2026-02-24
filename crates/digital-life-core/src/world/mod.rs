@@ -38,7 +38,7 @@ pub struct StepTimings {
 }
 
 pub struct World {
-    pub agents: Vec<Agent>,
+    agents: Vec<Agent>,
     organisms: Vec<OrganismRuntime>,
     config: SimConfig,
     metabolism: MetabolismEngine,
@@ -351,6 +351,10 @@ impl World {
 
     pub fn set_metabolism_engine(&mut self, engine: MetabolismEngine) {
         self.metabolism = engine;
+    }
+
+    pub fn agents(&self) -> &[Agent] {
+        &self.agents
     }
 
     pub fn resource_field(&self) -> &ResourceField {
@@ -771,8 +775,6 @@ impl World {
             )
         };
 
-        self.organisms[parent_idx].metabolic_state.energy -= self.config.reproduction_energy_cost;
-
         if self.config.enable_evolution {
             child_genome.mutate(&mut self.rng, &self.mutation_rates);
         }
@@ -803,6 +805,8 @@ impl World {
         if child_agent_ids.is_empty() {
             return;
         }
+
+        self.organisms[parent_idx].metabolic_state.energy -= self.config.reproduction_energy_cost;
 
         let metabolic_state = MetabolicState {
             energy: self.config.reproduction_energy_cost,
@@ -899,7 +903,8 @@ impl World {
         if dead_count > 0
             && (self
                 .step_index
-                .is_multiple_of(self.config.compaction_interval_steps)
+                .checked_rem(self.config.compaction_interval_steps)
+                .is_some_and(|r| r == 0)
                 || dead_count * 4 >= self.organisms.len().max(1))
         {
             self.prune_dead_entities();

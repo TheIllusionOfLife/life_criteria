@@ -89,7 +89,7 @@ def _draw_intervention_effects(ax: plt.Axes, analysis: dict) -> None:
             val = row.get(key, 0.0)
             if abs(val) > 20:
                 short_key = key.replace("_mean", "").replace("_0", "")
-                sign = "-" if val > 0 else "+"
+                sign = "+" if val > 0 else "-"
                 metric_effects.append(f"{short_key} {sign}{abs(val):.0f}%")
                 max_effect = max(max_effect, abs(val))
         if metric_effects:
