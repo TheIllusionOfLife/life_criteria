@@ -1,0 +1,11 @@
+{
+  "_provenance": "Tuned via param_sweep_thresholds.py on 2026-02-12. Calibration set: seeds 0-99.",
+  "boundary_decay_base_rate": 0.001,
+  "boundary_repair_rate": 0.05,
+  "metabolic_viability_floor": 0.1,
+  "crowding_neighbor_threshold": 50.0,
+  "homeostasis_decay_rate": 0.01,
+  "growth_maturation_steps": 200,
+  "growth_immature_metabolic_efficiency": 0.3,
+  "resource_regeneration_rate": 0.01
+}

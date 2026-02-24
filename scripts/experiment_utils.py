@@ -1,7 +1,18 @@
 """Compatibility shim for legacy imports.
 
-Use `experiment_common` as the single source of truth.
+.. deprecated::
+    Import directly from ``experiment_common`` instead. This shim will be
+    removed in a future cleanup. Migrate: replace
+    ``from experiment_utils import X`` with ``from experiment_common import X``.
 """
+
+import warnings
+
+warnings.warn(
+    "experiment_utils is deprecated; import from experiment_common directly.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from experiment_common import CONDITIONS, log, make_config, safe_path
 from experiment_common import run_single as _run_single_common

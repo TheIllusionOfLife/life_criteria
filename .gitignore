@@ -23,22 +23,25 @@ build/
 /python/digital_life/*.dylib
 
 # Experiment output data
+# NOTE: .git/info/exclude used to have blanket rules; they are now consolidated here.
+/experiments/*.json
+/experiments/*.tsv
 /experiments/*.gz
 /experiments/logs/
 /experiments/*_part_*.json
-/experiments/*_normal*.json
-/experiments/*_no_*.json
-/experiments/*_off.json
-/experiments/*_on.json
-/experiments/*_sweep_*.json
-/experiments/*_step0.json
-/experiments/*_midrun.json
 # Keep manifest-bound source artifacts trackable.
 !/experiments/final_graph_normal.json
 !/experiments/evolution_long_normal.json
 !/experiments/evolution_long_no_evolution.json
 !/experiments/niche_normal.json
 !/experiments/niche_normal_long.json
+
+# Generated paper artifacts
+paper/main.pdf
+paper/figures/*.pdf
+
+# macOS junk in subdirectories
+docs/.DS_Store
 
 # LaTeX build artifacts
 paper/*.aux
