@@ -25,6 +25,7 @@ from figures.fig_evolution_evidence import generate_evolution_evidence
 from figures.fig_graded import generate_graded
 from figures.fig_homeostasis import generate_homeostasis
 from figures.fig_invariance import generate_invariance
+from figures.fig_criterion8 import generate_criterion8
 from figures.fig_lifelikeness_gap import generate_lifelikeness_gap
 from figures.fig_lineage import generate_lineage
 from figures.fig_midrun import generate_midrun_ablation
@@ -36,6 +37,7 @@ from figures.fig_timeseries import generate_timeseries
 from figures.fig_trait_evolution import generate_trait_evolution
 
 __all__ = [
+    "generate_criterion8",
     "generate_timeseries",
     "generate_architecture",
     "generate_proxy",

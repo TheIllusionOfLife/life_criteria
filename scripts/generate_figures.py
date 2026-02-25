@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from figures import (
+    generate_criterion8,
     generate_ablation_distributions,
     generate_architecture,
     generate_coupling,
@@ -110,6 +111,9 @@ def main() -> None:
 
     print("Figure 21: Life-likeness gap (Phase 0 diagnostic)")
     generate_lifelikeness_gap()
+
+    print("Figure 22: 8th Criterion — memory results")
+    generate_criterion8()
 
     print("Done.")
 
