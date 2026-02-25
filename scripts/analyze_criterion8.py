@@ -244,10 +244,14 @@ def run_analysis(
     print("\nComputing per-condition summaries...")
     summaries = {cond: _summarize_condition(results) for cond, results in loaded.items()}
 
-    # Pairwise comparisons vs baseline
+    # Pairwise comparisons vs baseline — skip conditions with no data
     baseline_aucs: list[float] = summaries["baseline"]["survival_auc"]["per_seed"]
     comparisons: dict[str, dict] = {}
-    comparison_conds = ["criterion8_on", "criterion8_ablated", "sham"]
+    _all_comparison_conds = ["criterion8_on", "criterion8_ablated", "sham"]
+    comparison_conds = [
+        c for c in _all_comparison_conds
+        if summaries[c]["survival_auc"]["per_seed"]
+    ]
     raw_pvalues: list[float] = []
 
     for cond in comparison_conds:
@@ -278,7 +282,10 @@ def run_analysis(
     sham_mem_vars = [
         v for v in summaries["sham"]["memory_late_variance"]["per_seed"] if v is not None
     ]
-    mem_u, mem_p = _mwu_test(c8_mem_vars, sham_mem_vars)
+    if c8_mem_vars and sham_mem_vars:
+        mem_u, mem_p = _mwu_test(c8_mem_vars, sham_mem_vars)
+    else:
+        mem_u, mem_p = None, None
 
     memory_stability = {
         "criterion8_on_mean_late_variance": c8_mem_var,
@@ -299,18 +306,23 @@ def run_analysis(
     for cond in ["baseline", "criterion8_on", "criterion8_ablated", "sham"]:
         s = summaries[cond]["survival_auc"]
         n = summaries[cond]["n_seeds"]
-        print(f"  {cond:25s}  median={s['median']:8.1f}  mean={s['mean']:8.1f}  n={n}")
+        med = f"{s['median']:8.1f}" if s["median"] is not None else "     n/a"
+        mean = f"{s['mean']:8.1f}" if s["mean"] is not None else "     n/a"
+        print(f"  {cond:25s}  median={med}  mean={mean}  n={n}")
 
     print("\nPairwise vs baseline (Holm-Bonferroni corrected):")
     for cond in comparison_conds:
         c = comparisons[cond]
+        d_val = c["vs_baseline_cohen_d"]
+        d_str = "n/a" if d_val is None else f"{d_val:.3f}"
         print(
             f"  {cond:25s}  p_raw={c['vs_baseline_mwu_p_raw']:.4f}"
             f"  p_adj={c['vs_baseline_mwu_p_adj']:.4f}"
-            f"  d={c['vs_baseline_cohen_d'] or 'n/a'}"
+            f"  d={d_str}"
         )
 
-    print(f"\nMemory stability (c8_on var vs sham var): p={mem_p:.4f}")
+    mem_p_str = f"{mem_p:.4f}" if mem_p is not None else "n/a"
+    print(f"\nMemory stability (c8_on var vs sham var): p={mem_p_str}")
     orth_val = orthogonality["partial_corr_auc_vs_diversity_controlling_energy"]
     print(f"Orthogonality: partial_corr(AUC, diversity | energy) = {orth_val}")
 

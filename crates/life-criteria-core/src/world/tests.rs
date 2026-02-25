@@ -1928,19 +1928,45 @@ fn sham_memory_does_not_converge_to_stable_trace() {
     };
     let mut real_world = make_world_with_sham(false);
     let mut sham_world = make_world_with_sham(true);
+
+    // Warm-up: let the EMA settle before collecting the comparison window.
     for _ in 0..50 {
         real_world.step();
         sham_world.step();
     }
-    // Real memory converges (slow EMA, 0.99 decay); sham is random
-    // They should have different memory_mean values after convergence
-    let real_mem = real_world.organisms[0].memory[0];
-    let sham_mem = sham_world.organisms[0].memory[0];
-    // Real memory should be near IS mean (IS starts at 0.5, homeostasis disabled → drifts toward 0)
-    // Sham memory should be random, likely != real
+
+    // Collect memory[0] of organism 0 over 100 late-window steps.
+    let mut real_history = Vec::with_capacity(100);
+    let mut sham_history = Vec::with_capacity(100);
+    for _ in 0..100 {
+        real_world.step();
+        sham_world.step();
+        real_history.push(real_world.organisms[0].memory[0]);
+        sham_history.push(sham_world.organisms[0].memory[0]);
+    }
+
+    let variance = |vals: &[f32]| -> f32 {
+        let mean = vals.iter().sum::<f32>() / vals.len() as f32;
+        vals.iter().map(|v| (v - mean).powi(2)).sum::<f32>() / vals.len() as f32
+    };
+
+    let real_var = variance(&real_history);
+    let sham_var = variance(&sham_history);
+
+    // EMA converges → near-zero variance; sham is U(0,1) each step → high variance (~1/12 ≈ 0.083)
     assert!(
-        (real_mem - sham_mem).abs() > 1e-6,
-        "real memory ({real_mem}) and sham memory ({sham_mem}) should diverge"
+        sham_var > real_var,
+        "sham memory variance ({sham_var:.6}) should exceed real EMA variance ({real_var:.6})"
+    );
+    // Sanity: sham variance should be in the right ballpark for U(0,1) draws
+    assert!(
+        sham_var > 0.01,
+        "sham variance ({sham_var:.6}) too low — expected ~0.083 for U(0,1)"
+    );
+    // Sanity: EMA should be stable (slow 0.99 decay → low variance)
+    assert!(
+        real_var < 0.01,
+        "real EMA variance ({real_var:.6}) too high — EMA should have converged"
     );
 }
 

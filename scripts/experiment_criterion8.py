@@ -13,8 +13,8 @@ All conditions use graph metabolism and the population cap from Phase 0.
 
 Tiers
 -----
-  --tier 1  (main)  : 10 000 steps, sample_every=100, n=30 seeds
-  --tier smoke      : 10 000 steps, sample_every=100, n=3 seeds (quick sanity)
+  --tier 1  (main)  : 10 000 steps, sample_every=100, n=30 seeds (held-out 100–129)
+  --tier smoke      : 10 000 steps, sample_every=100, n=3 seeds  (smoke seeds 0–2)
 
 Usage
 -----
@@ -90,7 +90,8 @@ CONDITIONS: dict[str, dict] = {
 
 TIER_SEEDS: dict[str, list[int]] = {
     "smoke": [0, 1, 2],
-    "1": list(range(30)),
+    # Tier 1 uses held-out final test seeds (100–129); calibration seeds 0–99 remain held out.
+    "1": list(range(100, 130)),
 }
 
 
@@ -128,7 +129,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print resolved config JSON for seed 0 of each condition without running.",
+        help="Print resolved config JSON for the first seed of each condition without running.",
     )
     return parser.parse_args()
 
@@ -154,8 +155,9 @@ def _run_condition(
     log(f"  Output: {out_path}")
 
     if dry_run:
-        sample_config = make_config_dict(seeds[0], overrides)
-        log("  [dry-run] Resolved config (seed=0):")
+        seed = seeds[0]
+        sample_config = make_config_dict(seed, overrides)
+        log(f"  [dry-run] Resolved config (seed={seed}):")
         log(json.dumps(sample_config, indent=2))
         log("")
         return
