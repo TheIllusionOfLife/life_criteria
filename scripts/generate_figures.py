@@ -22,6 +22,7 @@ from figures import (
     generate_graded,
     generate_homeostasis,
     generate_invariance,
+    generate_lifelikeness_gap,
     generate_lineage,
     generate_midrun_ablation,
     generate_orthogonal,
@@ -106,6 +107,9 @@ def main() -> None:
 
     print("Figure 20: Trait evolution / selection differential")
     generate_trait_evolution()
+
+    print("Figure 21: Life-likeness gap (Phase 0 diagnostic)")
+    generate_lifelikeness_gap()
 
     print("Done.")
 
