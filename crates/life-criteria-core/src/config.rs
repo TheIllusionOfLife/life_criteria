@@ -831,10 +831,7 @@ mod tests {
             memory_target: 1.1,
             ..SimConfig::default()
         };
-        assert_eq!(
-            config.validate(),
-            Err(SimConfigError::InvalidMemoryTarget)
-        );
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryTarget));
     }
 
     #[test]
@@ -843,7 +840,7 @@ mod tests {
         // deliberately invalid params do not fail (they are never used).
         let config = SimConfig {
             enable_memory: false,
-            memory_decay: 2.0,  // invalid, but should not matter when disabled
+            memory_decay: 2.0, // invalid, but should not matter when disabled
             ..SimConfig::default()
         };
         assert!(
@@ -855,7 +852,8 @@ mod tests {
     #[test]
     fn memory_ablation_target_deserializes() {
         let json = r#"{"ablation_step": 50, "ablation_targets": ["memory"]}"#;
-        let cfg: SimConfig = serde_json::from_str(json).expect("should parse memory ablation target");
+        let cfg: SimConfig =
+            serde_json::from_str(json).expect("should parse memory ablation target");
         assert!(cfg.ablation_targets.contains(&AblationTarget::Memory));
     }
 

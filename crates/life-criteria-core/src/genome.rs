@@ -228,7 +228,10 @@ mod tests {
         let g = Genome::with_nn_weights(vec![0.0; nn_len]);
         let mw = g.memory_weights();
         assert_eq!(mw.len(), Genome::MEMORY_SIZE);
-        assert!(mw.iter().all(|&v| v == 0.0), "memory segment zero-initialized");
+        assert!(
+            mw.iter().all(|&v| v == 0.0),
+            "memory segment zero-initialized"
+        );
     }
 
     #[test]
@@ -246,7 +249,7 @@ mod tests {
             + Genome::EVOLUTION_SIZE;
         let mut g = Genome::with_nn_weights(vec![0.0; nn_len]);
         let rates = MutationRates {
-            point_rate: 0.9,  // high rate so genes definitely change
+            point_rate: 0.9, // high rate so genes definitely change
             point_scale: 1.0,
             ..MutationRates::default()
         };
@@ -288,11 +291,7 @@ mod tests {
         // mutate_range(legacy_len) on the 8-segment genome
         g_range.mutate_range(&mut ChaCha12Rng::seed_from_u64(seed), &rates, legacy_len);
         // full mutate on a genome that only has legacy_len genes (same as legacy)
-        g_full.mutate_range(
-            &mut ChaCha12Rng::seed_from_u64(seed),
-            &rates,
-            legacy_len,
-        );
+        g_full.mutate_range(&mut ChaCha12Rng::seed_from_u64(seed), &rates, legacy_len);
 
         // First legacy_len values must be identical
         assert_eq!(

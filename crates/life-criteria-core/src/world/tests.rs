@@ -1734,7 +1734,9 @@ fn memory_initialised_to_target_on_new() {
         memory_target: 0.5,
         ..SimConfig::default()
     };
-    let agents: Vec<Agent> = (0..5).map(|i| Agent::new(i as u32, 0, [50.0, 50.0])).collect();
+    let agents: Vec<Agent> = (0..5)
+        .map(|i| Agent::new(i as u32, 0, [50.0, 50.0]))
+        .collect();
     let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
     let world = World::new(agents, vec![nn], config).unwrap();
     let mem = world.organisms[0].memory;
