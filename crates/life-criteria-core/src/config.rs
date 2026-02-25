@@ -36,6 +36,8 @@ pub enum AblationTarget {
     Reproduction,
     Evolution,
     Growth,
+    /// 8th criterion: learning/memory (within-lifetime homeostatic adaptation).
+    Memory,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -174,6 +176,26 @@ pub struct SimConfig {
     pub environment_cycle_low_rate: f32,
     /// Toggle for sham (no-op) computational process control.
     pub enable_sham_process: bool,
+
+    // -----------------------------------------------------------------------
+    // 8th Criterion: Learning / Memory (within-lifetime adaptation)
+    // -----------------------------------------------------------------------
+    /// Enable the 8th criterion: within-lifetime homeostatic adaptation via
+    /// an exponential-moving-average memory trace (RNN-lite).
+    /// Default `false` — existing behavior is byte-for-byte preserved.
+    pub enable_memory: bool,
+    /// Per-step exponential-decay factor for the memory trace.
+    /// Must be in `[0, 1)`. Higher values = longer memory horizon.
+    /// Validated only when `enable_memory = true`.
+    pub memory_decay: f32,
+    /// Gain multiplier for the memory-driven homeostatic correction.
+    /// Must be `>= 0`. Larger values = stronger correction toward `memory_target`.
+    /// Validated only when `enable_memory = true`.
+    pub memory_gain: f32,
+    /// Target internal-state level that memory correction drives toward.
+    /// Must be in `[0, 1]`. Also used to initialize `organism.memory` at birth,
+    /// so validated unconditionally (even when `enable_memory = false`).
+    pub memory_target: f32,
 }
 
 impl Default for SimConfig {
@@ -243,6 +265,10 @@ impl Default for SimConfig {
             environment_cycle_period: 0,
             environment_cycle_low_rate: 0.005,
             enable_sham_process: false,
+            enable_memory: false,
+            memory_decay: 0.99,
+            memory_gain: 0.1,
+            memory_target: 0.5,
         }
     }
 }
@@ -325,6 +351,9 @@ define_sim_config_error! {
     InvalidEnvironmentCycleLowRate => "environment_cycle_low_rate must be finite and non-negative";
     ConflictingEnvironmentFeatures => "environment_shift_step and environment_cycle_period are mutually exclusive";
     WorldSizeTooLarge { max: f64, actual: f64 } => "world_size ({actual}) exceeds supported maximum ({max})";
+    InvalidMemoryDecay => "memory_decay must be finite and within [0, 1)";
+    InvalidMemoryGain => "memory_gain must be finite and non-negative";
+    InvalidMemoryTarget => "memory_target must be finite and within [0, 1]";
 }
 
 impl std::error::Error for SimConfigError {}
@@ -347,6 +376,7 @@ impl SimConfig {
         self.validate_homeostasis()?;
         self.validate_growth()?;
         self.validate_environment()?;
+        self.validate_memory()?;
         Ok(())
     }
 
@@ -380,7 +410,7 @@ impl SimConfig {
                 actual: self.world_size,
             });
         }
-        if !(self.dt.is_finite() && self.dt > 0.0) {
+        if !(self.dt.is_finite() && self.dt > 0.0 && self.dt <= f32::MAX as f64) {
             return Err(SimConfigError::InvalidDt);
         }
         if !(self.max_speed.is_finite() && self.max_speed > 0.0) {
@@ -580,6 +610,24 @@ impl SimConfig {
         Ok(())
     }
 
+    fn validate_memory(&self) -> Result<(), SimConfigError> {
+        // memory_target is always used to initialize organism.memory regardless of enable_memory,
+        // so validate it unconditionally to prevent NaN from poisoning initial organism state.
+        if !(self.memory_target.is_finite() && (0.0..=1.0).contains(&self.memory_target)) {
+            return Err(SimConfigError::InvalidMemoryTarget);
+        }
+        if !self.enable_memory {
+            return Ok(());
+        }
+        if !(self.memory_decay.is_finite() && self.memory_decay >= 0.0 && self.memory_decay < 1.0) {
+            return Err(SimConfigError::InvalidMemoryDecay);
+        }
+        if !(self.memory_gain.is_finite() && self.memory_gain >= 0.0) {
+            return Err(SimConfigError::InvalidMemoryGain);
+        }
+        Ok(())
+    }
+
     fn validate_environment(&self) -> Result<(), SimConfigError> {
         if !(self.resource_regeneration_rate.is_finite() && self.resource_regeneration_rate >= 0.0)
         {
@@ -724,6 +772,99 @@ mod tests {
             Err(SimConfigError::TooManyAgents { .. }) => (),
             _ => panic!("Expected TooManyAgents error"),
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Memory criterion (8th criterion) tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn memory_config_disabled_by_default() {
+        let config = SimConfig::default();
+        assert!(!config.enable_memory, "memory must be off by default");
+    }
+
+    #[test]
+    fn memory_config_valid_enabled() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_decay: 0.99,
+            memory_gain: 0.1,
+            memory_target: 0.5,
+            ..SimConfig::default()
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn memory_config_rejects_decay_ge_one() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_decay: 1.0,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryDecay));
+    }
+
+    #[test]
+    fn memory_config_rejects_decay_negative() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_decay: -0.1,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryDecay));
+    }
+
+    #[test]
+    fn memory_config_rejects_negative_gain() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_gain: -0.01,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryGain));
+    }
+
+    #[test]
+    fn memory_config_rejects_target_out_of_range() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_target: 1.1,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryTarget));
+    }
+
+    #[test]
+    fn memory_config_validation_only_active_when_enabled() {
+        // With enable_memory = false, memory param validation is skipped so
+        // deliberately invalid params do not fail (they are never used).
+        let config = SimConfig {
+            enable_memory: false,
+            memory_decay: 2.0, // invalid, but should not matter when disabled
+            ..SimConfig::default()
+        };
+        assert!(
+            config.validate().is_ok(),
+            "memory param validation must be skipped when enable_memory=false"
+        );
+    }
+
+    #[test]
+    fn memory_ablation_target_deserializes() {
+        let json = r#"{"ablation_step": 50, "ablation_targets": ["memory"]}"#;
+        let cfg: SimConfig =
+            serde_json::from_str(json).expect("should parse memory ablation target");
+        assert!(cfg.ablation_targets.contains(&AblationTarget::Memory));
+    }
+
+    #[test]
+    fn legacy_config_deserializes_enable_memory_false() {
+        // Configs without memory fields should default to enable_memory=false.
+        let legacy_json = r#"{"seed": 1, "num_organisms": 1, "agents_per_organism": 1}"#;
+        let cfg: SimConfig = serde_json::from_str(legacy_json).expect("legacy config should parse");
+        assert!(!cfg.enable_memory);
     }
 
     #[test]

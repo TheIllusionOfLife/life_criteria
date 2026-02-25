@@ -166,6 +166,11 @@ pub struct OrganismRuntime {
     pub developmental_program: DevelopmentalProgram,
     /// Stable ID of the parent organism (None for bootstrap organisms).
     pub parent_stable_id: Option<u64>,
+    /// 8th criterion: within-lifetime memory trace for IS channels 0 and 1.
+    /// Exponential moving average of mean agent IS[0..2].
+    /// Initialised to `memory_target`; NOT inherited by children.
+    /// Zero when `enable_memory = false` (allocated but ignored).
+    pub memory: [f32; 2],
 }
 
 #[cfg(test)]

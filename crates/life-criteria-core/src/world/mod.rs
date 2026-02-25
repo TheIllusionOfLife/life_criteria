@@ -219,6 +219,7 @@ impl World {
                     metabolism_engine: None,
                     developmental_program,
                     parent_stable_id: None,
+                    memory: [config.memory_target; 2],
                 }
             })
             .collect();
@@ -791,7 +792,15 @@ impl World {
         };
 
         if self.config.enable_evolution {
-            child_genome.mutate(&mut self.rng, &self.mutation_rates);
+            if self.config.enable_memory {
+                child_genome.mutate(&mut self.rng, &self.mutation_rates);
+            } else {
+                // Skip memory segment (last 4 genes) to preserve the RNG stream for
+                // seeds that do not use the 8th criterion, ensuring enable_memory=false
+                // runs are byte-for-byte identical regardless of the PR.
+                let active_genes = NeuralNet::WEIGHT_COUNT + Genome::LEGACY_NONNN_SIZE;
+                child_genome.mutate_range(&mut self.rng, &self.mutation_rates, active_genes);
+            }
         }
         let child_weights = if child_genome.nn_weights().len() == NeuralNet::WEIGHT_COUNT {
             child_genome.nn_weights().to_vec()
@@ -848,6 +857,8 @@ impl World {
             metabolism_engine: child_metabolism_engine,
             developmental_program,
             parent_stable_id: Some(parent_stable_id),
+            // Memory is NOT inherited — each organism starts naive.
+            memory: [self.config.memory_target; 2],
         };
         self.next_organism_stable_id = self.next_organism_stable_id.saturating_add(1);
         self.lineage_events.push(LineageEvent {
@@ -874,6 +885,7 @@ impl World {
         if self.original_config.is_none() {
             self.original_config = Some(self.config.clone());
         }
+        let mut zero_memories = false;
         for target in &self.config.ablation_targets {
             match target {
                 AblationTarget::Metabolism => self.config.enable_metabolism = false,
@@ -883,6 +895,15 @@ impl World {
                 AblationTarget::Reproduction => self.config.enable_reproduction = false,
                 AblationTarget::Evolution => self.config.enable_evolution = false,
                 AblationTarget::Growth => self.config.enable_growth = false,
+                AblationTarget::Memory => {
+                    self.config.enable_memory = false;
+                    zero_memories = true;
+                }
+            }
+        }
+        if zero_memories {
+            for org in &mut self.organisms {
+                org.memory = [0.0; 2];
             }
         }
         self.scheduled_ablation_applied = true;
@@ -908,6 +929,7 @@ impl World {
 
         let t2 = Instant::now();
         self.step_agent_state_phase();
+        self.step_memory_phase();
         self.step_boundary_phase(boundary_terminal_threshold);
         self.step_metabolism_phase(boundary_terminal_threshold);
         self.step_growth_and_crowding_phase(boundary_terminal_threshold);
