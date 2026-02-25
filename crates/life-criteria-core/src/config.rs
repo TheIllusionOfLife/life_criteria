@@ -410,7 +410,7 @@ impl SimConfig {
                 actual: self.world_size,
             });
         }
-        if !(self.dt.is_finite() && self.dt > 0.0) {
+        if !(self.dt.is_finite() && self.dt > 0.0 && self.dt <= f32::MAX as f64) {
             return Err(SimConfigError::InvalidDt);
         }
         if !(self.max_speed.is_finite() && self.max_speed > 0.0) {
