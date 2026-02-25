@@ -35,6 +35,10 @@ pub struct StepMetrics {
     pub memory_mean: f32,
     /// Std-dev of organism memory[0] across alive organisms (0.0 when memory disabled).
     pub memory_std: f32,
+    /// Mean of organism memory[1] across alive organisms (0.0 when memory disabled).
+    pub memory_mean_ch1: f32,
+    /// Std-dev of organism memory[1] across alive organisms (0.0 when memory disabled).
+    pub memory_std_ch1: f32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -313,18 +317,24 @@ pub fn collect_step_metrics(
     // Spatial cohesion: mean pairwise agent distance per organism (toroidal-aware)
     let spatial_cohesion_mean = compute_spatial_cohesion(agents, organisms, world_size);
 
-    // Memory trace: mean and std of memory[0] across alive organisms (0 when disabled)
-    let memory_vals: Vec<f32> = organisms
+    // Memory trace: mean and std of memory[0] and memory[1] across alive organisms
+    let (memory_vals, memory_vals_ch1): (Vec<f32>, Vec<f32>) = organisms
         .iter()
         .filter(|o| o.alive)
-        .map(|o| o.memory[0])
-        .collect();
+        .map(|o| (o.memory[0], o.memory[1]))
+        .unzip();
     let memory_mean = if memory_vals.is_empty() {
         0.0
     } else {
         memory_vals.iter().sum::<f32>() / memory_vals.len() as f32
     };
     let memory_std = std_dev(&memory_vals, memory_mean);
+    let memory_mean_ch1 = if memory_vals_ch1.is_empty() {
+        0.0
+    } else {
+        memory_vals_ch1.iter().sum::<f32>() / memory_vals_ch1.len() as f32
+    };
+    let memory_std_ch1 = std_dev(&memory_vals_ch1, memory_mean_ch1);
 
     StepMetrics {
         step,
@@ -351,5 +361,7 @@ pub fn collect_step_metrics(
         spatial_cohesion_mean,
         memory_mean,
         memory_std,
+        memory_mean_ch1,
+        memory_std_ch1,
     }
 }

@@ -193,8 +193,8 @@ pub struct SimConfig {
     /// Validated only when `enable_memory = true`.
     pub memory_gain: f32,
     /// Target internal-state level that memory correction drives toward.
-    /// Must be in `[0, 1]`.
-    /// Validated only when `enable_memory = true`.
+    /// Must be in `[0, 1]`. Also used to initialize `organism.memory` at birth,
+    /// so validated unconditionally (even when `enable_memory = false`).
     pub memory_target: f32,
 }
 
@@ -611,6 +611,11 @@ impl SimConfig {
     }
 
     fn validate_memory(&self) -> Result<(), SimConfigError> {
+        // memory_target is always used to initialize organism.memory regardless of enable_memory,
+        // so validate it unconditionally to prevent NaN from poisoning initial organism state.
+        if !(self.memory_target.is_finite() && (0.0..=1.0).contains(&self.memory_target)) {
+            return Err(SimConfigError::InvalidMemoryTarget);
+        }
         if !self.enable_memory {
             return Ok(());
         }
@@ -619,9 +624,6 @@ impl SimConfig {
         }
         if !(self.memory_gain.is_finite() && self.memory_gain >= 0.0) {
             return Err(SimConfigError::InvalidMemoryGain);
-        }
-        if !(self.memory_target.is_finite() && (0.0..=1.0).contains(&self.memory_target)) {
-            return Err(SimConfigError::InvalidMemoryTarget);
         }
         Ok(())
     }

@@ -27,7 +27,7 @@ impl Genome {
     /// Total number of non-NN genes for the 7 legacy criteria (pre-memory).
     /// Used by `mutate_range` to skip the memory segment when `enable_memory=false`,
     /// preserving the RNG stream across PR boundaries.
-    pub const LEGACY_NONNN_SIZE: usize = Self::METABOLIC_SIZE
+    pub(crate) const LEGACY_NONNN_SIZE: usize = Self::METABOLIC_SIZE
         + Self::HOMEOSTASIS_SIZE
         + Self::DEVELOPMENTAL_SIZE
         + Self::REPRODUCTION_SIZE
@@ -77,7 +77,7 @@ impl Genome {
         self.segment_data(7)
     }
 
-    /// Returns the parameter slice for a criterion segment (0..=6).
+    /// Returns the parameter slice for a criterion segment (0..=7).
     pub fn segment_data(&self, criterion: usize) -> &[f32] {
         assert!(
             criterion < self.segments.len(),
@@ -263,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn mutate_range_rng_stream_matches_full_mutate_on_legacy_length() {
+    fn mutate_range_on_legacy_size_is_deterministic() {
         use rand::SeedableRng;
         use rand_chacha::ChaCha12Rng;
 
