@@ -133,7 +133,6 @@ def _panel_violin(ax, conditions: dict[str, list[dict]], analysis: dict | None) 
         d = c8_on_data.get("vs_baseline_cohen_d")
         if p_adj is not None and not np.isnan(p_adj):
             sig = "***" if p_adj < 0.001 else ("**" if p_adj < 0.01 else ("*" if p_adj < 0.05 else "ns"))
-            all_aucs = [_survival_auc(r) for r in list(conditions.values()) for _ in [1] if r]
             y_max = max((_survival_auc(r) for results in conditions.values() for r in results), default=0)
             y_ann = y_max * 1.05
             baseline_xi = _COND_ORDER.index("baseline")
