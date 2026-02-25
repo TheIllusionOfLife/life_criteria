@@ -25,6 +25,7 @@ from figures.fig_evolution_evidence import generate_evolution_evidence
 from figures.fig_graded import generate_graded
 from figures.fig_homeostasis import generate_homeostasis
 from figures.fig_invariance import generate_invariance
+from figures.fig_lifelikeness_gap import generate_lifelikeness_gap
 from figures.fig_lineage import generate_lineage
 from figures.fig_midrun import generate_midrun_ablation
 from figures.fig_orthogonal import generate_orthogonal
@@ -55,4 +56,5 @@ __all__ = [
     "generate_invariance",
     "generate_ecology_stress",
     "generate_trait_evolution",
+    "generate_lifelikeness_gap",
 ]
