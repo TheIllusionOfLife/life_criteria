@@ -70,7 +70,8 @@ def _per_seed_trajectories(
     step_sets = [
         {int(s["step"]) for s in r.get("samples", [])} for r in results
     ]
-    common_steps = sorted(set.intersection(*step_sets) if step_sets else set())
+    non_empty = [ss for ss in step_sets if ss]
+    common_steps = sorted(set.intersection(*non_empty) if non_empty else set())
     steps = np.array(common_steps)
     per_seed = []
     for r in results:
@@ -125,25 +126,39 @@ def _panel_trajectory(
 
 
 def _annotate_slope(ax, results: list[dict], steps: np.ndarray) -> None:
-    """Overlay late-window regression slope on Panel B (genome_diversity)."""
-    late_steps_all: list[float] = []
-    late_divs_all: list[float] = []
-    for r in results:
-        for s in r.get("samples", []):
-            if 5_000 <= s["step"] <= 10_000:
-                late_steps_all.append(float(s["step"]))
-                late_divs_all.append(float(s.get("genome_diversity", 0.0)))
+    """Overlay median per-seed late-window regression slope on Panel B.
 
-    if len(late_steps_all) < 4:
+    Mirrors compute_diversity_slope so the annotation reflects the exact
+    statistic used in the pre-registered Rule 2 decision metric.
+    """
+    slopes = []
+    for r in results:
+        xs = [float(s["step"]) for s in r.get("samples", []) if 5_000 <= s["step"] <= 10_000]
+        ys = [float(s.get("genome_diversity", 0.0)) for s in r.get("samples", [])
+              if 5_000 <= s["step"] <= 10_000]
+        if len(xs) >= 2:
+            slopes.append(linregress(xs, ys).slope * 1_000)
+
+    if not slopes:
         return
 
-    reg = linregress(late_steps_all, late_divs_all)
+    median_slope = float(np.median(slopes))
+
+    # Anchor the line at the median diversity value at the window start
     x0, x1 = 5_000.0, 10_000.0
-    y0 = reg.slope * x0 + reg.intercept
-    y1 = reg.slope * x1 + reg.intercept
+    div_at_x0 = [
+        float(s.get("genome_diversity", 0.0))
+        for r in results
+        for s in r.get("samples", [])
+        if int(s["step"]) == int(x0)
+    ]
+    if not div_at_x0:
+        return
+    y0 = float(np.median(div_at_x0))
+    y1 = y0 + median_slope * (x1 - x0) / 1_000
 
     ax.plot([x0, x1], [y0, y1], color="#D55E00", linewidth=1.8,
-            linestyle="--", label=f"Slope {reg.slope * 1000:+.3f}/1k steps", zorder=5)
+            linestyle="--", label=f"Median slope {median_slope:+.3f}/1k steps", zorder=5)
     ax.axvspan(5_000, 10_000, color="#F0E442", alpha=0.12, label="Late window")
 
 

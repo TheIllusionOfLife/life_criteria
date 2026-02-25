@@ -148,8 +148,13 @@ def compute_novelty_halflife(results: list[dict]) -> dict:
             wb[w] += 1
         per_seed_windows.append(dict(wb))
 
-    all_windows = sorted({w for wb in per_seed_windows for w in wb})
-    if not all_windows:
+    # Build a complete window grid (including zero-birth windows) so the
+    # exponential fit is not biased toward longer half-lives by omitting gaps.
+    max_step = max(
+        (s["step"] for r in results for s in r.get("samples", [])),
+        default=0,
+    )
+    if max_step == 0:
         return {
             "halflife_steps": None,
             "decay_constant_k": None,
@@ -157,6 +162,7 @@ def compute_novelty_halflife(results: list[dict]) -> dict:
             "mean_births_per_window": [],
         }
 
+    all_windows = list(range(0, max_step + 1, window_size))
     mean_births = [
         float(np.mean([wb.get(w, 0) for wb in per_seed_windows])) for w in all_windows
     ]
@@ -199,6 +205,11 @@ def _build_founder_descendants(events: list[dict]) -> dict[int, set[int]]:
 
     Returns a mapping from each founder stable_id to the set of all its
     descendants (including itself).  Returns {} when no founders are found.
+
+    NOTE: Founders are derived from lineage_events (reproduction events only).
+    Organisms alive before step 1 000 that never reproduced are excluded from
+    the denominator; the survival metric therefore reflects "fraction of
+    reproducing early lineages that persisted", not all early organisms.
     """
     founders: set[int] = set()
     for e in events:
@@ -436,6 +447,10 @@ def run_analysis(
             shift_results = json.load(f)
     else:
         print(f"WARNING: {shift_path} not found — adaptation_lag metric will be empty.")
+
+    if not normal_results:
+        print(f"ERROR: {normal_path} contains no seed data.")
+        sys.exit(1)
 
     print(f"Loaded normal_graph: {len(normal_results)} seeds")
     if shift_results:
