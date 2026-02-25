@@ -726,6 +726,101 @@ mod tests {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Memory criterion (8th criterion) tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn memory_config_disabled_by_default() {
+        let config = SimConfig::default();
+        assert!(!config.enable_memory, "memory must be off by default");
+    }
+
+    #[test]
+    fn memory_config_valid_enabled() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_decay: 0.99,
+            memory_gain: 0.1,
+            memory_target: 0.5,
+            ..SimConfig::default()
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn memory_config_rejects_decay_ge_one() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_decay: 1.0,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryDecay));
+    }
+
+    #[test]
+    fn memory_config_rejects_decay_negative() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_decay: -0.1,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryDecay));
+    }
+
+    #[test]
+    fn memory_config_rejects_negative_gain() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_gain: -0.01,
+            ..SimConfig::default()
+        };
+        assert_eq!(config.validate(), Err(SimConfigError::InvalidMemoryGain));
+    }
+
+    #[test]
+    fn memory_config_rejects_target_out_of_range() {
+        let config = SimConfig {
+            enable_memory: true,
+            memory_target: 1.1,
+            ..SimConfig::default()
+        };
+        assert_eq!(
+            config.validate(),
+            Err(SimConfigError::InvalidMemoryTarget)
+        );
+    }
+
+    #[test]
+    fn memory_config_validation_only_active_when_enabled() {
+        // With enable_memory = false, memory param validation is skipped so
+        // deliberately invalid params do not fail (they are never used).
+        let config = SimConfig {
+            enable_memory: false,
+            memory_decay: 2.0,  // invalid, but should not matter when disabled
+            ..SimConfig::default()
+        };
+        assert!(
+            config.validate().is_ok(),
+            "memory param validation must be skipped when enable_memory=false"
+        );
+    }
+
+    #[test]
+    fn memory_ablation_target_deserializes() {
+        let json = r#"{"ablation_step": 50, "ablation_targets": ["memory"]}"#;
+        let cfg: SimConfig = serde_json::from_str(json).expect("should parse memory ablation target");
+        assert!(cfg.ablation_targets.contains(&AblationTarget::Memory));
+    }
+
+    #[test]
+    fn legacy_config_deserializes_enable_memory_false() {
+        // Configs without memory fields should default to enable_memory=false.
+        let legacy_json = r#"{"seed": 1, "num_organisms": 1, "agents_per_organism": 1}"#;
+        let cfg: SimConfig = serde_json::from_str(legacy_json).expect("legacy config should parse");
+        assert!(!cfg.enable_memory);
+    }
+
     #[test]
     fn error_display_messages_are_preserved() {
         let cases = vec![

@@ -1688,3 +1688,217 @@ fn setpoint_pid_mode_stabilizes_internal_state_toward_energy_scaled_setpoint() {
         "setpoint controller should lower high state toward target"
     );
 }
+
+// ---------------------------------------------------------------------------
+// 8th Criterion: Learning/Memory tests
+// ---------------------------------------------------------------------------
+
+fn make_memory_world(num_agents: usize) -> World {
+    let agents: Vec<Agent> = (0..num_agents)
+        .map(|i| Agent::new(i as u32, 0, [50.0, 50.0]))
+        .collect();
+    let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+    let config = SimConfig {
+        world_size: 100.0,
+        num_organisms: 1,
+        agents_per_organism: num_agents,
+        enable_memory: true,
+        memory_decay: 0.9,
+        memory_gain: 0.5,
+        memory_target: 0.5,
+        // Disable other criteria to isolate memory effect
+        enable_metabolism: false,
+        enable_boundary_maintenance: false,
+        enable_reproduction: false,
+        death_boundary_threshold: 0.0,
+        boundary_collapse_threshold: 0.0,
+        max_organism_age_steps: usize::MAX,
+        ..SimConfig::default()
+    };
+    World::new(agents, vec![nn], config).unwrap()
+}
+
+#[test]
+fn memory_disabled_by_default() {
+    let world = make_world(5, 100.0);
+    assert!(!world.config.enable_memory);
+}
+
+#[test]
+fn memory_initialised_to_target_on_new() {
+    let config = SimConfig {
+        world_size: 100.0,
+        num_organisms: 1,
+        agents_per_organism: 5,
+        enable_memory: true,
+        memory_target: 0.5,
+        ..SimConfig::default()
+    };
+    let agents: Vec<Agent> = (0..5).map(|i| Agent::new(i as u32, 0, [50.0, 50.0])).collect();
+    let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+    let world = World::new(agents, vec![nn], config).unwrap();
+    let mem = world.organisms[0].memory;
+    assert!(
+        (mem[0] - 0.5).abs() < f32::EPSILON,
+        "memory[0] should init to memory_target"
+    );
+    assert!(
+        (mem[1] - 0.5).abs() < f32::EPSILON,
+        "memory[1] should init to memory_target"
+    );
+}
+
+#[test]
+fn memory_trace_updates_from_agent_internal_state() {
+    let mut world = make_memory_world(4);
+    // Force all agents to IS[0]=0.0, IS[1]=0.0 so memory will drift below target
+    for agent in &mut world.agents {
+        agent.internal_state[0] = 0.0;
+        agent.internal_state[1] = 0.0;
+    }
+    let initial_mem = world.organisms[0].memory;
+    world.step();
+    let updated_mem = world.organisms[0].memory;
+    // Memory should have moved toward 0.0 (away from 0.5 initial)
+    assert!(
+        updated_mem[0] < initial_mem[0],
+        "memory trace should move toward IS mean (0.0) after step"
+    );
+}
+
+#[test]
+fn memory_correction_drives_internal_state_toward_target() {
+    let mut world = make_memory_world(4);
+    // Force IS[0]=0.0 so correction should be positive (toward target 0.5)
+    for agent in &mut world.agents {
+        agent.internal_state[0] = 0.0;
+        agent.internal_state[1] = 0.0;
+    }
+    // Seed memory below target to produce positive correction
+    world.organisms[0].memory[0] = 0.0;
+    world.organisms[0].memory[1] = 0.0;
+    world.step();
+    // IS[0] should have increased due to memory correction
+    let is0_after = world.agents[0].internal_state[0];
+    assert!(
+        is0_after > 0.0,
+        "memory correction should increase IS[0] when memory < target"
+    );
+}
+
+#[test]
+fn memory_internal_state_stays_clamped_with_memory_enabled() {
+    let mut world = make_memory_world(4);
+    for _ in 0..200 {
+        world.step();
+    }
+    for agent in &world.agents {
+        for &s in &agent.internal_state {
+            assert!(
+                (0.0..=1.0).contains(&s),
+                "internal_state must stay in [0,1] with memory enabled"
+            );
+        }
+    }
+}
+
+#[test]
+fn memory_ablation_disables_memory_and_zeroes_traces() {
+    let mut world = make_memory_world(4);
+    // Run a few steps so memory diverges from initial
+    for agent in &mut world.agents {
+        agent.internal_state[0] = 0.1;
+    }
+    world.config.ablation_step = 3;
+    world.config.ablation_targets = vec![AblationTarget::Memory];
+    // Run to ablation step
+    for _ in 0..3 {
+        world.step();
+    }
+    assert!(
+        !world.config.enable_memory,
+        "ablation should set enable_memory=false"
+    );
+    assert!(
+        world.organisms[0].memory.iter().all(|&v| v == 0.0),
+        "ablation should zero memory traces"
+    );
+}
+
+#[test]
+fn memory_disabled_runs_are_deterministic() {
+    // Two identical worlds with enable_memory=false should produce identical RunSummary
+    let config = SimConfig {
+        world_size: 100.0,
+        num_organisms: 2,
+        agents_per_organism: 5,
+        enable_memory: false,
+        ..SimConfig::default()
+    };
+    let make = || {
+        let agents: Vec<Agent> = (0..10)
+            .map(|i| Agent::new(i as u32, (i / 5) as u16, [50.0 + i as f64, 50.0]))
+            .collect();
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.1f32, NeuralNet::WEIGHT_COUNT));
+        World::new(agents, vec![nn.clone(), nn], config.clone()).unwrap()
+    };
+    let summary_a = make().run_experiment(50, 10);
+    let summary_b = make().run_experiment(50, 10);
+    assert_eq!(summary_a.final_alive_count, summary_b.final_alive_count);
+    assert_eq!(summary_a.samples.len(), summary_b.samples.len());
+    for (sa, sb) in summary_a.samples.iter().zip(summary_b.samples.iter()) {
+        assert_eq!(sa.step, sb.step);
+        assert!(
+            (sa.energy_mean - sb.energy_mean).abs() < f32::EPSILON,
+            "determinism broken: energy_mean differs at step {}",
+            sa.step
+        );
+    }
+}
+
+#[test]
+fn memory_child_initialised_to_target_on_spawn() {
+    // Verify that newly reproduced organisms get memory initialised to memory_target
+    let config = SimConfig {
+        world_size: 100.0,
+        num_organisms: 1,
+        agents_per_organism: 10,
+        enable_memory: true,
+        memory_target: 0.3,
+        memory_decay: 0.9,
+        memory_gain: 0.0, // no correction so child boundary stays high
+        enable_reproduction: true,
+        reproduction_min_energy: 0.1,
+        reproduction_min_boundary: 0.1,
+        reproduction_energy_cost: 0.05,
+        enable_metabolism: false,
+        enable_boundary_maintenance: false,
+        death_boundary_threshold: 0.0,
+        boundary_collapse_threshold: 0.0,
+        max_organism_age_steps: usize::MAX,
+        ..SimConfig::default()
+    };
+    let agents: Vec<Agent> = (0..10)
+        .map(|i| Agent::new(i as u32, 0, [50.0, 50.0]))
+        .collect();
+    let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+    let mut world = World::new(agents, vec![nn], config.clone()).unwrap();
+    // Give parent enough energy to reproduce
+    world.organisms[0].metabolic_state.energy = 1.0;
+    world.organisms[0].maturity = 1.0;
+    // Run until a child is spawned
+    for _ in 0..20 {
+        world.step();
+        if world.organisms.len() > 1 {
+            break;
+        }
+    }
+    if world.organisms.len() > 1 {
+        let child_mem = world.organisms.last().unwrap().memory;
+        assert!(
+            (child_mem[0] - 0.3).abs() < f32::EPSILON,
+            "child memory[0] should init to memory_target=0.3, got {}",
+            child_mem[0]
+        );
+    }
+}

@@ -177,6 +177,7 @@ mod tests {
             Genome::REPRODUCTION_SIZE,
             Genome::SENSORY_SIZE,
             Genome::EVOLUTION_SIZE,
+            Genome::MEMORY_SIZE,
         ];
         let mut offset = 0;
         for (i, &size) in expected_sizes.iter().enumerate() {
@@ -184,6 +185,86 @@ mod tests {
             offset += size;
         }
         assert_eq!(g.data().len(), offset, "total genome length");
+    }
+
+    #[test]
+    fn memory_weights_accessor_returns_segment_7() {
+        let nn_len = 212;
+        let g = Genome::with_nn_weights(vec![0.0; nn_len]);
+        let mw = g.memory_weights();
+        assert_eq!(mw.len(), Genome::MEMORY_SIZE);
+        assert!(mw.iter().all(|&v| v == 0.0), "memory segment zero-initialized");
+    }
+
+    #[test]
+    fn mutate_range_only_affects_specified_gene_count() {
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha12Rng;
+
+        let nn_len = 212;
+        let legacy_len = nn_len
+            + Genome::METABOLIC_SIZE
+            + Genome::HOMEOSTASIS_SIZE
+            + Genome::DEVELOPMENTAL_SIZE
+            + Genome::REPRODUCTION_SIZE
+            + Genome::SENSORY_SIZE
+            + Genome::EVOLUTION_SIZE;
+        let mut g = Genome::with_nn_weights(vec![0.0; nn_len]);
+        let rates = MutationRates {
+            point_rate: 0.9,  // high rate so genes definitely change
+            point_scale: 1.0,
+            ..MutationRates::default()
+        };
+        let mut rng = ChaCha12Rng::seed_from_u64(42);
+        g.mutate_range(&mut rng, &rates, legacy_len);
+        // Memory segment (last 4 genes) must remain zero
+        assert!(
+            g.memory_weights().iter().all(|&v| v == 0.0),
+            "memory weights must not be mutated by mutate_range(legacy_len)"
+        );
+    }
+
+    #[test]
+    fn mutate_range_rng_stream_matches_full_mutate_on_legacy_length() {
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha12Rng;
+
+        // A genome whose total size equals the legacy (pre-memory) size
+        let nn_len = 212;
+        let legacy_len = nn_len
+            + Genome::METABOLIC_SIZE
+            + Genome::HOMEOSTASIS_SIZE
+            + Genome::DEVELOPMENTAL_SIZE
+            + Genome::REPRODUCTION_SIZE
+            + Genome::SENSORY_SIZE
+            + Genome::EVOLUTION_SIZE;
+
+        // Create two identical genomes
+        let mut g_range = Genome::with_nn_weights(vec![0.5; nn_len]);
+        let mut g_full = Genome::with_nn_weights(vec![0.5; nn_len]);
+
+        let rates = MutationRates {
+            point_rate: 0.3,
+            point_scale: 0.5,
+            ..MutationRates::default()
+        };
+        let seed = 77u64;
+
+        // mutate_range(legacy_len) on the 8-segment genome
+        g_range.mutate_range(&mut ChaCha12Rng::seed_from_u64(seed), &rates, legacy_len);
+        // full mutate on a genome that only has legacy_len genes (same as legacy)
+        g_full.mutate_range(
+            &mut ChaCha12Rng::seed_from_u64(seed),
+            &rates,
+            legacy_len,
+        );
+
+        // First legacy_len values must be identical
+        assert_eq!(
+            &g_range.data()[..legacy_len],
+            &g_full.data()[..legacy_len],
+            "mutate_range(legacy_len) must produce identical nn+criteria genes"
+        );
     }
 
     #[test]
