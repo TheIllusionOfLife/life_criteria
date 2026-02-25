@@ -31,6 +31,7 @@ Build and evolve the Life Criteria simulation with reproducible, testable change
 - Never push directly to `main`.
 - Keep commits small, logically grouped, and prefixed (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`).
 - PRs should include the problem, solution, and exact verification commands run.
+- **One PR per session**: do not open multiple PRs from a single work session. Group all changes into one logical PR to keep review and git history manageable.
 
 ## Architecture Decisions to Preserve
 
