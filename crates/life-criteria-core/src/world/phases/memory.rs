@@ -1,3 +1,5 @@
+use rand::Rng;
+
 use super::super::World;
 
 impl World {
@@ -11,8 +13,15 @@ impl World {
     ///
     /// Three-pass layout to satisfy Rust borrow rules:
     ///   1. Collect IS sums from agents (shared borrow of agents + organisms)
-    ///   2. Update `org.memory` and compute per-org corrections (exclusive borrow of organisms)
-    ///   3. Apply corrections to agents (exclusive borrow of agents, shared borrow of corrections)
+    ///   2. Pre-compute sham memory values if needed (mutable borrow of rng only)
+    ///   3. Update `org.memory` and compute per-org corrections (exclusive borrow of organisms)
+    ///   4. Apply corrections to agents (exclusive borrow of agents, shared borrow of corrections)
+    ///
+    /// **Sham mode** (`enable_sham_process = true`):
+    /// The memory trace is replaced by a fresh `U(0,1)` draw each step instead of
+    /// the EMA.  This gives compute-matched random corrections — same code path and
+    /// same correction magnitude, but no temporal coherence (no learning).  Used as
+    /// the control condition in Phase 1b experiments.
     ///
     /// When `enable_memory = false` this function returns immediately, so the call
     /// site in `World::step` has zero overhead in the baseline condition.
@@ -26,6 +35,7 @@ impl World {
         let base_gain = self.config.memory_gain;
         let base_target = self.config.memory_target;
         let dt = self.config.dt as f32;
+        let is_sham = self.config.enable_sham_process;
 
         // -------------------------------------------------------------------
         // Pass 1: accumulate IS[0] and IS[1] sums per organism from agents
@@ -44,7 +54,20 @@ impl World {
         }
 
         // -------------------------------------------------------------------
-        // Pass 2: update EMA memory trace and compute per-org corrections
+        // Pass 2 (sham only): pre-compute random memory values before we
+        // exclusively borrow `self.organisms`.  This avoids the borrow conflict
+        // between `self.rng` and `self.organisms` in the organism loop.
+        // -------------------------------------------------------------------
+        let sham_vals: Vec<[f32; 2]> = if is_sham {
+            (0..n_orgs)
+                .map(|_| [self.rng.random::<f32>(), self.rng.random::<f32>()])
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        // -------------------------------------------------------------------
+        // Pass 3: update EMA memory trace (or sham override) and compute corrections
         // -------------------------------------------------------------------
         let mut org_corrections = vec![[0.0f32; 2]; n_orgs];
 
@@ -56,10 +79,14 @@ impl World {
             let mw = org.genome.memory_weights();
 
             for i in 0..2 {
-                let mean_is = is_sums[org_idx][i] / count;
-
-                // EMA update: m = decay * m + (1 - decay) * mean_is
-                org.memory[i] = decay * org.memory[i] + (1.0 - decay) * mean_is;
+                if is_sham {
+                    // Sham: replace EMA with a fresh random draw — no temporal learning
+                    org.memory[i] = sham_vals[org_idx][i];
+                } else {
+                    // Real EMA: m = decay * m + (1 - decay) * mean_is
+                    let mean_is = is_sums[org_idx][i] / count;
+                    org.memory[i] = decay * org.memory[i] + (1.0 - decay) * mean_is;
+                }
 
                 // Genome-modulated gain and target (signed additive offsets).
                 // Gains are clamped to ≥0; targets are clamped to [0,1].
@@ -74,7 +101,7 @@ impl World {
         }
 
         // -------------------------------------------------------------------
-        // Pass 3: apply memory corrections to agent internal states
+        // Pass 4: apply memory corrections to agent internal states
         // -------------------------------------------------------------------
         for agent in &mut self.agents {
             let org_idx = agent.organism_id as usize;

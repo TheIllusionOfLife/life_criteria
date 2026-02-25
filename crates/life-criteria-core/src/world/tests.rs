@@ -1859,6 +1859,92 @@ fn memory_disabled_runs_are_deterministic() {
 }
 
 #[test]
+fn sham_memory_is_deterministic_for_same_seed() {
+    // Two identical worlds with enable_sham_process=true must produce identical output
+    let make = || {
+        let agents: Vec<Agent> = (0..10)
+            .map(|i| Agent::new(i as u32, 0, [50.0, 50.0 + i as f64]))
+            .collect();
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+        let config = SimConfig {
+            seed: 7,
+            world_size: 100.0,
+            num_organisms: 1,
+            agents_per_organism: 10,
+            enable_memory: true,
+            enable_sham_process: true,
+            memory_decay: 0.9,
+            memory_gain: 0.2,
+            memory_target: 0.5,
+            enable_metabolism: false,
+            enable_boundary_maintenance: false,
+            enable_reproduction: false,
+            death_boundary_threshold: 0.0,
+            boundary_collapse_threshold: 0.0,
+            max_organism_age_steps: usize::MAX,
+            ..SimConfig::default()
+        };
+        World::new(agents, vec![nn], config).unwrap()
+    };
+    let summary_a = make().run_experiment(30, 10);
+    let summary_b = make().run_experiment(30, 10);
+    for (sa, sb) in summary_a.samples.iter().zip(summary_b.samples.iter()) {
+        assert!(
+            (sa.memory_mean - sb.memory_mean).abs() < f32::EPSILON,
+            "sham memory must be deterministic at step {}",
+            sa.step
+        );
+    }
+}
+
+#[test]
+fn sham_memory_does_not_converge_to_stable_trace() {
+    // Real memory converges (EMA), sham memory stays random — check they diverge
+    let make_world_with_sham = |sham: bool| {
+        let agents: Vec<Agent> = (0..10)
+            .map(|i| Agent::new(i as u32, 0, [50.0, 50.0 + i as f64]))
+            .collect();
+        let nn = NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT));
+        let config = SimConfig {
+            seed: 12,
+            world_size: 100.0,
+            num_organisms: 1,
+            agents_per_organism: 10,
+            enable_memory: true,
+            enable_sham_process: sham,
+            memory_decay: 0.99,
+            memory_gain: 0.0, // no correction, so IS doesn't change
+            memory_target: 0.5,
+            enable_homeostasis: false,
+            enable_metabolism: false,
+            enable_boundary_maintenance: false,
+            enable_reproduction: false,
+            death_boundary_threshold: 0.0,
+            boundary_collapse_threshold: 0.0,
+            max_organism_age_steps: usize::MAX,
+            ..SimConfig::default()
+        };
+        World::new(agents, vec![nn], config).unwrap()
+    };
+    let mut real_world = make_world_with_sham(false);
+    let mut sham_world = make_world_with_sham(true);
+    for _ in 0..50 {
+        real_world.step();
+        sham_world.step();
+    }
+    // Real memory converges (slow EMA, 0.99 decay); sham is random
+    // They should have different memory_mean values after convergence
+    let real_mem = real_world.organisms[0].memory[0];
+    let sham_mem = sham_world.organisms[0].memory[0];
+    // Real memory should be near IS mean (IS starts at 0.5, homeostasis disabled → drifts toward 0)
+    // Sham memory should be random, likely != real
+    assert!(
+        (real_mem - sham_mem).abs() > 1e-6,
+        "real memory ({real_mem}) and sham memory ({sham_mem}) should diverge"
+    );
+}
+
+#[test]
 fn memory_child_initialised_to_target_on_spawn() {
     // Verify that newly reproduced organisms get memory initialised to memory_target
     let config = SimConfig {
