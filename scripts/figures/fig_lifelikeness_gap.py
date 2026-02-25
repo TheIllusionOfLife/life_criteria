@@ -126,7 +126,7 @@ def _annotate_slope(ax, results: list[dict], steps: np.ndarray) -> None:
     late_divs_all: list[float] = []
     for r in results:
         for s in r.get("samples", []):
-            if 10_000 <= s["step"] <= 20_000:
+            if 5_000 <= s["step"] <= 10_000:
                 late_steps_all.append(float(s["step"]))
                 late_divs_all.append(float(s.get("genome_diversity", 0.0)))
 
@@ -134,18 +134,18 @@ def _annotate_slope(ax, results: list[dict], steps: np.ndarray) -> None:
         return
 
     reg = linregress(late_steps_all, late_divs_all)
-    x0, x1 = 10_000.0, 20_000.0
+    x0, x1 = 5_000.0, 10_000.0
     y0 = reg.slope * x0 + reg.intercept
     y1 = reg.slope * x1 + reg.intercept
 
     ax.plot([x0, x1], [y0, y1], color="#D55E00", linewidth=1.8,
             linestyle="--", label=f"Slope {reg.slope * 1000:+.3f}/1k steps", zorder=5)
-    ax.axvspan(10_000, 20_000, color="#F0E442", alpha=0.12, label="Late window")
+    ax.axvspan(5_000, 10_000, color="#F0E442", alpha=0.12, label="Late window")
 
 
 def _panel_lineage_survival(ax, results: list[dict]) -> None:
     """Panel C: Kaplan-Meier style lineage survival curve."""
-    checkpoints = list(range(0, 21_000, 1_000))
+    checkpoints = list(range(0, 11_000, 1_000))
     window = 1_000
 
     # Compute per-seed survival at each checkpoint
@@ -230,12 +230,12 @@ def _panel_adaptation_lag(
     ax, normal_results: list[dict], shift_results: list[dict], lag_annotation: str = ""
 ) -> None:
     """Panel D: Normal vs. shift alive_count with vertical shift line."""
-    shift_step = 10_000
+    shift_step = 5_000
     colors = {"normal": "#000000", "shift": "#E69F00"}
 
     for label, results, color, ls in [
         ("Normal", normal_results, colors["normal"], "-"),
-        ("Shift at 10k", shift_results, colors["shift"], "--"),
+        ("Shift at 5k", shift_results, colors["shift"], "--"),
     ]:
         if not results:
             continue
@@ -244,7 +244,7 @@ def _panel_adaptation_lag(
         ax.plot(steps, median, color=color, linewidth=1.6, linestyle=ls, label=label)
 
     ax.axvline(shift_step, color="#888888", linewidth=1.0, linestyle=":",
-               label=f"Resource shift (step {shift_step:,})")
+               label=f"Resource shift (step {shift_step:,d})")
 
     if lag_annotation:
         ax.text(
@@ -267,7 +267,7 @@ def _panel_adaptation_lag(
 
 
 def generate_lifelikeness_gap() -> None:
-    """Figure: Life-likeness gap — 4-panel diagnostic (Tier 1, 20k steps)."""
+    """Figure: Life-likeness gap — 4-panel diagnostic (Tier 1, 10k steps)."""
     exp_dir = PROJECT_ROOT / "experiments"
     normal_results, shift_results = _load_tier1(exp_dir)
 
@@ -320,14 +320,14 @@ def generate_lifelikeness_gap() -> None:
     # --- Panel D: adaptation lag ---
     _panel_adaptation_lag(ax_d, normal_results, shift_results, lag_annotation)
     ax_d.set_xlabel("Simulation step")
-    ax_d.set_title("D  Adaptation lag (shift at step 10k)", loc="left", fontsize=9)
+    ax_d.set_title("D  Adaptation lag (shift at step 5k)", loc="left", fontsize=9)
     ax_d.legend(loc="upper right", fontsize=7, framealpha=0.9)
 
     # Shared x labels for top row
     for ax in (ax_a, ax_b):
         ax.set_xlabel("Simulation step")
 
-    fig.suptitle("Life-likeness gap: 7-criteria system (20 000 steps)", fontsize=10)
+    fig.suptitle("Life-likeness gap: 7-criteria system (10 000 steps)", fontsize=10)
     fig.tight_layout()
 
     out_path = FIG_DIR / "fig_lifelikeness_gap.pdf"

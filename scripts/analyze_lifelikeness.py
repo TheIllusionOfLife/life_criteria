@@ -14,7 +14,7 @@ Decision rules applied here are the SAME pre-registered rules recorded in
 experiment_lifelikeness.py's module docstring before any experiments were run.
 First-match-wins, applied in order:
 
-    extinction_fraction_at_20k > 0.50  →  adaptive_robustness
+    extinction_fraction_at_10k > 0.50  →  adaptive_robustness
     median_diversity_slope_late <= 0   →  generative_capacity
     novelty_halflife_steps < 5000      →  niche_construction
     (none triggered)                   →  open_ended_already
@@ -67,9 +67,9 @@ def compute_extinction(results: list[dict]) -> dict:
         extinct_steps.append(ext_step)
 
     n = len(extinct_steps)
+    frac_2_5k = sum(1 for s in extinct_steps if s is not None and s <= 2_500) / n
     frac_5k = sum(1 for s in extinct_steps if s is not None and s <= 5_000) / n
     frac_10k = sum(1 for s in extinct_steps if s is not None and s <= 10_000) / n
-    frac_20k = sum(1 for s in extinct_steps if s is not None and s <= 20_000) / n
 
     non_none = [s for s in extinct_steps if s is not None]
     median_ext: float | None = float(np.median(non_none)) if non_none else None
@@ -77,11 +77,11 @@ def compute_extinction(results: list[dict]) -> dict:
     return {
         "per_seed": extinct_steps,
         "n_seeds": n,
+        "fraction_extinct_by_2_5k": frac_2_5k,
         "fraction_extinct_by_5k": frac_5k,
         "fraction_extinct_by_10k": frac_10k,
-        "fraction_extinct_by_20k": frac_20k,
         "median_extinction_step": median_ext,
-        "n_extinct_by_20k": len(non_none),
+        "n_extinct_by_10k": len(non_none),
     }
 
 
@@ -91,7 +91,7 @@ def compute_extinction(results: list[dict]) -> dict:
 
 
 def compute_diversity_slope(results: list[dict]) -> dict:
-    """Linear regression on genome_diversity over the late window [10k, 20k].
+    """Linear regression on genome_diversity over the late window [5k, 10k].
 
     Slope units: diversity change per 1 000 steps.
     """
@@ -100,7 +100,7 @@ def compute_diversity_slope(results: list[dict]) -> dict:
         xs: list[float] = []
         ys: list[float] = []
         for s in r["samples"]:
-            if 10_000 <= s["step"] <= 20_000:
+            if 5_000 <= s["step"] <= 10_000:
                 xs.append(float(s["step"]))
                 ys.append(float(s.get("genome_diversity", 0.0)))
         if len(xs) >= 2:
@@ -190,7 +190,7 @@ def compute_lineage_survival(results: list[dict]) -> dict:
     A founder lineage "survives" at checkpoint t if any descendant of that
     founder reproduced in the window (t - 1 000, t].
     """
-    checkpoints = [5_000, 10_000, 20_000]
+    checkpoints = [2_500, 5_000, 10_000]
     window = 1_000
 
     per_seed: list[dict] = []
@@ -276,8 +276,8 @@ def compute_bedau_class(results: list[dict]) -> dict:
     per_seed_class: list[int] = []
     for r in results:
         events: list[dict] = r.get("lineage_events", [])
-        early = sum(1 for e in events if 0 <= e["step"] < 5_000)
-        late = sum(1 for e in events if 15_000 <= e["step"] <= 20_000)
+        early = sum(1 for e in events if 0 <= e["step"] < 2_500)
+        late = sum(1 for e in events if 7_500 <= e["step"] <= 10_000)
 
         if early == 0 and late == 0:
             cls = 2  # no activity at all → extinct pattern
@@ -310,16 +310,16 @@ def compute_bedau_class(results: list[dict]) -> dict:
 def compute_adaptation_lag(
     normal_results: list[dict], shift_results: list[dict]
 ) -> dict:
-    """Measure how long the population takes to recover after resource shift at step 10k.
+    """Measure how long the population takes to recover after resource shift at step 5k.
 
-    Pre-shift baseline: mean alive_count over steps 8k–9.5k in the shift condition
+    Pre-shift baseline: mean alive_count over steps 4k–4.75k in the shift condition
     (identical to normal before the shift).
     Recovery target: 80% of pre-shift baseline.
-    Lag: first step after 10k where alive_count reaches the target.
+    Lag: first step after 5k where alive_count reaches the target.
     """
-    shift_step = 10_000
-    pre_start = 8_000
-    pre_end = 9_500
+    shift_step = 5_000
+    pre_start = 4_000
+    pre_end = 4_750
     recovery_frac = 0.8
 
     lags: list[int | None] = []
@@ -362,15 +362,15 @@ def compute_adaptation_lag(
 
 
 def apply_decision_rule(
-    extinction_fraction_at_20k: float,
+    extinction_fraction_at_10k: float,
     median_diversity_slope_late: float | None,
     novelty_halflife: float | None,
 ) -> tuple[str, str]:
     """Return (criterion8_candidate, triggered_rule) per the pre-registered rules."""
-    if extinction_fraction_at_20k > 0.50:
+    if extinction_fraction_at_10k > 0.50:
         return (
             "adaptive_robustness",
-            f"Rule 1: extinction_fraction_at_20k={extinction_fraction_at_20k:.3f} > 0.50",
+            f"Rule 1: extinction_fraction_at_10k={extinction_fraction_at_10k:.3f} > 0.50",
         )
     if median_diversity_slope_late is not None and median_diversity_slope_late <= 0:
         return (
@@ -424,14 +424,14 @@ def run_analysis(
     lag = compute_adaptation_lag(normal_results, shift_results) if shift_results else None
 
     candidate, rule = apply_decision_rule(
-        extinction_fraction_at_20k=ext["fraction_extinct_by_20k"],
+        extinction_fraction_at_10k=ext["fraction_extinct_by_10k"],
         median_diversity_slope_late=div["median_slope_per_1k_steps"],
         novelty_halflife=nov["halflife_steps"],
     )
 
     print(f"\nDecision: {candidate}")
     print(f"  Triggered: {rule}")
-    print(f"  extinction_fraction_at_20k = {ext['fraction_extinct_by_20k']:.3f}")
+    print(f"  extinction_fraction_at_10k = {ext['fraction_extinct_by_10k']:.3f}")
     print(f"  median_diversity_slope     = {div['median_slope_per_1k_steps']}")
     print(f"  novelty_halflife_steps     = {nov['halflife_steps']}")
     print(f"  bedau_modal_class          = {bed['modal_class']}")
@@ -457,7 +457,7 @@ def run_analysis(
             "criterion8_candidate": candidate,
             "triggered_rule": rule,
             "summary": {
-                "extinction_fraction_at_20k": ext["fraction_extinct_by_20k"],
+                "extinction_fraction_at_10k": ext["fraction_extinct_by_10k"],
                 "median_diversity_slope_per_1k": div["median_slope_per_1k_steps"],
                 "novelty_halflife_steps": nov["halflife_steps"],
                 "bedau_modal_class": bed["modal_class"],

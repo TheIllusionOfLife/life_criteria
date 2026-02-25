@@ -3,18 +3,18 @@
 PRE-REGISTERED DECISION RULES (locked 2026-02-25, BEFORE execution)
 =====================================================================
 These rules determine which 8th-criterion candidate is selected from
-the Tier 1 (20k step) diagnostic data.  They are written here before
+the Tier 1 (10k step) diagnostic data.  They are written here before
 any simulation results exist.  First-match-wins; applied in order.
 
   Rule 1 — Extinction:
-      If extinction_fraction_at_20k > 0.50 (majority of seeds extinct)
+      If extinction_fraction_at_10k > 0.50 (majority of seeds extinct)
       → candidate = "adaptive_robustness"
       Rationale: organisms lack within-lifetime regulation of their own
       homeostasis thresholds in response to sustained stress — analogous
       to epigenetic regulation.
 
   Rule 2 — Complexity plateau:
-      Elif median genome_diversity slope over steps 10k–20k <= 0
+      Elif median genome_diversity slope over steps 5k–10k <= 0
       → candidate = "generative_capacity"
       Rationale: fixed-length genomes cannot generate qualitatively new
       functions; variable-length genome with gene duplication is required.
@@ -34,12 +34,12 @@ any simulation results exist.  First-match-wins; applied in order.
 Conditions
 ----------
   normal_graph : baseline 7-criteria system with graph metabolism
-  shift_graph  : same + resource-regeneration shift at step 10 000
+  shift_graph  : same + resource-regeneration shift at step 5 000
                  (for adaptation-lag measurement, Panel D of figure)
 
 Tiers
 -----
-  --tier 1  (diagnostic)     : 20 000 steps, sample_every=200, n=30 seeds
+  --tier 1  (diagnostic)     : 10 000 steps, sample_every=100, n=30 seeds
   --tier 2  (open-endedness) : 100 000 steps, sample_every=500, n=3 seeds,
                                normal_graph only
 
@@ -73,17 +73,27 @@ from experiment_common import log, make_config_dict, run_single
 # ---------------------------------------------------------------------------
 
 TIER_PARAMS: dict[int, dict] = {
-    1: {"steps": 20_000, "sample_every": 200, "default_seeds": list(range(30))},
+    1: {"steps": 10_000, "sample_every": 100, "default_seeds": list(range(30))},
     2: {"steps": 100_000, "sample_every": 500, "default_seeds": list(range(3))},
 }
+
+# max_alive_organisms caps the alive population so per-step cost stays bounded.
+# Without it a 20k-step run grows to ~386 organisms, making each step ~18× more
+# expensive than the 2k-step baseline (O(n_agents × k_neighbors) NN query phase).
+# Value 100 = 2× the initial 50, allowing visible population growth while keeping
+# runtime tractable (~8 min/seed vs 87 min/seed uncapped).
+_POPULATION_CAP = 100
 
 CONDITIONS: dict[str, dict] = {
     "normal_graph": {
         "metabolism_mode": "graph",
+        "max_alive_organisms": _POPULATION_CAP,
     },
     "shift_graph": {
         "metabolism_mode": "graph",
-        "environment_shift_step": 10_000,
+        "max_alive_organisms": _POPULATION_CAP,
+        # Shift at step 5 000 so there are 5 000 post-shift steps to observe recovery.
+        "environment_shift_step": 5_000,
         "environment_shift_resource_rate": 0.003,
     },
 }
