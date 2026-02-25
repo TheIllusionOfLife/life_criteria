@@ -149,7 +149,8 @@ def _run_condition(
     out_path = out_dir / f"criterion8_{cond_name}.json"
     log(f"--- Condition: {cond_name} ---")
     log(f"  Steps: {STEPS}  sample_every: {SAMPLE_EVERY}  seeds: {seeds}")
-    log(f"  Overrides: {json.dumps({k: v for k, v in overrides.items() if k != 'metabolism_mode'})}")
+    filtered = {k: v for k, v in overrides.items() if k != "metabolism_mode"}
+    log(f"  Overrides: {json.dumps(filtered)}")
     log(f"  Output: {out_path}")
 
     if dry_run:
@@ -173,7 +174,11 @@ def _run_condition(
 
         # Log final memory_mean if available (will be non-zero when memory is on)
         last_sample = result["samples"][-1] if result["samples"] else {}
-        mem_str = f"  mem={last_sample.get('memory_mean', 0.0):.3f}" if "memory_mean" in last_sample else ""
+        mem_str = (
+            f"  mem={last_sample.get('memory_mean', 0.0):.3f}"
+            if "memory_mean" in last_sample
+            else ""
+        )
         log(
             f"  seed={seed:3d}  alive={result['final_alive_count']:4d}"
             f"  samples={len(result['samples']):5d}"

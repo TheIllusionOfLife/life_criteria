@@ -272,8 +272,12 @@ def run_analysis(
     # Memory stability check: real EMA should have lower variance than sham
     c8_mem_var = summaries["criterion8_on"]["memory_late_variance"]["mean"]
     sham_mem_var = summaries["sham"]["memory_late_variance"]["mean"]
-    c8_mem_vars = [v for v in summaries["criterion8_on"]["memory_late_variance"]["per_seed"] if v is not None]
-    sham_mem_vars = [v for v in summaries["sham"]["memory_late_variance"]["per_seed"] if v is not None]
+    c8_mem_vars = [
+        v for v in summaries["criterion8_on"]["memory_late_variance"]["per_seed"] if v is not None
+    ]
+    sham_mem_vars = [
+        v for v in summaries["sham"]["memory_late_variance"]["per_seed"] if v is not None
+    ]
     mem_u, mem_p = _mwu_test(c8_mem_vars, sham_mem_vars)
 
     memory_stability = {
@@ -291,14 +295,13 @@ def run_analysis(
     orthogonality = _orthogonality_check(loaded["criterion8_on"])
 
     # Human-readable summary
-    c8_on = comparisons.get("criterion8_on", {})
-    ablated = comparisons.get("criterion8_ablated", {})
-    print(f"\nSurvival AUC summary:")
+    print("\nSurvival AUC summary:")
     for cond in ["baseline", "criterion8_on", "criterion8_ablated", "sham"]:
         s = summaries[cond]["survival_auc"]
-        print(f"  {cond:25s}  median={s['median']:8.1f}  mean={s['mean']:8.1f}  n={summaries[cond]['n_seeds']}")
+        n = summaries[cond]["n_seeds"]
+        print(f"  {cond:25s}  median={s['median']:8.1f}  mean={s['mean']:8.1f}  n={n}")
 
-    print(f"\nPairwise vs baseline (Holm-Bonferroni corrected):")
+    print("\nPairwise vs baseline (Holm-Bonferroni corrected):")
     for cond in comparison_conds:
         c = comparisons[cond]
         print(
@@ -308,7 +311,8 @@ def run_analysis(
         )
 
     print(f"\nMemory stability (c8_on var vs sham var): p={mem_p:.4f}")
-    print(f"Orthogonality: partial_corr(AUC, diversity | energy) = {orthogonality['partial_corr_auc_vs_diversity_controlling_energy']}")
+    orth_val = orthogonality["partial_corr_auc_vs_diversity_controlling_energy"]
+    print(f"Orthogonality: partial_corr(AUC, diversity | energy) = {orth_val}")
 
     analysis = {
         "data_sources": {k: str(v) for k, v in condition_files.items()},

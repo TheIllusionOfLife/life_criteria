@@ -11,10 +11,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from figures import (
-    generate_criterion8,
     generate_ablation_distributions,
     generate_architecture,
     generate_coupling,
+    generate_criterion8,
     generate_cyclic,
     generate_cyclic_sweep,
     generate_ecology_stress,

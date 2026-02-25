@@ -18,6 +18,7 @@ _FIG_DIR.mkdir(parents=True, exist_ok=True)
 from figures.fig_ablation import generate_ablation_distributions
 from figures.fig_architecture import generate_architecture
 from figures.fig_coupling import generate_coupling
+from figures.fig_criterion8 import generate_criterion8
 from figures.fig_cyclic import generate_cyclic, generate_cyclic_sweep
 from figures.fig_ecology_stress import generate_ecology_stress
 from figures.fig_evolution import generate_evolution
@@ -25,7 +26,6 @@ from figures.fig_evolution_evidence import generate_evolution_evidence
 from figures.fig_graded import generate_graded
 from figures.fig_homeostasis import generate_homeostasis
 from figures.fig_invariance import generate_invariance
-from figures.fig_criterion8 import generate_criterion8
 from figures.fig_lifelikeness_gap import generate_lifelikeness_gap
 from figures.fig_lineage import generate_lineage
 from figures.fig_midrun import generate_midrun_ablation
