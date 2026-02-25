@@ -228,6 +228,7 @@ pub fn collect_step_metrics(
     exhaustion_events: usize,
     organisms: &[OrganismRuntime],
     agents: &[Agent],
+    enable_memory: bool,
 ) -> StepMetrics {
     let alive = organisms.iter().filter(|o| o.alive).count();
     let denom = alive.max(1) as f32;
@@ -317,24 +318,32 @@ pub fn collect_step_metrics(
     // Spatial cohesion: mean pairwise agent distance per organism (toroidal-aware)
     let spatial_cohesion_mean = compute_spatial_cohesion(agents, organisms, world_size);
 
-    // Memory trace: mean and std of memory[0] and memory[1] across alive organisms
-    let (memory_vals, memory_vals_ch1): (Vec<f32>, Vec<f32>) = organisms
-        .iter()
-        .filter(|o| o.alive)
-        .map(|o| (o.memory[0], o.memory[1]))
-        .unzip();
-    let memory_mean = if memory_vals.is_empty() {
-        0.0
+    // Memory trace: mean and std of memory[0] and memory[1] across alive organisms.
+    // Gated on enable_memory: when memory is disabled org.memory holds the
+    // initialisation value (memory_target), not a learned trace, so we report 0.0
+    // to avoid contaminating baseline vs. +memory comparisons.
+    let (memory_mean, memory_std, memory_mean_ch1, memory_std_ch1) = if enable_memory {
+        let (memory_vals, memory_vals_ch1): (Vec<f32>, Vec<f32>) = organisms
+            .iter()
+            .filter(|o| o.alive)
+            .map(|o| (o.memory[0], o.memory[1]))
+            .unzip();
+        let mm = if memory_vals.is_empty() {
+            0.0
+        } else {
+            memory_vals.iter().sum::<f32>() / memory_vals.len() as f32
+        };
+        let ms = std_dev(&memory_vals, mm);
+        let mm1 = if memory_vals_ch1.is_empty() {
+            0.0
+        } else {
+            memory_vals_ch1.iter().sum::<f32>() / memory_vals_ch1.len() as f32
+        };
+        let ms1 = std_dev(&memory_vals_ch1, mm1);
+        (mm, ms, mm1, ms1)
     } else {
-        memory_vals.iter().sum::<f32>() / memory_vals.len() as f32
+        (0.0, 0.0, 0.0, 0.0)
     };
-    let memory_std = std_dev(&memory_vals, memory_mean);
-    let memory_mean_ch1 = if memory_vals_ch1.is_empty() {
-        0.0
-    } else {
-        memory_vals_ch1.iter().sum::<f32>() / memory_vals_ch1.len() as f32
-    };
-    let memory_std_ch1 = std_dev(&memory_vals_ch1, memory_mean_ch1);
 
     StepMetrics {
         step,

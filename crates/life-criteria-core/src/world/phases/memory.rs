@@ -11,7 +11,7 @@ impl World {
     /// to compute a proportional correction that drives IS toward `memory_target`,
     /// modulated by the genome's memory segment (segment 7).
     ///
-    /// Three-pass layout to satisfy Rust borrow rules:
+    /// Four-pass layout to satisfy Rust borrow rules:
     ///   1. Collect IS sums from agents (shared borrow of agents + organisms)
     ///   2. Pre-compute sham memory values if needed (mutable borrow of rng only)
     ///   3. Update `org.memory` and compute per-org corrections (exclusive borrow of organisms)

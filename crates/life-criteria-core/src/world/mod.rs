@@ -586,6 +586,7 @@ impl World {
                     self.agent_id_exhaustions_last_step,
                     &self.organisms,
                     &self.agents,
+                    self.config.enable_memory,
                 ));
             }
         }
@@ -687,6 +688,7 @@ impl World {
                     self.agent_id_exhaustions_last_step,
                     &self.organisms,
                     &self.agents,
+                    self.config.enable_memory,
                 ));
             }
             if snapshot_steps_set.contains(&step) {

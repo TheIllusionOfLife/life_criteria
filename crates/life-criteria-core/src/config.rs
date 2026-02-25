@@ -1049,6 +1049,18 @@ mod tests {
                 },
                 "world_size (4096) exceeds supported maximum (2048)",
             ),
+            (
+                SimConfigError::InvalidMemoryDecay,
+                "memory_decay must be finite and within [0, 1)",
+            ),
+            (
+                SimConfigError::InvalidMemoryGain,
+                "memory_gain must be finite and non-negative",
+            ),
+            (
+                SimConfigError::InvalidMemoryTarget,
+                "memory_target must be finite and within [0, 1]",
+            ),
         ];
 
         for (err, expected) in cases {

@@ -113,7 +113,7 @@ def _holm_bonferroni(p_values: list[float]) -> list[float]:
     adjusted = [0.0] * n
     running_min = 1.0
     for rank, (orig_idx, p) in enumerate(reversed(indexed)):
-        k = n - rank  # number of remaining tests at this step
+        k = rank + 1  # multiplier: 1 for largest p, n for smallest p (step-down)
         adj = min(running_min, p * k)
         running_min = adj
         adjusted[orig_idx] = adj
