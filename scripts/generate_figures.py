@@ -14,6 +14,7 @@ from figures import (
     generate_ablation_distributions,
     generate_architecture,
     generate_coupling,
+    generate_criterion8,
     generate_cyclic,
     generate_cyclic_sweep,
     generate_ecology_stress,
@@ -110,6 +111,9 @@ def main() -> None:
 
     print("Figure 21: Life-likeness gap (Phase 0 diagnostic)")
     generate_lifelikeness_gap()
+
+    print("Figure 22: 8th Criterion — memory results")
+    generate_criterion8()
 
     print("Done.")
 

@@ -46,6 +46,11 @@ pub struct World {
     org_toroidal_sums: Vec<[f64; 4]>,
     org_counts: Vec<usize>,
     rng: ChaCha12Rng,
+    /// Dedicated RNG for sham memory draws — seeded independently from `rng`
+    /// so that sham does not shift the main RNG stream.  This ensures population
+    /// dynamics (reproduction, mutation) are byte-for-byte identical between the
+    /// `criterion8_on` and `sham` conditions, isolating the memory-coherence effect.
+    sham_rng: ChaCha12Rng,
     next_agent_id: u32,
     step_index: usize,
     original_config: Option<SimConfig>,
@@ -73,6 +78,8 @@ pub struct World {
     neighbor_counts_buffer: Vec<usize>,
     homeostasis_sums_buffer: Vec<f32>,
     homeostasis_counts_buffer: Vec<usize>,
+    /// Reusable buffer for sham memory pre-computation — avoids per-step Vec allocation.
+    sham_vals_buffer: Vec<[f32; 2]>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -269,6 +276,9 @@ impl World {
             org_toroidal_sums: vec![[0.0, 0.0, 0.0, 0.0]; org_count],
             org_counts: vec![0; org_count],
             rng: ChaCha12Rng::seed_from_u64(config.seed),
+            // Sham RNG: same seed XOR'd with a constant so sham values are
+            // deterministic but independent of the main simulation stream.
+            sham_rng: ChaCha12Rng::seed_from_u64(config.seed ^ 0x9e3779b97f4a7c15),
             next_agent_id: max_agent_id.saturating_add(1),
             step_index: 0,
             original_config: None,
@@ -290,6 +300,7 @@ impl World {
             neighbor_counts_buffer: Vec::with_capacity(org_count),
             homeostasis_sums_buffer: Vec::with_capacity(org_count),
             homeostasis_counts_buffer: Vec::with_capacity(org_count),
+            sham_vals_buffer: Vec::with_capacity(org_count),
         })
     }
 
@@ -575,6 +586,7 @@ impl World {
                     self.agent_id_exhaustions_last_step,
                     &self.organisms,
                     &self.agents,
+                    self.config.enable_memory,
                 ));
             }
         }
@@ -676,6 +688,7 @@ impl World {
                     self.agent_id_exhaustions_last_step,
                     &self.organisms,
                     &self.agents,
+                    self.config.enable_memory,
                 ));
             }
             if snapshot_steps_set.contains(&step) {

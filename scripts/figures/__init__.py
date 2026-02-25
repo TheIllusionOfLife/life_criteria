@@ -18,6 +18,7 @@ _FIG_DIR.mkdir(parents=True, exist_ok=True)
 from figures.fig_ablation import generate_ablation_distributions
 from figures.fig_architecture import generate_architecture
 from figures.fig_coupling import generate_coupling
+from figures.fig_criterion8 import generate_criterion8
 from figures.fig_cyclic import generate_cyclic, generate_cyclic_sweep
 from figures.fig_ecology_stress import generate_ecology_stress
 from figures.fig_evolution import generate_evolution
@@ -36,6 +37,7 @@ from figures.fig_timeseries import generate_timeseries
 from figures.fig_trait_evolution import generate_trait_evolution
 
 __all__ = [
+    "generate_criterion8",
     "generate_timeseries",
     "generate_architecture",
     "generate_proxy",
