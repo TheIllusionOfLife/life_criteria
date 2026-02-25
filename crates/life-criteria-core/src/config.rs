@@ -132,6 +132,11 @@ pub struct SimConfig {
     pub crowding_boundary_decay: f32,
     /// Maximum age in simulation steps before forced organism death.
     pub max_organism_age_steps: usize,
+    /// Maximum number of alive organisms allowed at any step (0 = no cap).
+    /// When the alive count reaches this limit, reproduction is suppressed until
+    /// the population drops below the cap.  Useful for long-horizon runs where
+    /// unbounded growth would otherwise make each step increasingly expensive.
+    pub max_alive_organisms: usize,
     /// Step interval used for pruning dead entities.
     pub compaction_interval_steps: usize,
     /// Per-gene point mutation probability.
@@ -219,6 +224,7 @@ impl Default for SimConfig {
             crowding_neighbor_threshold: 8.0,
             crowding_boundary_decay: 0.0015,
             max_organism_age_steps: 20_000,
+            max_alive_organisms: 0,
             compaction_interval_steps: 64,
             mutation_point_rate: 0.02,
             mutation_point_scale: 0.15,

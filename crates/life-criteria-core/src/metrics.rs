@@ -163,14 +163,23 @@ fn compute_spatial_cohesion(
     world_size: f64,
 ) -> f32 {
     let half = world_size * 0.5;
+
+    // Single pass: bucket agent positions by organism_id to avoid O(n_orgs × n_agents) scan.
+    let mut org_positions: Vec<Vec<[f64; 2]>> = vec![Vec::new(); organisms.len()];
+    for agent in agents {
+        let idx = agent.organism_id as usize;
+        if organisms.get(idx).map(|o| o.alive).unwrap_or(false) {
+            org_positions[idx].push(agent.position);
+        }
+    }
+
     let mut org_cohesions = Vec::new();
 
-    for org in organisms.iter().filter(|o| o.alive) {
-        let positions: Vec<[f64; 2]> = agents
-            .iter()
-            .filter(|a| a.organism_id == org.id)
-            .map(|a| a.position)
-            .collect();
+    for (org_idx, org) in organisms.iter().enumerate() {
+        if !org.alive {
+            continue;
+        }
+        let positions = &org_positions[org_idx];
         let n = positions.len();
         if n < 2 {
             continue;
