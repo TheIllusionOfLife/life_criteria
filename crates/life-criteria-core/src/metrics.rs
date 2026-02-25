@@ -168,7 +168,7 @@ fn compute_spatial_cohesion(
     let mut org_positions: Vec<Vec<[f64; 2]>> = vec![Vec::new(); organisms.len()];
     for agent in agents {
         let idx = agent.organism_id as usize;
-        if organisms.get(idx).map(|o| o.alive).unwrap_or(false) {
+        if organisms.get(idx).is_some_and(|o| o.alive) {
             org_positions[idx].push(agent.position);
         }
     }
@@ -271,8 +271,7 @@ pub fn collect_step_metrics(
         .filter(|a| {
             organisms
                 .get(a.organism_id as usize)
-                .map(|o| o.alive)
-                .unwrap_or(false)
+                .is_some_and(|o| o.alive)
         })
         .map(|a| a.internal_state)
         .collect();
