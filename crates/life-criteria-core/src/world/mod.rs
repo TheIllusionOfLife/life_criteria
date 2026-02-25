@@ -703,6 +703,12 @@ impl World {
     }
 
     fn maybe_reproduce(&mut self) {
+        // Suppress reproduction when the alive-organism cap is active and reached.
+        if self.config.max_alive_organisms > 0
+            && self.alive_count() >= self.config.max_alive_organisms
+        {
+            return;
+        }
         let child_agents =
             (self.config.agents_per_organism / 2).max(self.config.reproduction_child_min_agents);
         let parent_indices: Vec<usize> = self
