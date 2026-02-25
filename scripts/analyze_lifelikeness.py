@@ -28,7 +28,7 @@ Usage
 import argparse
 import json
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -57,6 +57,17 @@ def compute_extinction(results: list[dict]) -> dict:
 
     A seed is "extinct" at step t if alive_count drops below 2 at or before t.
     """
+    if not results:
+        return {
+            "per_seed": [],
+            "n_seeds": 0,
+            "fraction_extinct_by_2_5k": None,
+            "fraction_extinct_by_5k": None,
+            "fraction_extinct_by_10k": None,
+            "median_extinction_step": None,
+            "n_extinct_by_10k": 0,
+        }
+
     extinct_steps: list[int | None] = []
     for r in results:
         ext_step: int | None = None
@@ -167,8 +178,8 @@ def compute_novelty_halflife(results: list[dict]) -> dict:
         )
         _, k_fit = float(popt[0]), float(popt[1])
         halflife = float(np.log(2) / k_fit) if k_fit > 0 else None
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"WARNING: curve_fit for novelty halflife failed: {exc}")
 
     return {
         "halflife_steps": halflife,
@@ -176,6 +187,43 @@ def compute_novelty_halflife(results: list[dict]) -> dict:
         "window_starts": all_windows,
         "mean_births_per_window": mean_births,
     }
+
+
+# ---------------------------------------------------------------------------
+# Shared BFS helper (also imported by figures/fig_lifelikeness_gap.py)
+# ---------------------------------------------------------------------------
+
+
+def _build_founder_descendants(events: list[dict]) -> dict[int, set[int]]:
+    """BFS expansion of all lineages whose founders appeared before step 1 000.
+
+    Returns a mapping from each founder stable_id to the set of all its
+    descendants (including itself).  Returns {} when no founders are found.
+    """
+    founders: set[int] = set()
+    for e in events:
+        if e["step"] < 1_000:
+            founders.add(int(e["parent_stable_id"]))
+            founders.add(int(e["child_stable_id"]))
+    if not founders:
+        return {}
+
+    parent_to_children: dict[int, list[int]] = defaultdict(list)
+    for e in events:
+        parent_to_children[int(e["parent_stable_id"])].append(int(e["child_stable_id"]))
+
+    founder_descendants: dict[int, set[int]] = {}
+    for f in founders:
+        desc: set[int] = {f}
+        queue = [f]
+        while queue:
+            node = queue.pop()
+            for child in parent_to_children.get(node, []):
+                if child not in desc:
+                    desc.add(child)
+                    queue.append(child)
+        founder_descendants[f] = desc
+    return founder_descendants
 
 
 # ---------------------------------------------------------------------------
@@ -196,39 +244,12 @@ def compute_lineage_survival(results: list[dict]) -> dict:
     per_seed: list[dict] = []
     for r in results:
         events: list[dict] = r.get("lineage_events", [])
+        founder_descendants = _build_founder_descendants(events)
 
-        # Identify founders: organisms present as parent or child in early events
-        founders: set[int] = set()
-        for e in events:
-            if e["step"] < 1_000:
-                founders.add(int(e["parent_stable_id"]))
-                founders.add(int(e["child_stable_id"]))
-
-        if not founders:
+        if not founder_descendants:
             per_seed.append({str(t): None for t in checkpoints})
             continue
 
-        # Build parent→children adjacency for descendant expansion (BFS)
-        parent_to_children: dict[int, list[int]] = defaultdict(list)
-        for e in events:
-            parent_to_children[int(e["parent_stable_id"])].append(
-                int(e["child_stable_id"])
-            )
-
-        # For each founder expand all descendants
-        founder_descendants: dict[int, set[int]] = {}
-        for f in founders:
-            desc: set[int] = {f}
-            queue = [f]
-            while queue:
-                node = queue.pop()
-                for child in parent_to_children.get(node, []):
-                    if child not in desc:
-                        desc.add(child)
-                        queue.append(child)
-            founder_descendants[f] = desc
-
-        # At each checkpoint, check if any descendant reproduced recently
         survival: dict[str, float | None] = {}
         for t in checkpoints:
             active_parents = {
@@ -237,7 +258,7 @@ def compute_lineage_survival(results: list[dict]) -> dict:
                 if t - window < e["step"] <= t
             }
             n_surviving = sum(
-                1 for f, desc in founder_descendants.items() if desc & active_parents
+                1 for desc in founder_descendants.values() if desc & active_parents
             )
             survival[str(t)] = n_surviving / len(founder_descendants)
 
@@ -266,13 +287,11 @@ def compute_bedau_class(results: list[dict]) -> dict:
 
     Uses lineage_events for accurate window-level birth counts.
     Classes:
-        1 — birth rate approximately constant (late ≈ early)
-        2 — birth rate declines to ≈ 0 by step 20k
-        3 — birth rate intermittent (non-zero but declining)
-        4 — birth rate sustained or growing
+        1 — birth rate approximately constant (late within ±10% of early)
+        2 — birth rate declines to ≈ 0 by step 10k
+        3 — birth rate intermittent (non-zero but declining >10%)
+        4 — birth rate genuinely growing (late > 110% of early)
     """
-    from collections import Counter
-
     per_seed_class: list[int] = []
     for r in results:
         events: list[dict] = r.get("lineage_events", [])
@@ -283,10 +302,10 @@ def compute_bedau_class(results: list[dict]) -> dict:
             cls = 2  # no activity at all → extinct pattern
         elif late == 0:
             cls = 2  # declined to zero
-        elif late >= early * 0.9:
-            cls = 4  # sustained or growing (within 10% of early)
+        elif late > early * 1.1:
+            cls = 4  # genuinely growing (>10% above early)
         elif abs(late - early) <= 0.1 * max(early, 1):
-            cls = 1  # approximately constant
+            cls = 1  # approximately constant (±10%)
         else:
             cls = 3  # declining but non-zero → intermittent
 
@@ -307,9 +326,7 @@ def compute_bedau_class(results: list[dict]) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def compute_adaptation_lag(
-    normal_results: list[dict], shift_results: list[dict]
-) -> dict:
+def compute_adaptation_lag(shift_results: list[dict]) -> dict:
     """Measure how long the population takes to recover after resource shift at step 5k.
 
     Pre-shift baseline: mean alive_count over steps 4k–4.75k in the shift condition
@@ -372,12 +389,22 @@ def apply_decision_rule(
             "adaptive_robustness",
             f"Rule 1: extinction_fraction_at_10k={extinction_fraction_at_10k:.3f} > 0.50",
         )
-    if median_diversity_slope_late is not None and median_diversity_slope_late <= 0:
+    if median_diversity_slope_late is None:
+        print(
+            "WARNING: median_diversity_slope_late is None — "
+            "Rule 2 cannot be evaluated (insufficient late-window data); skipping to Rule 3."
+        )
+    elif median_diversity_slope_late <= 0:
         return (
             "generative_capacity",
             f"Rule 2: median_diversity_slope_late={median_diversity_slope_late:.4f} <= 0",
         )
-    if novelty_halflife is not None and novelty_halflife < 5_000:
+    if novelty_halflife is None:
+        print(
+            "WARNING: novelty_halflife is None — "
+            "Rule 3 cannot be evaluated (curve_fit failed or no births); skipping to Rule 4."
+        )
+    elif novelty_halflife < 5_000:
         return (
             "niche_construction",
             f"Rule 3: novelty_halflife_steps={novelty_halflife:.1f} < 5000",
@@ -421,7 +448,7 @@ def run_analysis(
     nov = compute_novelty_halflife(normal_results)
     lin = compute_lineage_survival(normal_results)
     bed = compute_bedau_class(normal_results)
-    lag = compute_adaptation_lag(normal_results, shift_results) if shift_results else None
+    lag = compute_adaptation_lag(shift_results) if shift_results else None
 
     candidate, rule = apply_decision_rule(
         extinction_fraction_at_10k=ext["fraction_extinct_by_10k"],

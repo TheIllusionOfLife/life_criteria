@@ -14,10 +14,14 @@ Data sources
   experiments/lifelikeness_analysis.json  (for slope/lag annotations)
 """
 
+import json
 from collections import defaultdict
+from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
-from figures._shared import *
+from analyze_lifelikeness import _build_founder_descendants
+from figures._shared import FIG_DIR, PROJECT_ROOT, load_json
 from scipy.stats import linregress
 
 # ---------------------------------------------------------------------------
@@ -152,33 +156,11 @@ def _panel_lineage_survival(ax, results: list[dict]) -> None:
     per_seed_survival: list[list[float | None]] = []
     for r in results:
         events: list[dict] = r.get("lineage_events", [])
+        founder_descendants = _build_founder_descendants(events)
 
-        founders: set[int] = set()
-        for e in events:
-            if e["step"] < 1_000:
-                founders.add(int(e["parent_stable_id"]))
-                founders.add(int(e["child_stable_id"]))
-
-        if not founders:
+        if not founder_descendants:
             per_seed_survival.append([None] * len(checkpoints))
             continue
-
-        from collections import defaultdict as _ddict
-        parent_to_children: dict[int, list[int]] = _ddict(list)
-        for e in events:
-            parent_to_children[int(e["parent_stable_id"])].append(int(e["child_stable_id"]))
-
-        founder_descendants: dict[int, set[int]] = {}
-        for f in founders:
-            desc: set[int] = {f}
-            queue = [f]
-            while queue:
-                node = queue.pop()
-                for child in parent_to_children.get(node, []):
-                    if child not in desc:
-                        desc.add(child)
-                        queue.append(child)
-            founder_descendants[f] = desc
 
         seed_survival = []
         for t in checkpoints:
@@ -315,7 +297,8 @@ def generate_lifelikeness_gap() -> None:
     _panel_lineage_survival(ax_c, normal_results)
     ax_c.set_xlabel("Simulation step")
     ax_c.set_title("C  Founder lineage survival", loc="left", fontsize=9)
-    ax_c.legend(loc="upper right", fontsize=7, framealpha=0.9)
+    if ax_c.get_legend_handles_labels()[1]:
+        ax_c.legend(loc="upper right", fontsize=7, framealpha=0.9)
 
     # --- Panel D: adaptation lag ---
     _panel_adaptation_lag(ax_d, normal_results, shift_results, lag_annotation)
