@@ -1945,6 +1945,57 @@ fn sham_memory_does_not_converge_to_stable_trace() {
 }
 
 #[test]
+fn sham_does_not_shift_main_rng_stream() {
+    // The sham condition must produce identical population dynamics (alive_count,
+    // births) to criterion8_on because sham_rng is independent of self.rng.
+    // Any difference would confound memory-coherence vs evolutionary-path effects.
+    let make_world = |sham: bool| {
+        let config = SimConfig {
+            seed: 42,
+            world_size: 100.0,
+            num_organisms: 2,
+            agents_per_organism: 10,
+            enable_memory: true,
+            enable_sham_process: sham,
+            memory_decay: 0.9,
+            memory_gain: 0.0, // zero gain: IS corrections are zero for both
+            memory_target: 0.5,
+            enable_metabolism: false,
+            enable_boundary_maintenance: false,
+            death_boundary_threshold: 0.0,
+            boundary_collapse_threshold: 0.0,
+            max_organism_age_steps: usize::MAX,
+            ..SimConfig::default()
+        };
+        let agents: Vec<Agent> = (0..20u16)
+            .map(|i| Agent::new(i as u32, i / 10, [50.0 + (i % 10) as f64, 50.0]))
+            .collect();
+        let nns: Vec<NeuralNet> = (0..2)
+            .map(|_| NeuralNet::from_weights(std::iter::repeat_n(0.0f32, NeuralNet::WEIGHT_COUNT)))
+            .collect();
+        World::new(agents, nns, config).unwrap()
+    };
+
+    let ema_summary = make_world(false).run_experiment(50, 10);
+    let sham_summary = make_world(true).run_experiment(50, 10);
+
+    // With memory_gain=0.0, IS corrections are zero for both EMA and sham.
+    // Population dynamics must therefore be identical.
+    for (se, ss) in ema_summary.samples.iter().zip(sham_summary.samples.iter()) {
+        assert_eq!(
+            se.alive_count, ss.alive_count,
+            "sham must not shift main RNG: alive_count differs at step {}",
+            se.step
+        );
+        assert_eq!(
+            se.birth_count, ss.birth_count,
+            "sham must not shift main RNG: birth_count differs at step {}",
+            se.step
+        );
+    }
+}
+
+#[test]
 fn memory_child_initialised_to_target_on_spawn() {
     // Verify that newly reproduced organisms get memory initialised to memory_target
     let config = SimConfig {
