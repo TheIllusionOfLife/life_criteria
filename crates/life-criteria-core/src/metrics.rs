@@ -268,7 +268,11 @@ pub fn collect_step_metrics(
     // Internal state: mean and SD across all alive agents (single-pass collection)
     let alive_states: Vec<[f32; 4]> = agents
         .iter()
-        .filter(|a| organisms.get(a.organism_id as usize).is_some_and(|o| o.alive))
+        .filter(|a| {
+            organisms
+                .get(a.organism_id as usize)
+                .is_some_and(|o| o.alive)
+        })
         .map(|a| a.internal_state)
         .collect();
 
