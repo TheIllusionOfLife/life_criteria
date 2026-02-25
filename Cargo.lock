@@ -169,43 +169,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
-name = "digital-life-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "digital-life-core",
- "rand",
- "rand_chacha",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "digital-life-core"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "rand",
- "rand_chacha",
- "rayon",
- "rstar",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "digital-life-py"
-version = "0.1.0"
-dependencies = [
- "digital-life-core",
- "pyo3",
- "rand",
- "rand_chacha",
- "serde_json",
-]
-
-[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -293,6 +256,43 @@ name = "libm"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
+
+[[package]]
+name = "life-criteria-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "life-criteria-core",
+ "rand",
+ "rand_chacha",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "life-criteria-core"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "rand",
+ "rand_chacha",
+ "rayon",
+ "rstar",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "life-criteria-py"
+version = "0.1.0"
+dependencies = [
+ "life-criteria-core",
+ "pyo3",
+ "rand",
+ "rand_chacha",
+ "serde_json",
+]
 
 [[package]]
 name = "linux-raw-sys"

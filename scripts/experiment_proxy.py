@@ -14,7 +14,7 @@ Usage:
 Output: TSV data to stdout + summary report to stderr.
 """
 
-import digital_life
+import life_criteria
 from experiment_common import log, run_condition_suite
 
 STEPS = 2000
@@ -30,7 +30,7 @@ CONDITIONS = {
 
 def main():
     """Run proxy control comparison experiment across 3 metabolism modes."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Proxy control experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

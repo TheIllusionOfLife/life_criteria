@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use digital_life_core::agent::Agent;
-use digital_life_core::config::{MetabolismMode, SimConfig};
-use digital_life_core::nn::NeuralNet;
-use digital_life_core::world::World;
+use life_criteria_core::agent::Agent;
+use life_criteria_core::config::{MetabolismMode, SimConfig};
+use life_criteria_core::nn::NeuralNet;
+use life_criteria_core::world::World;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
@@ -17,7 +17,7 @@ const BENCHMARK_STEPS: usize = 200;
 const TARGET_SPS: f64 = 100.0;
 
 #[derive(Parser)]
-#[command(name = "digital-life")]
+#[command(name = "life-criteria")]
 #[command(about = "Digital Life Simulation CLI")]
 struct Cli {
     #[command(subcommand)]
@@ -158,7 +158,7 @@ fn main() -> Result<()> {
         Commands::Benchmark => {
             if cfg!(debug_assertions) {
                 eprintln!("WARNING: running in debug mode. Results are not representative.");
-                eprintln!("         Use: cargo run -p digital-life-cli --release -- benchmark");
+                eprintln!("         Use: cargo run -p life-criteria-cli --release -- benchmark");
                 eprintln!();
             }
             println!("=== Digital Life Feasibility Spike ===");

@@ -9,9 +9,9 @@
 
 ## Workspace Components
 
-- `digital-life-core`: domain model and simulation engine
-- `digital-life-py`: Python bindings and JSON-facing experiment interface
-- `digital-life-spike`: performance/feasibility benchmark binary
+- `life-criteria-core`: domain model and simulation engine
+- `life-criteria-py`: Python bindings and JSON-facing experiment interface
+- `life-criteria-cli` (in `crates/spike`): performance/feasibility benchmark binary
 
 ## Tooling Standards
 

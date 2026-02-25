@@ -10,7 +10,7 @@ Output: TSV data to stdout + summary to stderr.
         Raw JSON saved to experiments/cyclic_sweep_p{period}_{evo_label}.json.
 """
 
-import digital_life
+import life_criteria
 from experiment_common import log, run_condition_suite
 
 STEPS = 10000
@@ -35,7 +35,7 @@ CONDITIONS = {
 
 def main():
     """Run cyclic period sweep (4 periods x 2 conditions x 30 seeds)."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Cyclic sweep: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

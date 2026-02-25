@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 
 _CONFIGS_DIR = Path(__file__).resolve().parent.parent / "configs"
 
@@ -91,7 +91,7 @@ def make_config(seed: int, overrides: dict) -> str:
 
 def make_config_dict(seed: int, overrides: dict) -> dict:
     """Build a config dict with tuned baseline, seed, and overrides."""
-    config = json.loads(digital_life.default_config_json())
+    config = json.loads(life_criteria.default_config_json())
     config["seed"] = seed
     config.update(TUNED_BASELINE)
     config.update(overrides)
@@ -101,7 +101,7 @@ def make_config_dict(seed: int, overrides: dict) -> dict:
 def run_single(seed: int, overrides: dict, steps: int = 2000, sample_every: int = 50) -> dict:
     """Run a single experiment and return parsed results."""
     config_json = make_config(seed, overrides)
-    result_json = digital_life.run_experiment_json(config_json, steps, sample_every)
+    result_json = life_criteria.run_experiment_json(config_json, steps, sample_every)
     return json.loads(result_json)
 
 

@@ -19,7 +19,7 @@ Output: TSV data to stdout + summary report to stderr.
 import json
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import (
     CRITERION_TO_FLAG,
     PAIRS,
@@ -43,7 +43,7 @@ for _a, _b in PAIRS:
 
 def main():
     """Run pairwise criterion-ablation experiment for 6 criterion pairs."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Pairwise ablation experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

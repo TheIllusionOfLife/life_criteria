@@ -22,7 +22,7 @@ import sys
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import safe_path
 
 STEPS = 1000
@@ -56,7 +56,7 @@ def log(msg: str) -> None:
 
 def make_config(seed: int, overrides: dict) -> str:
     """Build a JSON config string with tuned baseline, seed, and overrides."""
-    config = json.loads(digital_life.default_config_json())
+    config = json.loads(life_criteria.default_config_json())
     config["seed"] = seed
     config.update(TUNED_BASELINE)
     config.update(overrides)
@@ -66,7 +66,7 @@ def make_config(seed: int, overrides: dict) -> str:
 def run_single(seed: int, overrides: dict) -> dict:
     """Run a single experiment and return parsed results."""
     config_json = make_config(seed, overrides)
-    result_json = digital_life.run_experiment_json(config_json, STEPS, SAMPLE_EVERY)
+    result_json = life_criteria.run_experiment_json(config_json, STEPS, SAMPLE_EVERY)
     return json.loads(result_json)
 
 
@@ -149,7 +149,7 @@ def summarize(condition: str, results: list[dict]) -> dict | None:
 
 
 def main():
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(f"Experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, seeds {SEEDS[0]}-{SEEDS[-1]}")
     log("")
 

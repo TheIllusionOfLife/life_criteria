@@ -1,4 +1,4 @@
-"""Analysis subpackage for digital-life experiments.
+"""Analysis subpackage for life-criteria experiments.
 
 Sub-packages:
   results/  — criterion-ablation statistics (Mann-Whitney, Holm-Bonferroni, Cohen's d)

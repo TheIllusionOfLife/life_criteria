@@ -1,4 +1,4 @@
-"""Digital Life: Artificial life simulation framework."""
+"""Life Criteria: Artificial life simulation framework."""
 
 from ._core import (
     default_config_json,

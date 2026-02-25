@@ -15,7 +15,7 @@ import sys
 import time
 from dataclasses import dataclass
 
-import digital_life
+import life_criteria
 
 STEPS = 500
 SAMPLE_EVERY = 50
@@ -52,10 +52,10 @@ def log(msg: str) -> None:
 
 def run(overrides: dict) -> dict:
     """Run a single sweep experiment and return parsed results."""
-    config = json.loads(digital_life.default_config_json())
+    config = json.loads(life_criteria.default_config_json())
     config["seed"] = SEED
     config.update(overrides)
-    return json.loads(digital_life.run_experiment_json(json.dumps(config), STEPS, SAMPLE_EVERY))
+    return json.loads(life_criteria.run_experiment_json(json.dumps(config), STEPS, SAMPLE_EVERY))
 
 
 def extract_metrics(overrides: dict, result: dict) -> ComboMetrics | None:

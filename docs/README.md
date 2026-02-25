@@ -10,13 +10,13 @@
 
 ## Research Docs
 
-- `research/digital-life-project-overview.md`
-- `research/unified-review.md`
-- `research/action-plan.md`
-- `research/result_manifest_bindings.json`
-- `research/final_graph_manifest_reference.json`
-- `research/ecological_differentiation_policy.md`
+- `research/plan.md` — **Authoritative plan**: 8th criterion thesis, experiment design, implementation strategy
 
-Research docs are historical/strategy artifacts for this project phase, with one explicit exception for conflicts: when conflicts arise, prioritize `docs/research/action-plan.md` as the authoritative source for technical decisions and implementation guidance. Operational development rules otherwise live in root-level docs.
+## Archive
 
-Heavy experiment outputs are published via Zenodo per `docs/research/artifact_publication_policy.md`; keep repository-tracked artifacts compact and reproducible.
+- `archive/research/` — Research docs from the digital_life project (7-criteria work)
+- `archive/paper/` — ALIFE 2026 paper drafts and peer reviews
+
+Research docs are strategy artifacts for this project phase. When conflicts arise, `docs/research/plan.md` is the authoritative source. Operational development rules live in root-level docs.
+
+Keep heavy experiment artifacts out of git; track compact summaries and provenance manifests instead.

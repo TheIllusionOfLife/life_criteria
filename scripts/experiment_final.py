@@ -10,7 +10,7 @@ Output: TSV data to stdout + summary report to stderr.
         Raw JSON saved to experiments/final_{condition}.json.
 """
 
-import digital_life
+import life_criteria
 from experiment_common import CONDITIONS, log, run_condition_suite
 
 STEPS = 2000
@@ -22,7 +22,7 @@ GRAPH_OVERRIDES = {"metabolism_mode": "graph"}
 
 def main():
     """Run final criterion-ablation experiment (8 conditions x 30 seeds)."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Final experiment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

@@ -10,7 +10,7 @@ Output: TSV data to stdout + summary report to stderr.
         Raw JSON saved to experiments/sham_{condition}.json.
 """
 
-import digital_life
+import life_criteria
 from experiment_common import log, run_condition_suite
 
 STEPS = 1000
@@ -31,7 +31,7 @@ CONDITIONS = {
 
 def main():
     """Run sham ablation control experiment (2 conditions x 30 seeds)."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Sham control: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

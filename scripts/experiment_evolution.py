@@ -16,7 +16,7 @@ import json
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import log, make_config, print_header, run_condition_common
 from experiment_manifest import write_manifest
 
@@ -49,7 +49,7 @@ SHIFT_CONDITIONS = {
 
 def main():
     """Run extended evolution experiments: long run and environmental shift."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log("Evolution strengthening experiment")
     log(f"  Long run: {LONG_STEPS} steps, seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
     log(f"  Shift run: {SHIFT_STEPS} steps, shift at {SHIFT_STEP}")

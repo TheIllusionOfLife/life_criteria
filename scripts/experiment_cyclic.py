@@ -13,7 +13,7 @@ Output: TSV data to stdout + summary report to stderr.
 import json
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import log, make_config, run_condition_suite
 from experiment_manifest import write_manifest
 
@@ -42,7 +42,7 @@ CONDITIONS = {
 
 def main():
     """Run cyclic environment experiment (2 conditions x 30 seeds)."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Cyclic environment: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

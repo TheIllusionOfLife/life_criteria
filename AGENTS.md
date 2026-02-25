@@ -4,15 +4,14 @@ This file provides repository-specific instructions for coding agents and contri
 
 ## Mission
 
-Build and evolve the Digital Life simulation with reproducible, testable changes aligned with the seven-criteria research goals.
+Build and evolve the Life Criteria simulation with reproducible, testable changes aligned with the eight-criteria research goals (7 standard + Learning/Memory as the 8th).
 
 ## High-Confidence Commands
 
 - Build workspace: `cargo build --workspace`
 - Run full checks: `./scripts/check.sh`
-- Run spike benchmark: `cargo run -p digital-life-spike --release`
-- Build Python extension: `uv run maturin develop --manifest-path crates/digital-life-py/Cargo.toml`
-- Compile paper: `cd paper && tectonic main.tex`
+- Run spike benchmark: `cargo run -p life-criteria-cli --release`
+- Build Python extension: `uv run maturin develop --manifest-path crates/life-criteria-py/Cargo.toml`
 
 ## Code Style and Quality Rules
 
@@ -24,7 +23,7 @@ Build and evolve the Digital Life simulation with reproducible, testable changes
 ## Testing Instructions
 
 - Baseline gate for all changes: `./scripts/check.sh`
-- For Python-binding changes, always run Rust tests in `crates/digital-life-py/src/lib.rs` through the full test command.
+- For Python-binding changes, always run Rust tests in `crates/life-criteria-py/src/lib.rs` through the full test command.
 
 ## Repository Etiquette
 
@@ -44,16 +43,8 @@ Build and evolve the Digital Life simulation with reproducible, testable changes
 
 - Use `uv` for Python-related tooling; avoid ad-hoc global package installs.
 - Use `tectonic` for LaTeX compilation (not `latexmk` or `pdflatex`). Run `cd paper && tectonic main.tex` to produce the PDF.
-- Running `cargo run -p digital-life-spike` without `--release` yields non-representative performance.
+- Running `cargo run -p life-criteria-cli` without `--release` yields non-representative performance.
 - Local build artifacts (`target/`, extension binaries) should remain untracked.
-
-## Paper (LaTeX) Guidelines
-
-- **Overfull \hbox/\vbox** = text overflows margins. **Must fix** (adjust column widths, abbreviate text, use `\footnotesize`, etc.).
-- **Underfull \hbox/\vbox** = extra whitespace from imperfect line/page breaking. **Ignorable** in two-column conference format.
-- After paper edits, verify zero overfull warnings: `cd paper && tectonic main.tex 2>&1 | grep -i overfull`
-- ALIFE 2026 format: 3–8 pages **excluding references/acknowledgements**. Uses `alifeconf.sty`, `natbib` + `apalike`.
-- When editing tables, test that no word in a `p{width}` column exceeds the column width — this is the most common cause of overfull hbox.
 
 ## Non-Obvious Gotchas
 

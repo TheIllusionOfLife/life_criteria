@@ -18,7 +18,7 @@ import json
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import log, make_config
 
 STEPS = 5000
@@ -86,7 +86,7 @@ def main():
     default_name = "niche_normal_long.json" if args.long_horizon else "niche_normal.json"
     snapshot_steps = LONG_HORIZON_SNAPSHOT_STEPS if args.long_horizon else SNAPSHOT_STEPS
 
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     mode = "long-horizon sensitivity" if args.long_horizon else "standard robustness"
     log(f"Ecological niche experiment (per-organism snapshots, {mode})")
     log(f"  Steps: {steps}, sample_every: {SAMPLE_EVERY}")
@@ -105,7 +105,7 @@ def main():
     for seed in seeds:
         config_json = make_config(seed, {})
         t0 = time.perf_counter()
-        result_json = digital_life.run_niche_experiment_json(
+        result_json = life_criteria.run_niche_experiment_json(
             config_json, steps, SAMPLE_EVERY, snapshot_steps_json
         )
         elapsed = time.perf_counter() - t0

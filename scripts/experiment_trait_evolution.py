@@ -15,7 +15,7 @@ import json
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import log, make_config
 
 STEPS = 10000
@@ -38,7 +38,7 @@ def run_condition(cond_name: str, overrides: dict, out_dir: Path) -> None:
     for seed in SEEDS:
         config_json = make_config(seed, overrides)
         t0 = time.perf_counter()
-        result_json = digital_life.run_niche_experiment_json(
+        result_json = life_criteria.run_niche_experiment_json(
             config_json, STEPS, SAMPLE_EVERY, snapshot_steps_json
         )
         elapsed = time.perf_counter() - t0
@@ -65,7 +65,7 @@ def run_condition(cond_name: str, overrides: dict, out_dir: Path) -> None:
 
 
 def main() -> None:
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log("Trait evolution experiment (generation-stratified selection differential)")
     log(f"  Steps: {STEPS}, sample_every: {SAMPLE_EVERY}")
     log(f"  Seeds: {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")

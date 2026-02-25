@@ -11,7 +11,7 @@ import json
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import log, run_single, safe_path
 
 STEPS = 2000
@@ -44,7 +44,7 @@ def summarize_results(label: str, results: list[dict]) -> dict:
 
 
 def main():
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(f"GraphMetabolism calibration: {STEPS} steps, seeds {SEEDS[0]}-{SEEDS[-1]}")
     log("")
 

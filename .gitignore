@@ -19,8 +19,8 @@ build/
 *.dylib
 
 # maturin/PyO3 artifacts
-/python/digital_life/*.so
-/python/digital_life/*.dylib
+/python/life_criteria/*.so
+/python/life_criteria/*.dylib
 
 # Experiment output data
 # NOTE: .git/info/exclude used to have blanket rules; they are now consolidated here.
@@ -34,17 +34,6 @@ build/
 !/experiments/final_graph_statistics.json
 !/experiments/final_statistics.json
 
-# Generated paper artifacts
-paper/main.pdf
-paper/figures/*.pdf
-
-# LaTeX build artifacts
-paper/*.aux
-paper/*.bbl
-paper/*.blg
-paper/*.log
-paper/*.out
-paper/*.synctex.gz
 
 # IDE/editor
 .idea/

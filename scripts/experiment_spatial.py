@@ -14,7 +14,7 @@ import json
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import (
     log,
     run_single,
@@ -44,7 +44,7 @@ TSV_COLUMNS = [
 
 def main():
     """Run spatial cohesion experiment (2 conditions x 30 seeds)."""
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(
         f"Spatial cohesion: {STEPS} steps, sample every {SAMPLE_EVERY}, "
         f"seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})"

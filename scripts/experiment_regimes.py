@@ -11,7 +11,7 @@ import json
 import time
 from pathlib import Path
 
-import digital_life
+import life_criteria
 from experiment_common import CONDITIONS, log, run_single, safe_path
 
 STEPS = 2000
@@ -29,7 +29,7 @@ REGIMES = {
 
 
 def main():
-    log(f"Digital Life v{digital_life.version()}")
+    log(f"Digital Life v{life_criteria.version()}")
     log(f"Regime shift experiment: {STEPS} steps, seeds {SEEDS[0]}-{SEEDS[-1]} (n={len(SEEDS)})")
     log(f"Regimes: {list(REGIMES.keys())}")
     log("")

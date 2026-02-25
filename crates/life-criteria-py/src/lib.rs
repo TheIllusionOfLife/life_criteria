@@ -1,7 +1,7 @@
-use digital_life_core::agent::Agent;
-use digital_life_core::config::SimConfig;
-use digital_life_core::nn::NeuralNet;
-use digital_life_core::world::World;
+use life_criteria_core::agent::Agent;
+use life_criteria_core::config::SimConfig;
+use life_criteria_core::nn::NeuralNet;
+use life_criteria_core::world::World;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rand::Rng;
@@ -9,7 +9,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
 use serde_json::json;
 
-/// Minimal PyO3 module exposing digital-life-core to Python.
+/// Minimal PyO3 module exposing life-criteria-core to Python.
 #[pyfunction]
 fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")

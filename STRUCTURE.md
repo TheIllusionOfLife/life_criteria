@@ -12,7 +12,7 @@
 
 ## Crates
 
-- `crates/digital-life-core/src/`
+- `crates/life-criteria-core/src/`
   - `constants.rs`: shared compile-time constants (MAX_WORLD_SIZE, RNG_DERIVATION_PRIME, GENOME_DIVERSITY_MAX_PAIRS)
   - `world/mod.rs`: World struct, `step()` orchestrator, experiment harnesses, reproduction helpers
   - `world/phases/`: six simulation phase modules (nn_query, agent_state, boundary, metabolism, growth, environment)
@@ -23,12 +23,12 @@
   - `nn.rs`: neural controller
   - `spatial.rs`: spatial indexing and neighborhood operations
   - `config.rs`: simulation configuration model and validation
-- `crates/digital-life-py/src/lib.rs`: Python binding entry points
+- `crates/life-criteria-py/src/lib.rs`: Python binding entry points
 - `crates/spike/src/main.rs`: benchmark and feasibility executable
 
 ## Python Surface
 
-- `python/digital_life/__init__.py`: public Python API exports
+- `python/life_criteria/__init__.py`: public Python API exports
 
 ## Scripts Layout
 
@@ -56,10 +56,9 @@ See `configs/README.md` for provenance of each file.
 ## Documentation Organization
 
 - Root docs (`README.md`, `AGENTS.md`, `PRODUCT.md`, `TECH.md`, `STRUCTURE.md`) are canonical operational docs
-- `docs/research/` stores planning/review artifacts; `action-plan.md` is authoritative
-- `docs/research/unified-review.md` and `docs/research/functional-analogy-definition.md` are historical reference — do not delete
-- Zenodo artifact policy for heavy outputs: `docs/research/artifact_publication_policy.md`
-- Repository should keep heavy experiment artifacts out of git; track compact summaries + provenance manifests instead
+- `docs/research/plan.md` is the authoritative research plan (8th criterion thesis)
+- `docs/archive/research/` and `docs/archive/paper/` hold historical artifacts from the digital_life project
+- Keep heavy experiment artifacts out of git; track compact summaries and provenance manifests instead
 
 ## Experiment Execution Order
 

@@ -375,7 +375,7 @@ def test_experiment_niche_defaults_and_long_horizon_output(
 
     fake.version = fake_version
     fake.run_niche_experiment_json = fake_run_niche
-    monkeypatch.setitem(sys.modules, "digital_life", fake)
+    monkeypatch.setitem(sys.modules, "life_criteria", fake)
     script_dir = Path(__file__).resolve().parents[1] / "scripts"
     monkeypatch.syspath_prepend(str(script_dir))
 
@@ -413,8 +413,8 @@ def test_experiment_regimes_seed_count_is_n30(monkeypatch: pytest.MonkeyPatch) -
     script_dir = Path(__file__).resolve().parents[1] / "scripts"
     script_path = script_dir / "experiment_regimes.py"
 
-    fake_digital_life = types.SimpleNamespace(version=lambda: "test")
-    monkeypatch.setitem(sys.modules, "digital_life", fake_digital_life)
+    fake_life_criteria = types.SimpleNamespace(version=lambda: "test")
+    monkeypatch.setitem(sys.modules, "life_criteria", fake_life_criteria)
     monkeypatch.syspath_prepend(str(script_dir))
 
     spec = importlib.util.spec_from_file_location("experiment_regimes_under_test", script_path)
@@ -446,7 +446,7 @@ def test_experiment_niche_seed_range_batching(
 
     fake.version = fake_version
     fake.run_niche_experiment_json = fake_run_niche
-    monkeypatch.setitem(sys.modules, "digital_life", fake)
+    monkeypatch.setitem(sys.modules, "life_criteria", fake)
     script_dir = Path(__file__).resolve().parents[1] / "scripts"
     monkeypatch.syspath_prepend(str(script_dir))
 
@@ -478,7 +478,7 @@ def test_experiment_niche_rejects_invalid_seed_ranges(monkeypatch: pytest.Monkey
     fake.run_niche_experiment_json = lambda *_args, **_kwargs: json.dumps(
         {"final_alive_count": 1, "organism_snapshots": []}
     )
-    monkeypatch.setitem(sys.modules, "digital_life", fake)
+    monkeypatch.setitem(sys.modules, "life_criteria", fake)
     script_dir = Path(__file__).resolve().parents[1] / "scripts"
     monkeypatch.syspath_prepend(str(script_dir))
 
@@ -549,72 +549,3 @@ def test_analyze_phenotype_long_horizon_sensitivity(tmp_path: Path) -> None:
     assert out["available"] is True
     assert out["long_horizon_path"].endswith("niche_normal_long.json")
     assert "adjusted_rand_index" in out["comparison"]
-
-
-def test_prepare_zenodo_metadata_builds_checksums(tmp_path: Path) -> None:
-    from scripts.prepare_zenodo_metadata import build_metadata
-
-    artifact = tmp_path / "niche_normal_long.json"
-    artifact.write_text('{"ok": true}')
-    args = types.SimpleNamespace(
-        files=[artifact],
-        experiment_name="niche_long_horizon",
-        steps=10000,
-        seed_start=100,
-        seed_end=129,
-        entrypoint="uv run python scripts/experiment_niche.py --long-horizon",
-        paper_binding=["fig:persistent_clusters=experiments/phenotype_analysis.json"],
-        zenodo_doi="10.5072/zenodo.123456",
-    )
-
-    payload = build_metadata(args)
-    assert payload["experiment_name"] == "niche_long_horizon"
-    assert payload["steps"] == 10000
-    assert payload["seed_range"] == {"start": 100, "end": 129}
-    assert payload["zenodo_doi"] == "10.5072/zenodo.123456"
-    assert payload["artifacts"][0]["path"].endswith("niche_normal_long.json")
-    assert len(payload["artifacts"][0]["sha256"]) == 64
-    assert "metadata_generation_argv" in payload
-    assert "argv" not in payload
-
-
-def test_prepare_zenodo_metadata_parse_args_validation(monkeypatch: pytest.MonkeyPatch) -> None:
-    from scripts.prepare_zenodo_metadata import parse_args
-
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "prepare_zenodo_metadata.py",
-            "artifact.json",
-            "--experiment-name",
-            "niche_long_horizon",
-            "--steps",
-            "0",
-            "--seed-start",
-            "100",
-            "--seed-end",
-            "129",
-        ],
-    )
-    with pytest.raises(SystemExit):
-        parse_args()
-
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "prepare_zenodo_metadata.py",
-            "artifact.json",
-            "--experiment-name",
-            "niche_long_horizon",
-            "--steps",
-            "10000",
-            "--seed-start",
-            "130",
-            "--seed-end",
-            "129",
-        ],
-    )
-    with pytest.raises(SystemExit):
-        parse_args()
