@@ -702,6 +702,10 @@ impl World {
                 org.boundary_integrity = 0.0;
                 self.deaths_last_step += 1;
                 self.total_deaths += 1;
+                debug_assert!(
+                    self.alive_organism_count > 0,
+                    "alive_organism_count underflow"
+                );
                 self.alive_organism_count -= 1;
             }
         }
