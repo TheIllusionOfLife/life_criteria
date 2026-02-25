@@ -31,6 +31,10 @@ pub struct StepMetrics {
     pub max_generation: usize,
     pub maturity_mean: f32,
     pub spatial_cohesion_mean: f32,
+    /// Mean of organism memory[0] across alive organisms (0.0 when memory disabled).
+    pub memory_mean: f32,
+    /// Std-dev of organism memory[0] across alive organisms (0.0 when memory disabled).
+    pub memory_std: f32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -309,6 +313,19 @@ pub fn collect_step_metrics(
     // Spatial cohesion: mean pairwise agent distance per organism (toroidal-aware)
     let spatial_cohesion_mean = compute_spatial_cohesion(agents, organisms, world_size);
 
+    // Memory trace: mean and std of memory[0] across alive organisms (0 when disabled)
+    let memory_vals: Vec<f32> = organisms
+        .iter()
+        .filter(|o| o.alive)
+        .map(|o| o.memory[0])
+        .collect();
+    let memory_mean = if memory_vals.is_empty() {
+        0.0
+    } else {
+        memory_vals.iter().sum::<f32>() / memory_vals.len() as f32
+    };
+    let memory_std = std_dev(&memory_vals, memory_mean);
+
     StepMetrics {
         step,
         energy_mean,
@@ -332,5 +349,7 @@ pub fn collect_step_metrics(
         max_generation: max_gen,
         maturity_mean: maturity_sum / denom,
         spatial_cohesion_mean,
+        memory_mean,
+        memory_std,
     }
 }

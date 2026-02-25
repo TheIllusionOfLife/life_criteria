@@ -36,6 +36,8 @@ pub enum AblationTarget {
     Reproduction,
     Evolution,
     Growth,
+    /// 8th criterion: learning/memory (within-lifetime homeostatic adaptation).
+    Memory,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -174,6 +176,26 @@ pub struct SimConfig {
     pub environment_cycle_low_rate: f32,
     /// Toggle for sham (no-op) computational process control.
     pub enable_sham_process: bool,
+
+    // -----------------------------------------------------------------------
+    // 8th Criterion: Learning / Memory (within-lifetime adaptation)
+    // -----------------------------------------------------------------------
+    /// Enable the 8th criterion: within-lifetime homeostatic adaptation via
+    /// an exponential-moving-average memory trace (RNN-lite).
+    /// Default `false` — existing behavior is byte-for-byte preserved.
+    pub enable_memory: bool,
+    /// Per-step exponential-decay factor for the memory trace.
+    /// Must be in `[0, 1)`. Higher values = longer memory horizon.
+    /// Validated only when `enable_memory = true`.
+    pub memory_decay: f32,
+    /// Gain multiplier for the memory-driven homeostatic correction.
+    /// Must be `>= 0`. Larger values = stronger correction toward `memory_target`.
+    /// Validated only when `enable_memory = true`.
+    pub memory_gain: f32,
+    /// Target internal-state level that memory correction drives toward.
+    /// Must be in `[0, 1]`.
+    /// Validated only when `enable_memory = true`.
+    pub memory_target: f32,
 }
 
 impl Default for SimConfig {
@@ -243,6 +265,10 @@ impl Default for SimConfig {
             environment_cycle_period: 0,
             environment_cycle_low_rate: 0.005,
             enable_sham_process: false,
+            enable_memory: false,
+            memory_decay: 0.99,
+            memory_gain: 0.1,
+            memory_target: 0.5,
         }
     }
 }
@@ -325,6 +351,9 @@ define_sim_config_error! {
     InvalidEnvironmentCycleLowRate => "environment_cycle_low_rate must be finite and non-negative";
     ConflictingEnvironmentFeatures => "environment_shift_step and environment_cycle_period are mutually exclusive";
     WorldSizeTooLarge { max: f64, actual: f64 } => "world_size ({actual}) exceeds supported maximum ({max})";
+    InvalidMemoryDecay => "memory_decay must be finite and within [0, 1)";
+    InvalidMemoryGain => "memory_gain must be finite and non-negative";
+    InvalidMemoryTarget => "memory_target must be finite and within [0, 1]";
 }
 
 impl std::error::Error for SimConfigError {}
@@ -347,6 +376,7 @@ impl SimConfig {
         self.validate_homeostasis()?;
         self.validate_growth()?;
         self.validate_environment()?;
+        self.validate_memory()?;
         Ok(())
     }
 
@@ -576,6 +606,22 @@ impl SimConfig {
             && (0.0..=1.0).contains(&self.growth_immature_metabolic_efficiency))
         {
             return Err(SimConfigError::InvalidGrowthImmatureMetabolicEfficiency);
+        }
+        Ok(())
+    }
+
+    fn validate_memory(&self) -> Result<(), SimConfigError> {
+        if !self.enable_memory {
+            return Ok(());
+        }
+        if !(self.memory_decay.is_finite() && self.memory_decay >= 0.0 && self.memory_decay < 1.0) {
+            return Err(SimConfigError::InvalidMemoryDecay);
+        }
+        if !(self.memory_gain.is_finite() && self.memory_gain >= 0.0) {
+            return Err(SimConfigError::InvalidMemoryGain);
+        }
+        if !(self.memory_target.is_finite() && (0.0..=1.0).contains(&self.memory_target)) {
+            return Err(SimConfigError::InvalidMemoryTarget);
         }
         Ok(())
     }

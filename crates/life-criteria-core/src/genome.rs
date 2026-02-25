@@ -1,6 +1,6 @@
 use rand::Rng;
 
-/// Variable-length genome encoding all 7 criteria.
+/// Variable-length genome encoding all 8 criteria.
 /// Only NN weights are active initially; other segments are zero-initialized
 /// and will be activated as criteria are implemented.
 
@@ -10,8 +10,8 @@ pub struct Genome {
     /// Segment layout: (start, len) for each criterion's parameters.
     /// Index 0 = NN weights, 1 = metabolic network, 2 = homeostasis params,
     /// 3 = developmental program, 4 = reproduction params, 5 = sensory params,
-    /// 6 = evolution/mutation params
-    segments: [(usize, usize); 7],
+    /// 6 = evolution/mutation params, 7 = memory/learning params (8th criterion)
+    segments: [(usize, usize); 8],
 }
 
 impl Genome {
@@ -21,17 +21,31 @@ impl Genome {
     pub const REPRODUCTION_SIZE: usize = 4;
     pub const SENSORY_SIZE: usize = 4;
     pub const EVOLUTION_SIZE: usize = 4;
+    /// 8th criterion — memory/learning: [gain_is0, gain_is1, target_is0, target_is1].
+    pub const MEMORY_SIZE: usize = 4;
 
-    const SEGMENT_SIZES: [usize; 6] = [
+    /// Total number of non-NN genes for the 7 legacy criteria (pre-memory).
+    /// Used by `mutate_range` to skip the memory segment when `enable_memory=false`,
+    /// preserving the RNG stream across PR boundaries.
+    pub const LEGACY_NONNN_SIZE: usize = Self::METABOLIC_SIZE
+        + Self::HOMEOSTASIS_SIZE
+        + Self::DEVELOPMENTAL_SIZE
+        + Self::REPRODUCTION_SIZE
+        + Self::SENSORY_SIZE
+        + Self::EVOLUTION_SIZE;
+
+    const SEGMENT_SIZES: [usize; 7] = [
         Self::METABOLIC_SIZE,
         Self::HOMEOSTASIS_SIZE,
         Self::DEVELOPMENTAL_SIZE,
         Self::REPRODUCTION_SIZE,
         Self::SENSORY_SIZE,
         Self::EVOLUTION_SIZE,
+        Self::MEMORY_SIZE,
     ];
 
     /// Create a genome with only NN weights active (segment 0).
+    /// All other segments (1–7) are zero-initialised.
     pub fn with_nn_weights(nn_weights: Vec<f32>) -> Self {
         let nn_len = nn_weights.len();
         let placeholder_sizes = Self::SEGMENT_SIZES;
@@ -42,7 +56,7 @@ impl Genome {
         // Zero-fill remaining segments
         data.resize(total_len, 0.0);
 
-        let mut segments = [(0usize, 0usize); 7];
+        let mut segments = [(0usize, 0usize); 8];
         segments[0] = (0, nn_len);
         let mut offset = nn_len;
         for (i, &size) in placeholder_sizes.iter().enumerate() {
@@ -55,6 +69,12 @@ impl Genome {
 
     pub fn nn_weights(&self) -> &[f32] {
         self.segment_data(0)
+    }
+
+    /// Returns the memory/learning gene slice (segment 7, 8th criterion).
+    /// Layout: `[gain_is0, gain_is1, target_is0, target_is1]`.
+    pub fn memory_weights(&self) -> &[f32] {
+        self.segment_data(7)
     }
 
     /// Returns the parameter slice for a criterion segment (0..=6).
@@ -81,16 +101,31 @@ impl Genome {
         &self.data
     }
 
-    pub fn segments(&self) -> &[(usize, usize); 7] {
+    pub fn segments(&self) -> &[(usize, usize); 8] {
         &self.segments
     }
 
     pub fn mutate<R: Rng + ?Sized>(&mut self, rng: &mut R, rates: &MutationRates) {
+        self.mutate_range(rng, rates, self.data.len());
+    }
+
+    /// Mutate only the first `gene_count` genes, leaving the rest unchanged.
+    ///
+    /// Used by `World::spawn_child` to skip the memory segment (segment 7) when
+    /// `enable_memory = false`, so the RNG stream is byte-for-byte identical to
+    /// pre-memory-feature runs with the same seed.
+    pub fn mutate_range<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        rates: &MutationRates,
+        gene_count: usize,
+    ) {
         debug_assert!(
             rates.point_rate + rates.reset_rate + rates.scale_rate <= 1.0,
             "mutation probabilities should sum to <= 1.0"
         );
-        for v in &mut self.data {
+        let end = gene_count.min(self.data.len());
+        for v in &mut self.data[..end] {
             let r = rng.random::<f32>();
             if r < rates.point_rate {
                 let delta = rng.random_range(-rates.point_scale..=rates.point_scale);
