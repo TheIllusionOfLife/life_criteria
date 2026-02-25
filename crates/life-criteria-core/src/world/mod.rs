@@ -60,6 +60,9 @@ pub struct World {
     total_agent_id_exhaustions: usize,
     lifespans: Vec<usize>,
     lineage_events: Vec<LineageEvent>,
+    /// Cached alive organism count — updated in mark_dead / spawn_child so that
+    /// alive_count() is O(1) rather than O(N) for every maybe_reproduce() check.
+    alive_organism_count: usize,
     /// Runtime resource regeneration rate, separate from config to avoid mutating
     /// config at runtime during environment shifts.
     current_resource_rate: f32,
@@ -279,6 +282,7 @@ impl World {
             total_agent_id_exhaustions: 0,
             lifespans: Vec::new(),
             lineage_events: Vec::new(),
+            alive_organism_count: org_count,
             current_resource_rate: config.resource_regeneration_rate,
             deltas_buffer: Vec::with_capacity(agent_count),
             neighbor_sums_buffer: Vec::with_capacity(org_count),
@@ -399,7 +403,7 @@ impl World {
     }
 
     fn alive_count(&self) -> usize {
-        self.organisms.iter().filter(|o| o.alive).count()
+        self.alive_organism_count
     }
 
     fn terminal_boundary_threshold(&self) -> f32 {
@@ -425,7 +429,7 @@ impl World {
 
         for agent in &self.agents {
             let idx = agent.organism_id as usize;
-            if !self.organisms.get(idx).map(|o| o.alive).unwrap_or(false) {
+            if !self.organisms.get(idx).is_some_and(|o| o.alive) {
                 continue;
             }
             let theta_x = agent.position[0] * tau_over_world;
@@ -698,6 +702,7 @@ impl World {
                 org.boundary_integrity = 0.0;
                 self.deaths_last_step += 1;
                 self.total_deaths += 1;
+                self.alive_organism_count -= 1;
             }
         }
     }
@@ -852,6 +857,7 @@ impl World {
         self.org_counts.push(0);
         self.births_last_step += 1;
         self.total_births += 1;
+        self.alive_organism_count += 1;
     }
 
     fn apply_scheduled_ablation_if_due(&mut self) {
