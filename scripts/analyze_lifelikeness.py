@@ -171,7 +171,10 @@ def compute_novelty_halflife(results: list[dict]) -> dict:
         }
 
     all_windows = list(range(0, max_step + 1, window_size))
-    mean_births = [float(np.mean([wb.get(w, 0) for wb in per_seed_windows])) for w in all_windows]
+    mean_births = []
+    for w in all_windows:
+        births_for_window = [wb.get(w, 0) for wb in per_seed_windows]
+        mean_births.append(float(np.mean(births_for_window)))
 
     # Attempt exponential decay fit: y = A * exp(-k * t)
     t_arr = np.array(all_windows, dtype=float)
@@ -417,16 +420,16 @@ def _holm_bonferroni(p_values: list[float]) -> list[float]:
     n = len(p_values)
     if n == 0:
         return []
-    # Sort ascending by p-value; multiply smallest by n, next by n-1, etc.
+    # Sort ascending; multiply smallest p by n, next by n-1, etc.
     # Enforce monotonicity via running maximum (step-down).
-    sorted_indices = sorted(range(n), key=lambda i: p_values[i])
+    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
     adjusted = [0.0] * n
-    running_max = 0.0
-    for rank, orig_idx in enumerate(sorted_indices):
+    previous_adj = 0.0
+    for rank, (orig_idx, p) in enumerate(indexed):
         multiplier = n - rank
-        adj = min(1.0, p_values[orig_idx] * multiplier)
-        running_max = max(running_max, adj)
-        adjusted[orig_idx] = running_max
+        adj = min(1.0, max(previous_adj, p * multiplier))
+        adjusted[orig_idx] = adj
+        previous_adj = adj
     return adjusted
 
 
