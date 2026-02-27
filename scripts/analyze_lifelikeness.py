@@ -548,7 +548,7 @@ def _compute_memory_comparisons(
     for adj_p, label in zip(adjusted, pair_labels, strict=True):
         comparisons[label]["survival_auc"]["mwu_p_adj"] = adj_p
         comparisons[label]["survival_auc"]["significant_adj005"] = (
-            adj_p < 0.05 if not (adj_p != adj_p) else None
+            adj_p < 0.05 if not np.isnan(adj_p) else None
         )
 
     return comparisons
