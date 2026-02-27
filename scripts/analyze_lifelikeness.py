@@ -4,10 +4,13 @@ Reads
 -----
     experiments/lifelikeness_t1_normal_graph.json
     experiments/lifelikeness_t1_shift_graph.json
+    experiments/lifelikeness_t1_normal_graph_memory.json
+    experiments/lifelikeness_t1_shift_graph_memory.json
 
 Writes
 ------
     experiments/lifelikeness_analysis.json  — all 6 metrics + criterion-8 decision
+                                              + pairwise memory comparisons
     paper/figures/fig_lifelikeness_gap.pdf  — 4-panel diagnostic figure
 
 Decision rules applied here are the SAME pre-registered rules recorded in
@@ -33,7 +36,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.optimize import curve_fit
-from scipy.stats import linregress
+from scipy.stats import linregress, mannwhitneyu
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -42,9 +45,18 @@ from scipy.stats import linregress
 _ROOT = Path(__file__).resolve().parent.parent
 _EXP_DIR = _ROOT / "experiments"
 
-_NORMAL_PATH = _EXP_DIR / "lifelikeness_t1_normal_graph.json"
-_SHIFT_PATH = _EXP_DIR / "lifelikeness_t1_shift_graph.json"
+_CONDITION_PATHS: dict[str, Path] = {
+    "normal_graph": _EXP_DIR / "lifelikeness_t1_normal_graph.json",
+    "shift_graph": _EXP_DIR / "lifelikeness_t1_shift_graph.json",
+    "normal_graph_memory": _EXP_DIR / "lifelikeness_t1_normal_graph_memory.json",
+    "shift_graph_memory": _EXP_DIR / "lifelikeness_t1_shift_graph_memory.json",
+}
+
 _ANALYSIS_OUT = _EXP_DIR / "lifelikeness_analysis.json"
+
+# Held-out seed range for published results (calibration seeds 0–99 reserved).
+HOLDOUT_SEED_MIN = 100
+HOLDOUT_SEED_MAX = 199
 
 
 # ---------------------------------------------------------------------------
@@ -163,9 +175,10 @@ def compute_novelty_halflife(results: list[dict]) -> dict:
         }
 
     all_windows = list(range(0, max_step + 1, window_size))
-    mean_births = [
-        float(np.mean([wb.get(w, 0) for wb in per_seed_windows])) for w in all_windows
-    ]
+    mean_births = []
+    for w in all_windows:
+        births_for_window = [wb.get(w, 0) for wb in per_seed_windows]
+        mean_births.append(float(np.mean(births_for_window)))
 
     # Attempt exponential decay fit: y = A * exp(-k * t)
     t_arr = np.array(all_windows, dtype=float)
@@ -264,13 +277,9 @@ def compute_lineage_survival(results: list[dict]) -> dict:
         survival: dict[str, float | None] = {}
         for t in checkpoints:
             active_parents = {
-                int(e["parent_stable_id"])
-                for e in events
-                if t - window < e["step"] <= t
+                int(e["parent_stable_id"]) for e in events if t - window < e["step"] <= t
             }
-            n_surviving = sum(
-                1 for desc in founder_descendants.values() if desc & active_parents
-            )
+            n_surviving = sum(1 for desc in founder_descendants.values() if desc & active_parents)
             survival[str(t)] = n_surviving / len(founder_descendants)
 
         per_seed.append(survival)
@@ -352,9 +361,7 @@ def compute_adaptation_lag(shift_results: list[dict]) -> dict:
 
     lags: list[int | None] = []
     for shift_r in shift_results:
-        pre_samples = [
-            s for s in shift_r["samples"] if pre_start <= s["step"] <= pre_end
-        ]
+        pre_samples = [s for s in shift_r["samples"] if pre_start <= s["step"] <= pre_end]
         if not pre_samples:
             lags.append(None)
             continue
@@ -382,6 +389,60 @@ def compute_adaptation_lag(shift_results: list[dict]) -> dict:
         "shift_step": shift_step,
         "recovery_target_fraction": recovery_frac,
     }
+
+
+# ---------------------------------------------------------------------------
+# Survival AUC helper (matches criterion8 analysis pattern)
+# ---------------------------------------------------------------------------
+
+
+def _survival_auc(result: dict) -> float:
+    """Sum of alive_count across all sample steps."""
+    return float(sum(s["alive_count"] for s in result.get("samples", [])))
+
+
+# ---------------------------------------------------------------------------
+# Statistical helpers (reused from analyze_criterion8.py pattern)
+# ---------------------------------------------------------------------------
+
+
+def _cohen_d(a: list[float], b: list[float]) -> float | None:
+    """Pooled-variance Cohen's d (a vs b; positive = a > b)."""
+    na, nb = len(a), len(b)
+    if na < 2 or nb < 2:
+        return None
+    var_a = float(np.var(a, ddof=1))
+    var_b = float(np.var(b, ddof=1))
+    pooled_sd = float(np.sqrt(((na - 1) * var_a + (nb - 1) * var_b) / (na + nb - 2)))
+    if pooled_sd == 0.0:
+        return None
+    return (float(np.mean(a)) - float(np.mean(b))) / pooled_sd
+
+
+def _holm_bonferroni(p_values: list[float]) -> list[float]:
+    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order."""
+    n = len(p_values)
+    if n == 0:
+        return []
+    # Sort ascending; multiply smallest p by n, next by n-1, etc.
+    # Enforce monotonicity via running maximum (step-down).
+    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
+    adjusted = [0.0] * n
+    previous_adj = 0.0
+    for rank, (orig_idx, p) in enumerate(indexed):
+        multiplier = n - rank
+        adj = min(1.0, max(previous_adj, p * multiplier))
+        adjusted[orig_idx] = adj
+        previous_adj = adj
+    return adjusted
+
+
+def _mwu_test(a: list[float], b: list[float]) -> tuple[float, float]:
+    """Mann-Whitney U test (two-sided).  Returns (U_statistic, p_value)."""
+    if len(a) < 2 or len(b) < 2:
+        return float("nan"), float("nan")
+    result = mannwhitneyu(a, b, alternative="two-sided")
+    return float(result.statistic), float(result.pvalue)
 
 
 # ---------------------------------------------------------------------------
@@ -424,37 +485,153 @@ def apply_decision_rule(
 
 
 # ---------------------------------------------------------------------------
+# Pairwise memory comparison
+# ---------------------------------------------------------------------------
+
+
+def _compute_memory_comparisons(
+    loaded: dict[str, list[dict]],
+) -> dict:
+    """Pairwise comparisons: normal vs normal+memory, shift vs shift+memory.
+
+    Uses survival AUC as the primary metric, plus extinction fraction and
+    diversity slope as secondary metrics.
+    """
+    pairs = [
+        ("normal_graph", "normal_graph_memory"),
+        ("shift_graph", "shift_graph_memory"),
+    ]
+
+    comparisons: dict[str, dict] = {}
+    raw_pvalues: list[float] = []
+    pair_labels: list[str] = []
+
+    for base_cond, mem_cond in pairs:
+        base_results = loaded.get(base_cond, [])
+        mem_results = loaded.get(mem_cond, [])
+        if not base_results or not mem_results:
+            continue
+
+        label = f"{mem_cond}_vs_{base_cond}"
+
+        base_aucs = [_survival_auc(r) for r in base_results]
+        mem_aucs = [_survival_auc(r) for r in mem_results]
+
+        u_stat, p_val = _mwu_test(mem_aucs, base_aucs)
+        d = _cohen_d(mem_aucs, base_aucs)
+        if np.isnan(p_val):
+            print(
+                f"WARNING: MWU test returned NaN for {label} "
+                f"(n_base={len(base_results)}, n_mem={len(mem_results)}); skipping."
+            )
+            continue
+        pair_labels.append(label)
+        raw_pvalues.append(p_val)
+
+        # Extinction comparison
+        base_ext = compute_extinction(base_results)
+        mem_ext = compute_extinction(mem_results)
+
+        # Diversity slope comparison
+        base_div = compute_diversity_slope(base_results)
+        mem_div = compute_diversity_slope(mem_results)
+
+        comparisons[label] = {
+            "base_condition": base_cond,
+            "memory_condition": mem_cond,
+            "n_seeds_base": len(base_results),
+            "n_seeds_memory": len(mem_results),
+            "survival_auc": {
+                "base_median": float(np.median(base_aucs)),
+                "memory_median": float(np.median(mem_aucs)),
+                "mwu_u": u_stat,
+                "mwu_p_raw": p_val,
+                "cohen_d": d,
+            },
+            "extinction_fraction_10k": {
+                "base": base_ext["fraction_extinct_by_10k"],
+                "memory": mem_ext["fraction_extinct_by_10k"],
+            },
+            "diversity_slope_median": {
+                "base": base_div["median_slope_per_1k_steps"],
+                "memory": mem_div["median_slope_per_1k_steps"],
+            },
+        }
+
+    # Holm-Bonferroni correction across all pairwise tests
+    adjusted = _holm_bonferroni(raw_pvalues)
+    for adj_p, label in zip(adjusted, pair_labels, strict=True):
+        comparisons[label]["survival_auc"]["mwu_p_adj"] = adj_p
+        comparisons[label]["survival_auc"]["significant_adj005"] = (
+            adj_p < 0.05 if not np.isnan(adj_p) else None
+        )
+
+    return comparisons
+
+
+# ---------------------------------------------------------------------------
 # Main analysis pipeline
 # ---------------------------------------------------------------------------
 
 
 def run_analysis(
-    normal_path: Path = _NORMAL_PATH,
-    shift_path: Path = _SHIFT_PATH,
+    condition_paths: dict[str, Path] | None = None,
     out_path: Path = _ANALYSIS_OUT,
 ) -> dict:
     """Compute all metrics, apply the decision rule, write JSON, return result dict."""
+    if condition_paths is None:
+        condition_paths = _CONDITION_PATHS
+
+    # Validate required keys before indexing.
+    required_keys = set(_CONDITION_PATHS.keys())
+    missing_keys = required_keys - set(condition_paths.keys())
+    if missing_keys:
+        raise ValueError(
+            f"condition_paths missing required keys: {sorted(missing_keys)}. "
+            f"Expected: {sorted(required_keys)}"
+        )
+
+    normal_path = condition_paths["normal_graph"]
+
     if not normal_path.exists():
         print(f"ERROR: {normal_path} not found — run experiment_lifelikeness.py --tier 1 first.")
         sys.exit(1)
 
-    with open(normal_path) as f:
-        normal_results: list[dict] = json.load(f)
+    # Load all conditions and validate seed ranges.
+    loaded: dict[str, list[dict]] = {}
+    for cond, path in condition_paths.items():
+        if not path.exists():
+            print(f"WARNING: {path} not found — condition '{cond}' will be skipped.")
+            loaded[cond] = []
+            continue
 
-    shift_results: list[dict] = []
-    if shift_path.exists():
-        with open(shift_path) as f:
-            shift_results = json.load(f)
-    else:
-        print(f"WARNING: {shift_path} not found — adaptation_lag metric will be empty.")
+        with open(path) as f:
+            results = json.load(f)
+
+        # Validate seeds are within the held-out range.
+        bad_seeds = []
+        for r in results:
+            seed = r.get("seed")
+            if not isinstance(seed, int) or not (HOLDOUT_SEED_MIN <= seed <= HOLDOUT_SEED_MAX):
+                bad_seeds.append(seed)
+        if bad_seeds:
+            print(
+                f"ERROR: {cond} ({path}) contains seeds outside held-out range "
+                f"{HOLDOUT_SEED_MIN}–{HOLDOUT_SEED_MAX}: {bad_seeds}. "
+                "Refusing to load stale calibration data."
+            )
+            loaded[cond] = []
+            continue
+
+        loaded[cond] = results
+        print(f"Loaded {cond}: {len(results)} seeds")
+
+    normal_results = loaded["normal_graph"]
+    shift_results = loaded["shift_graph"]
 
     if not normal_results:
         print(f"ERROR: {normal_path} contains no seed data.")
         sys.exit(1)
-
-    print(f"Loaded normal_graph: {len(normal_results)} seeds")
-    if shift_results:
-        print(f"Loaded shift_graph:  {len(shift_results)} seeds")
 
     print("Computing metrics...")
 
@@ -480,13 +657,44 @@ def run_analysis(
     if lag:
         print(f"  adaptation_lag_median      = {lag['median_lag_steps']}")
 
+    # Memory pairwise comparisons (if memory conditions are available)
+    memory_comparisons = _compute_memory_comparisons(loaded)
+    if memory_comparisons:
+        print("\nMemory pairwise comparisons:")
+        for label, comp in memory_comparisons.items():
+            auc = comp["survival_auc"]
+            d_str = f"{auc['cohen_d']:.3f}" if auc["cohen_d"] is not None else "n/a"
+            p_adj = auc.get("mwu_p_adj")
+            p_str = f"{p_adj:.4f}" if p_adj is not None else "n/a"
+            print(
+                f"  {label:45s}  p_adj={p_str}  d={d_str}"
+                f"  base_med={auc['base_median']:.1f}  mem_med={auc['memory_median']:.1f}"
+            )
+
+    # Per-condition summary stats (for all loaded conditions)
+    per_condition_summary: dict[str, dict] = {}
+    for cond, results in loaded.items():
+        if not results:
+            continue
+        aucs = [_survival_auc(r) for r in results]
+        cond_ext = compute_extinction(results)
+        cond_div = compute_diversity_slope(results)
+        per_condition_summary[cond] = {
+            "n_seeds": len(results),
+            "survival_auc_median": float(np.median(aucs)),
+            "survival_auc_mean": float(np.mean(aucs)),
+            "survival_auc_std": float(np.std(aucs, ddof=1)) if len(aucs) >= 2 else None,
+            "extinction_fraction_10k": cond_ext["fraction_extinct_by_10k"],
+            "diversity_slope_median": cond_div["median_slope_per_1k_steps"],
+        }
+
     analysis = {
         "data_sources": {
-            "normal_graph": str(normal_path),
-            "shift_graph": str(shift_path) if shift_results else None,
+            cond: str(path) for cond, path in condition_paths.items() if loaded.get(cond)
         },
         "n_seeds_normal": len(normal_results),
-        "n_seeds_shift": len(shift_results) if shift_results else 0,
+        "n_seeds_shift": len(shift_results),
+        "per_condition_summary": per_condition_summary,
         "metrics": {
             "extinction": ext,
             "diversity_slope": div,
@@ -506,6 +714,7 @@ def run_analysis(
                 "adaptation_lag_median_steps": lag["median_lag_steps"] if lag else None,
             },
         },
+        "memory_comparisons": memory_comparisons,
     }
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
