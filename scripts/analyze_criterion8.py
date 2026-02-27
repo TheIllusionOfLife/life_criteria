@@ -105,18 +105,20 @@ def _cohen_d(a: list[float], b: list[float]) -> float | None:
 
 
 def _holm_bonferroni(p_values: list[float]) -> list[float]:
-    """Holm-Bonferroni correction.  Returns adjusted p-values in the same order."""
+    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order."""
     n = len(p_values)
     if n == 0:
         return []
+    # Sort ascending; multiply smallest p by n, next by n-1, etc.
+    # Enforce monotonicity via running maximum (step-down).
     indexed = sorted(enumerate(p_values), key=lambda x: x[1])
     adjusted = [0.0] * n
-    running_min = 1.0
-    for rank, (orig_idx, p) in enumerate(reversed(indexed)):
-        k = rank + 1  # multiplier: 1 for largest p, n for smallest p (step-down)
-        adj = min(running_min, p * k)
-        running_min = adj
+    previous_adj = 0.0
+    for rank, (orig_idx, p) in enumerate(indexed):
+        multiplier = n - rank
+        adj = min(1.0, max(previous_adj, p * multiplier))
         adjusted[orig_idx] = adj
+        previous_adj = adj
     return adjusted
 
 
@@ -221,8 +223,7 @@ def run_analysis(
     # Load all conditions — abort if baseline is missing
     if not condition_files["baseline"].exists():
         print(
-            f"ERROR: {condition_files['baseline']} not found — "
-            "run experiment_criterion8.py first."
+            f"ERROR: {condition_files['baseline']} not found — run experiment_criterion8.py first."
         )
         sys.exit(1)
 
@@ -249,8 +250,7 @@ def run_analysis(
     comparisons: dict[str, dict] = {}
     _all_comparison_conds = ["criterion8_on", "criterion8_ablated", "sham"]
     comparison_conds = [
-        c for c in _all_comparison_conds
-        if summaries[c]["survival_auc"]["per_seed"]
+        c for c in _all_comparison_conds if summaries[c]["survival_auc"]["per_seed"]
     ]
     raw_pvalues: list[float] = []
 
