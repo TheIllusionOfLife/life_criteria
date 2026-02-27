@@ -33,9 +33,11 @@ any simulation results exist.  First-match-wins; applied in order.
 
 Conditions
 ----------
-  normal_graph : baseline 7-criteria system with graph metabolism
-  shift_graph  : same + resource-regeneration shift at step 5 000
-                 (for adaptation-lag measurement, Panel D of figure)
+  normal_graph        : baseline 7-criteria system with graph metabolism
+  shift_graph         : same + resource-regeneration shift at step 5 000
+                        (for adaptation-lag measurement, Panel D of figure)
+  normal_graph_memory : normal_graph + enable_memory=True (8th criterion)
+  shift_graph_memory  : shift_graph + enable_memory=True (8th criterion)
 
 Tiers
 -----
@@ -73,7 +75,8 @@ from experiment_common import log, make_config_dict, run_single
 # ---------------------------------------------------------------------------
 
 TIER_PARAMS: dict[int, dict] = {
-    1: {"steps": 10_000, "sample_every": 100, "default_seeds": list(range(30))},
+    # Tier 1 uses held-out seeds 100–129 (calibration seeds 0–99 reserved).
+    1: {"steps": 10_000, "sample_every": 100, "default_seeds": list(range(100, 130))},
     2: {"steps": 100_000, "sample_every": 500, "default_seeds": list(range(3))},
 }
 
@@ -93,6 +96,19 @@ CONDITIONS: dict[str, dict] = {
         "metabolism_mode": "graph",
         "max_alive_organisms": _POPULATION_CAP,
         # Shift at step 5 000 so there are 5 000 post-shift steps to observe recovery.
+        "environment_shift_step": 5_000,
+        "environment_shift_resource_rate": 0.003,
+    },
+    # Memory-enabled variants for before/after comparison on lifelikeness metrics.
+    "normal_graph_memory": {
+        "metabolism_mode": "graph",
+        "max_alive_organisms": _POPULATION_CAP,
+        "enable_memory": True,
+    },
+    "shift_graph_memory": {
+        "metabolism_mode": "graph",
+        "max_alive_organisms": _POPULATION_CAP,
+        "enable_memory": True,
         "environment_shift_step": 5_000,
         "environment_shift_resource_rate": 0.003,
     },
