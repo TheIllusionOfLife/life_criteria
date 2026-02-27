@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-02-27T06:41:02.340811+00:00",
+  "experiment_name": "criterion8",
+  "steps": 10000,
+  "sample_every": 100,
+  "seeds": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129
+  ],
+  "n_seeds": 30,
+  "conditions": [
+    "baseline",
+    "criterion8_on",
+    "criterion8_ablated",
+    "sham"
+  ],
+  "condition_overrides": {
+    "baseline": {
+      "max_alive_organisms": 100,
+      "enable_memory": false
+    },
+    "criterion8_on": {
+      "max_alive_organisms": 100,
+      "enable_memory": true
+    },
+    "criterion8_ablated": {
+      "max_alive_organisms": 100,
+      "enable_memory": true,
+      "ablation_targets": [
+        "memory"
+      ],
+      "ablation_step": 5000
+    },
+    "sham": {
+      "max_alive_organisms": 100,
+      "enable_memory": true,
+      "enable_sham_process": true
+    }
+  },
+  "statistics": {
+    "conditions": {
+      "baseline": {
+        "n_seeds": 30,
+        "median_auc": 12000.0,
+        "mean_auc": 11895.7,
+        "std_auc": 739.5856785133612,
+        "vs_baseline_mwu_p_adj": null,
+        "vs_baseline_cohen_d": null,
+        "vs_baseline_significant_adj005": null
+      },
+      "criterion8_on": {
+        "n_seeds": 30,
+        "median_auc": 11961.0,
+        "mean_auc": 12002.166666666666,
+        "std_auc": 894.722884601643,
+        "vs_baseline_mwu_p_adj": 0.9351919702393391,
+        "vs_baseline_cohen_d": 0.12970648403548565,
+        "vs_baseline_significant_adj005": false
+      },
+      "criterion8_ablated": {
+        "n_seeds": 30,
+        "median_auc": 11822.0,
+        "mean_auc": 11976.366666666667,
+        "std_auc": 908.7347203414333,
+        "vs_baseline_mwu_p_adj": 0.9351919702393391,
+        "vs_baseline_cohen_d": 0.09736608887778161,
+        "vs_baseline_significant_adj005": false
+      },
+      "sham": {
+        "n_seeds": 30,
+        "median_auc": 12055.0,
+        "mean_auc": 11972.333333333334,
+        "std_auc": 958.2316447798368,
+        "vs_baseline_mwu_p_adj": 0.9351919702393391,
+        "vs_baseline_cohen_d": 0.08953338846034378,
+        "vs_baseline_significant_adj005": false
+      }
+    },
+    "memory_stability": {
+      "criterion8_on_mean_late_variance": 0.00010436704958250398,
+      "sham_mean_late_variance": 0.0007294191189363917,
+      "mwu_c8_vs_sham_p": 7.380285855777031e-10,
+      "interpretation": "criterion8_on should show significantly LOWER variance (converged EMA) than sham (random trace)."
+    },
+    "orthogonality": {
+      "partial_corr_auc_vs_diversity_controlling_energy": 0.037757314558020526,
+      "partial_corr_auc_vs_energy_controlling_diversity": -0.4050914404049492,
+      "n_seeds": 30,
+      "note": "Values near zero indicate survival AUC gain from memory is not explained by the 7-criteria metabolic/genomic signals alone."
+    },
+    "primary_outcome_met": false
+  },
+  "analysis_digest": "5bc1d58ccc85cf1da4c2d3b98a445b93a1c83348974312dd7f4330232569891b",
+  "script_name": "experiment_criterion8.py",
+  "git_commit": "029b5ad"
+}
