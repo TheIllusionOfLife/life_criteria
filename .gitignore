@@ -33,6 +33,7 @@ build/
 !/experiments/coupling_analysis.json
 !/experiments/final_graph_statistics.json
 !/experiments/final_statistics.json
+!/experiments/criterion8_manifest.json
 
 
 # IDE/editor
