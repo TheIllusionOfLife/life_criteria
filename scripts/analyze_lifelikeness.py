@@ -54,6 +54,10 @@ _CONDITION_PATHS: dict[str, Path] = {
 
 _ANALYSIS_OUT = _EXP_DIR / "lifelikeness_analysis.json"
 
+# Held-out seed range for published results (calibration seeds 0–99 reserved).
+HOLDOUT_SEED_MIN = 100
+HOLDOUT_SEED_MAX = 199
+
 
 # ---------------------------------------------------------------------------
 # Metric 1: Extinction timing
@@ -509,7 +513,6 @@ def _compute_memory_comparisons(
             continue
 
         label = f"{mem_cond}_vs_{base_cond}"
-        pair_labels.append(label)
 
         base_aucs = [_survival_auc(r) for r in base_results]
         mem_aucs = [_survival_auc(r) for r in mem_results]
@@ -522,6 +525,7 @@ def _compute_memory_comparisons(
                 f"(n_base={len(base_results)}, n_mem={len(mem_results)}); skipping."
             )
             continue
+        pair_labels.append(label)
         raw_pvalues.append(p_val)
 
         # Extinction comparison
@@ -578,22 +582,49 @@ def run_analysis(
     if condition_paths is None:
         condition_paths = _CONDITION_PATHS
 
+    # Validate required keys before indexing.
+    required_keys = set(_CONDITION_PATHS.keys())
+    missing_keys = required_keys - set(condition_paths.keys())
+    if missing_keys:
+        raise ValueError(
+            f"condition_paths missing required keys: {sorted(missing_keys)}. "
+            f"Expected: {sorted(required_keys)}"
+        )
+
     normal_path = condition_paths["normal_graph"]
 
     if not normal_path.exists():
         print(f"ERROR: {normal_path} not found — run experiment_lifelikeness.py --tier 1 first.")
         sys.exit(1)
 
-    # Load all conditions
+    # Load all conditions and validate seed ranges.
     loaded: dict[str, list[dict]] = {}
     for cond, path in condition_paths.items():
-        if path.exists():
-            with open(path) as f:
-                loaded[cond] = json.load(f)
-            print(f"Loaded {cond}: {len(loaded[cond])} seeds")
-        else:
+        if not path.exists():
             print(f"WARNING: {path} not found — condition '{cond}' will be skipped.")
             loaded[cond] = []
+            continue
+
+        with open(path) as f:
+            results = json.load(f)
+
+        # Validate seeds are within the held-out range.
+        bad_seeds = []
+        for r in results:
+            seed = r.get("seed")
+            if seed is None or not (HOLDOUT_SEED_MIN <= seed <= HOLDOUT_SEED_MAX):
+                bad_seeds.append(seed)
+        if bad_seeds:
+            print(
+                f"ERROR: {cond} ({path}) contains seeds outside held-out range "
+                f"{HOLDOUT_SEED_MIN}–{HOLDOUT_SEED_MAX}: {bad_seeds}. "
+                "Refusing to load stale calibration data."
+            )
+            loaded[cond] = []
+            continue
+
+        loaded[cond] = results
+        print(f"Loaded {cond}: {len(results)} seeds")
 
     normal_results = loaded["normal_graph"]
     shift_results = loaded["shift_graph"]
