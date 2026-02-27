@@ -63,13 +63,25 @@ def main() -> None:
             "vs_baseline_significant_adj005": pw.get("vs_baseline_significant_adj005"),
         }
 
-    # Seeds used (extracted from data sources, or from first condition's n_seeds)
+    # Seeds used (extracted from baseline results)
     baseline_results_path = _EXP_DIR / "criterion8_baseline.json"
     seeds_used: list[int] = []
     if baseline_results_path.exists():
         with open(baseline_results_path) as f:
             results = json.load(f)
         seeds_used = sorted(r["seed"] for r in results)
+
+    # Validate held-out seed policy (100–199)
+    if not seeds_used:
+        raise SystemExit(
+            "ERROR: No seeds found in baseline results. Cannot generate manifest without seed data."
+        )
+    bad_seeds = [s for s in seeds_used if not (100 <= s <= 199)]
+    if bad_seeds:
+        raise SystemExit(
+            f"ERROR: Seeds outside held-out range 100–199: {bad_seeds}. "
+            "Calibration seeds 0–99 must not appear in published results."
+        )
 
     manifest = {
         "schema_version": 1,
@@ -107,12 +119,12 @@ def main() -> None:
             },
             "orthogonality": analysis.get("orthogonality", {}),
             "primary_outcome_met": (
-                pairwise.get("criterion8_on", {}).get("vs_baseline_significant_adj005")
-                is True
+                pairwise.get("criterion8_on", {}).get("vs_baseline_significant_adj005") is True
             ),
         },
         "analysis_digest": _file_digest(_ANALYSIS_PATH),
         "script_name": "experiment_criterion8.py",
+        "generator_script": "generate_criterion8_manifest.py",
         "git_commit": _git_commit(),
     }
 
@@ -121,21 +133,31 @@ def main() -> None:
     print(f"Saved: {_MANIFEST_PATH}")
 
     # Human-readable summary
+    seed_lo = seeds_used[0]
+    seed_hi = seeds_used[-1]
+    outcome = manifest["statistics"]["primary_outcome_met"]
     print("\nResults summary:")
-    print(f"  Seeds: {seeds_used[0] if seeds_used else '?'}–{seeds_used[-1] if seeds_used else '?'} (n={len(seeds_used)})")
-    print(f"  Primary outcome met (criterion8_on p_adj<0.05): {manifest['statistics']['primary_outcome_met']}")
+    print(f"  Seeds: {seed_lo}–{seed_hi} (n={len(seeds_used)})")
+    print(f"  Primary outcome met (criterion8_on p_adj<0.05): {outcome}")
     print()
-    print(f"  {'Condition':<25}  {'Median AUC':>12}  {'p_adj':>8}  {'Cohen d':>8}")
-    print(f"  {'-'*25}  {'-'*12}  {'-'*8}  {'-'*8}")
+    hdr = f"  {'Condition':<25}  {'Median AUC':>12}  {'p_adj':>8}"
+    print(f"{hdr}  {'Cohen d':>8}")
+    print(f"  {'-' * 25}  {'-' * 12}  {'-' * 8}  {'-' * 8}")
     for cond in ["baseline", "criterion8_on", "criterion8_ablated", "sham"]:
         cs = conditions_stats[cond]
-        med = f"{cs['median_auc']:.1f}" if cs["median_auc"] is not None else "n/a"
-        p = f"{cs['vs_baseline_mwu_p_adj']:.4f}" if cs["vs_baseline_mwu_p_adj"] is not None else "—"
-        d = f"{cs['vs_baseline_cohen_d']:.3f}" if cs["vs_baseline_cohen_d"] is not None else "—"
+        med_auc = cs["median_auc"]
+        med = f"{med_auc:.1f}" if med_auc is not None else "n/a"
+        p_adj = cs["vs_baseline_mwu_p_adj"]
+        p = f"{p_adj:.4f}" if p_adj is not None else "—"
+        d_val = cs["vs_baseline_cohen_d"]
+        d = f"{d_val:.3f}" if d_val is not None else "—"
         print(f"  {cond:<25}  {med:>12}  {p:>8}  {d:>8}")
     ms = manifest["statistics"]["memory_stability"]
     mem_p = ms["mwu_c8_vs_sham_p"]
-    print(f"\n  Memory stability (c8_on vs sham): p={mem_p:.4f}" if mem_p is not None else "\n  Memory stability: n/a")
+    if mem_p is not None:
+        print(f"\n  Memory stability (c8_on vs sham): p={mem_p:.4f}")
+    else:
+        print("\n  Memory stability: n/a")
 
 
 if __name__ == "__main__":

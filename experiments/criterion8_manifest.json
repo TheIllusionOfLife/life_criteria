@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "created_at_utc": "2026-02-27T06:41:02.340811+00:00",
+  "created_at_utc": "2026-02-27T06:50:52.234410+00:00",
   "experiment_name": "criterion8",
   "steps": 10000,
   "sample_every": 100,
@@ -121,5 +121,6 @@
   },
   "analysis_digest": "5bc1d58ccc85cf1da4c2d3b98a445b93a1c83348974312dd7f4330232569891b",
   "script_name": "experiment_criterion8.py",
-  "git_commit": "029b5ad"
+  "generator_script": "generate_criterion8_manifest.py",
+  "git_commit": "322804d"
 }
