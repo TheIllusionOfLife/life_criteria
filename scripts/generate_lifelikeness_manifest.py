@@ -14,12 +14,12 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from experiment_lifelikeness import CONDITIONS
+
 _ROOT = Path(__file__).resolve().parent.parent
 _EXP_DIR = _ROOT / "experiments"
 _ANALYSIS_PATH = _EXP_DIR / "lifelikeness_analysis.json"
 _MANIFEST_PATH = _EXP_DIR / "lifelikeness_manifest.json"
-
-_CONDITIONS = ["normal_graph", "shift_graph", "normal_graph_memory", "shift_graph_memory"]
 
 
 def _git_commit() -> str:
@@ -46,25 +46,30 @@ def main() -> None:
     with open(_ANALYSIS_PATH) as f:
         analysis = json.load(f)
 
-    # Collect seeds from per-condition data files + validate
+    # All Tier 1 conditions must be present — fail hard to prevent partial publication.
     condition_seeds: dict[str, list[int]] = {}
-    for cond in _CONDITIONS:
+    missing: list[str] = []
+    for cond in CONDITIONS:
         path = _EXP_DIR / f"lifelikeness_t1_{cond}.json"
         if not path.exists():
-            print(f"WARNING: {path} not found — condition '{cond}' will be absent from manifest.")
+            missing.append(cond)
             continue
         with open(path) as f:
             data = json.load(f)
         condition_seeds[cond] = sorted(r["seed"] for r in data)
 
-    if not condition_seeds:
-        raise SystemExit("ERROR: No condition data files found.")
+    if missing:
+        raise SystemExit(
+            f"ERROR: Missing condition data files: {missing}. "
+            "All 4 conditions are required for a complete manifest. "
+            "Run experiment_lifelikeness.py --tier 1 first."
+        )
 
-    # Use the first available condition as the reference seed set
+    # Use the first condition as the reference seed set
     reference_cond = next(iter(condition_seeds))
     seeds_used = condition_seeds[reference_cond]
 
-    # Cross-validate seeds across all available conditions
+    # Cross-validate seeds across all conditions
     for cond, seeds in condition_seeds.items():
         if seeds != seeds_used:
             raise SystemExit(
@@ -97,30 +102,8 @@ def main() -> None:
         "seeds": seeds_used,
         "n_seeds": len(seeds_used),
         "conditions": list(condition_seeds.keys()),
-        "condition_overrides": {
-            "normal_graph": {
-                "metabolism_mode": "graph",
-                "max_alive_organisms": 100,
-            },
-            "shift_graph": {
-                "metabolism_mode": "graph",
-                "max_alive_organisms": 100,
-                "environment_shift_step": 5000,
-                "environment_shift_resource_rate": 0.003,
-            },
-            "normal_graph_memory": {
-                "metabolism_mode": "graph",
-                "max_alive_organisms": 100,
-                "enable_memory": True,
-            },
-            "shift_graph_memory": {
-                "metabolism_mode": "graph",
-                "max_alive_organisms": 100,
-                "enable_memory": True,
-                "environment_shift_step": 5000,
-                "environment_shift_resource_rate": 0.003,
-            },
-        },
+        # Source of truth: imported from experiment_lifelikeness.CONDITIONS
+        "condition_overrides": CONDITIONS,
         "statistics": {
             "per_condition": per_cond,
             "decision": decision,

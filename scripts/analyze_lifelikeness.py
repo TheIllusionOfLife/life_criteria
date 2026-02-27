@@ -413,18 +413,20 @@ def _cohen_d(a: list[float], b: list[float]) -> float | None:
 
 
 def _holm_bonferroni(p_values: list[float]) -> list[float]:
-    """Holm-Bonferroni correction.  Returns adjusted p-values in the same order."""
+    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order."""
     n = len(p_values)
     if n == 0:
         return []
-    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
+    # Sort ascending by p-value; multiply smallest by n, next by n-1, etc.
+    # Enforce monotonicity via running maximum (step-down).
+    sorted_indices = sorted(range(n), key=lambda i: p_values[i])
     adjusted = [0.0] * n
-    running_min = 1.0
-    for rank, (orig_idx, p) in enumerate(reversed(indexed)):
-        k = rank + 1
-        adj = min(running_min, p * k)
-        running_min = adj
-        adjusted[orig_idx] = adj
+    running_max = 0.0
+    for rank, orig_idx in enumerate(sorted_indices):
+        multiplier = n - rank
+        adj = min(1.0, p_values[orig_idx] * multiplier)
+        running_max = max(running_max, adj)
+        adjusted[orig_idx] = running_max
     return adjusted
 
 
@@ -511,6 +513,12 @@ def _compute_memory_comparisons(
 
         u_stat, p_val = _mwu_test(mem_aucs, base_aucs)
         d = _cohen_d(mem_aucs, base_aucs)
+        if np.isnan(p_val):
+            print(
+                f"WARNING: MWU test returned NaN for {label} "
+                f"(n_base={len(base_results)}, n_mem={len(mem_results)}); skipping."
+            )
+            continue
         raw_pvalues.append(p_val)
 
         # Extinction comparison
