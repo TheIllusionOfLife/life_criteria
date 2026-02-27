@@ -612,7 +612,7 @@ def run_analysis(
         bad_seeds = []
         for r in results:
             seed = r.get("seed")
-            if seed is None or not (HOLDOUT_SEED_MIN <= seed <= HOLDOUT_SEED_MAX):
+            if not isinstance(seed, int) or not (HOLDOUT_SEED_MIN <= seed <= HOLDOUT_SEED_MAX):
                 bad_seeds.append(seed)
         if bad_seeds:
             print(
