@@ -25,7 +25,7 @@ def _git_commit() -> str:
         return subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"], cwd=_ROOT, text=True
         ).strip()
-    except Exception:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
 
 
@@ -34,6 +34,18 @@ def _file_digest(path: Path) -> str:
     with open(path, "rb") as f:
         h.update(f.read())
     return h.hexdigest()
+
+
+def _primary_outcome(pairwise: dict) -> bool:
+    """Return True iff criterion8_on vs baseline is significant at adj p<0.05."""
+    c8 = pairwise.get("criterion8_on")
+    if c8 is None:
+        raise SystemExit(
+            "ERROR: 'criterion8_on' missing from pairwise_vs_baseline. "
+            "Analysis data may be incomplete."
+        )
+    sig = c8.get("vs_baseline_significant_adj005")
+    return sig is True
 
 
 def main() -> None:
@@ -63,25 +75,34 @@ def main() -> None:
             "vs_baseline_significant_adj005": pw.get("vs_baseline_significant_adj005"),
         }
 
-    # Seeds used (extracted from baseline results)
-    baseline_results_path = _EXP_DIR / "criterion8_baseline.json"
-    seeds_used: list[int] = []
-    if baseline_results_path.exists():
-        with open(baseline_results_path) as f:
-            results = json.load(f)
-        seeds_used = sorted(r["seed"] for r in results)
+    # Seeds used — cross-validate across all conditions
+    _CONDITIONS = ["baseline", "criterion8_on", "criterion8_ablated", "sham"]
+    condition_seeds: dict[str, list[int]] = {}
+    for cond in _CONDITIONS:
+        path = _EXP_DIR / f"criterion8_{cond}.json"
+        if not path.exists():
+            raise SystemExit(f"ERROR: {path} not found — run experiment first.")
+        with open(path) as f:
+            condition_seeds[cond] = sorted(r["seed"] for r in json.load(f))
 
-    # Validate held-out seed policy (100–199)
+    seeds_used = condition_seeds["baseline"]
+    for cond, seeds in condition_seeds.items():
+        if seeds != seeds_used:
+            raise SystemExit(
+                f"ERROR: Seed mismatch — {cond} has {seeds}, baseline has {seeds_used}."
+            )
+
+    # Validate held-out seed policy (100–199) and expected count
     if not seeds_used:
-        raise SystemExit(
-            "ERROR: No seeds found in baseline results. Cannot generate manifest without seed data."
-        )
+        raise SystemExit("ERROR: No seeds found. Cannot generate manifest without seed data.")
     bad_seeds = [s for s in seeds_used if not (100 <= s <= 199)]
     if bad_seeds:
         raise SystemExit(
             f"ERROR: Seeds outside held-out range 100–199: {bad_seeds}. "
             "Calibration seeds 0–99 must not appear in published results."
         )
+    if len(seeds_used) < 30:
+        print(f"WARNING: Only {len(seeds_used)} seeds found (expected 30). Partial run?")
 
     manifest = {
         "schema_version": 1,
@@ -118,9 +139,7 @@ def main() -> None:
                 "interpretation": memory_stability.get("interpretation"),
             },
             "orthogonality": analysis.get("orthogonality", {}),
-            "primary_outcome_met": (
-                pairwise.get("criterion8_on", {}).get("vs_baseline_significant_adj005") is True
-            ),
+            "primary_outcome_met": _primary_outcome(pairwise),
         },
         "analysis_digest": _file_digest(_ANALYSIS_PATH),
         "script_name": "experiment_criterion8.py",
@@ -130,6 +149,7 @@ def main() -> None:
 
     with open(_MANIFEST_PATH, "w") as f:
         json.dump(manifest, f, indent=2)
+        f.write("\n")
     print(f"Saved: {_MANIFEST_PATH}")
 
     # Human-readable summary
