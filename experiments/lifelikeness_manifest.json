@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-02-28T21:42:01.285076+00:00",
+  "experiment_name": "lifelikeness",
+  "steps": 10000,
+  "sample_every": 100,
+  "seeds": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129
+  ],
+  "n_seeds": 30,
+  "conditions": [
+    "normal_graph",
+    "shift_graph",
+    "normal_graph_memory",
+    "shift_graph_memory"
+  ],
+  "condition_overrides": {
+    "normal_graph": {
+      "metabolism_mode": "graph",
+      "max_alive_organisms": 100
+    },
+    "shift_graph": {
+      "metabolism_mode": "graph",
+      "max_alive_organisms": 100,
+      "environment_shift_step": 5000,
+      "environment_shift_resource_rate": 0.003
+    },
+    "normal_graph_memory": {
+      "metabolism_mode": "graph",
+      "max_alive_organisms": 100,
+      "enable_memory": true
+    },
+    "shift_graph_memory": {
+      "metabolism_mode": "graph",
+      "max_alive_organisms": 100,
+      "enable_memory": true,
+      "environment_shift_step": 5000,
+      "environment_shift_resource_rate": 0.003
+    }
+  },
+  "statistics": {
+    "per_condition": {
+      "normal_graph": {
+        "n_seeds": 30,
+        "survival_auc_median": 12000.0,
+        "survival_auc_mean": 11895.7,
+        "survival_auc_std": 739.5856785133612,
+        "extinction_fraction_10k": 0.0,
+        "diversity_slope_median": -0.011543204977375533
+      },
+      "shift_graph": {
+        "n_seeds": 30,
+        "survival_auc_median": 11920.0,
+        "survival_auc_mean": 11841.066666666668,
+        "survival_auc_std": 795.3428639677153,
+        "extinction_fraction_10k": 0.0,
+        "diversity_slope_median": -0.006868756334841609
+      },
+      "normal_graph_memory": {
+        "n_seeds": 30,
+        "survival_auc_median": 11961.0,
+        "survival_auc_mean": 12002.166666666666,
+        "survival_auc_std": 894.722884601643,
+        "extinction_fraction_10k": 0.0,
+        "diversity_slope_median": -0.018747159276018117
+      },
+      "shift_graph_memory": {
+        "n_seeds": 30,
+        "survival_auc_median": 11951.5,
+        "survival_auc_mean": 11986.733333333334,
+        "survival_auc_std": 906.1446917015244,
+        "extinction_fraction_10k": 0.0,
+        "diversity_slope_median": -0.019901776923076896
+      }
+    },
+    "decision": {
+      "criterion8_candidate": "generative_capacity",
+      "triggered_rule": "Rule 2: median_diversity_slope_late=-0.0115 <= 0",
+      "summary": {
+        "extinction_fraction_at_10k": 0.0,
+        "median_diversity_slope_per_1k": -0.011543204977375533,
+        "novelty_halflife_steps": 358.71881602314306,
+        "bedau_modal_class": 2,
+        "adaptation_lag_median_steps": 100.0
+      }
+    },
+    "memory_comparisons": {
+      "normal_graph_memory_vs_normal_graph": {
+        "base_condition": "normal_graph",
+        "memory_condition": "normal_graph_memory",
+        "n_seeds_base": 30,
+        "n_seeds_memory": 30,
+        "survival_auc": {
+          "base_median": 12000.0,
+          "memory_median": 11961.0,
+          "mwu_u": 466.0,
+          "mwu_p_raw": 0.818743179075688,
+          "cohen_d": 0.12970648403548565,
+          "mwu_p_adj": 1.0,
+          "significant_adj005": false
+        },
+        "extinction_fraction_10k": {
+          "base": 0.0,
+          "memory": 0.0
+        },
+        "diversity_slope_median": {
+          "base": -0.011543204977375533,
+          "memory": -0.018747159276018117
+        }
+      },
+      "shift_graph_memory_vs_shift_graph": {
+        "base_condition": "shift_graph",
+        "memory_condition": "shift_graph_memory",
+        "n_seeds_base": 30,
+        "n_seeds_memory": 30,
+        "survival_auc": {
+          "base_median": 11920.0,
+          "memory_median": 11951.5,
+          "mwu_u": 474.0,
+          "mwu_p_raw": 0.7282616702502525,
+          "cohen_d": 0.17086082310156706,
+          "mwu_p_adj": 1.0,
+          "significant_adj005": false
+        },
+        "extinction_fraction_10k": {
+          "base": 0.0,
+          "memory": 0.0
+        },
+        "diversity_slope_median": {
+          "base": -0.006868756334841609,
+          "memory": -0.019901776923076896
+        }
+      }
+    }
+  },
+  "analysis_digest": "f1022d61142bd6723c26553065621707ffa218590788b4b49be7861ea5becb34",
+  "script_name": "experiment_lifelikeness.py",
+  "generator_script": "generate_lifelikeness_manifest.py",
+  "git_commit": "467b574"
+}
