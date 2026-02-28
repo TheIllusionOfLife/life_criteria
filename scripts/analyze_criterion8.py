@@ -116,9 +116,12 @@ def _holm_bonferroni(p_values: list[float]) -> list[float]:
     previous_adj = 0.0
     for rank, (orig_idx, p) in enumerate(indexed):
         multiplier = n - rank
-        adj = min(1.0, max(previous_adj, p * multiplier))
-        adjusted[orig_idx] = adj
-        previous_adj = adj
+        if np.isnan(p):
+            adjusted[orig_idx] = float("nan")
+        else:
+            adj = min(1.0, max(previous_adj, p * multiplier))
+            adjusted[orig_idx] = adj
+            previous_adj = adj
     return adjusted
 
 
@@ -250,7 +253,7 @@ def run_analysis(
     comparisons: dict[str, dict] = {}
     _all_comparison_conds = ["criterion8_on", "criterion8_ablated", "sham"]
     comparison_conds = [
-        c for c in _all_comparison_conds if summaries[c]["survival_auc"]["per_seed"]
+        c for c in _all_comparison_conds if len(summaries[c]["survival_auc"]["per_seed"]) >= 2
     ]
     raw_pvalues: list[float] = []
 

@@ -431,9 +431,12 @@ def _holm_bonferroni(p_values: list[float]) -> list[float]:
     previous_adj = 0.0
     for rank, (orig_idx, p) in enumerate(indexed):
         multiplier = n - rank
-        adj = min(1.0, max(previous_adj, p * multiplier))
-        adjusted[orig_idx] = adj
-        previous_adj = adj
+        if np.isnan(p):
+            adjusted[orig_idx] = float("nan")
+        else:
+            adj = min(1.0, max(previous_adj, p * multiplier))
+            adjusted[orig_idx] = adj
+            previous_adj = adj
     return adjusted
 
 
