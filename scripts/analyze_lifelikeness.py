@@ -420,23 +420,29 @@ def _cohen_d(a: list[float], b: list[float]) -> float | None:
 
 
 def _holm_bonferroni(p_values: list[float]) -> list[float]:
-    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order."""
+    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order.
+
+    NaN p-values are excluded from ranking so they do not consume
+    multiplier slots; they are returned as NaN in the output.
+    """
     n = len(p_values)
     if n == 0:
         return []
-    # Sort ascending; multiply smallest p by n, next by n-1, etc.
+    adjusted = [float("nan")] * n
+    # Separate finite p-values from NaN entries.
+    finite = [(i, p) for i, p in enumerate(p_values) if not np.isnan(p)]
+    if not finite:
+        return adjusted
+    # Sort ascending; multiply smallest p by m, next by m-1, etc.
     # Enforce monotonicity via running maximum (step-down).
-    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
-    adjusted = [0.0] * n
+    finite.sort(key=lambda x: x[1])
+    m = len(finite)
     previous_adj = 0.0
-    for rank, (orig_idx, p) in enumerate(indexed):
-        multiplier = n - rank
-        if np.isnan(p):
-            adjusted[orig_idx] = float("nan")
-        else:
-            adj = min(1.0, max(previous_adj, p * multiplier))
-            adjusted[orig_idx] = adj
-            previous_adj = adj
+    for rank, (orig_idx, p) in enumerate(finite):
+        multiplier = m - rank
+        adj = min(1.0, max(previous_adj, p * multiplier))
+        adjusted[orig_idx] = adj
+        previous_adj = adj
     return adjusted
 
 

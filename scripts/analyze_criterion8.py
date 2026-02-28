@@ -105,23 +105,29 @@ def _cohen_d(a: list[float], b: list[float]) -> float | None:
 
 
 def _holm_bonferroni(p_values: list[float]) -> list[float]:
-    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order."""
+    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order.
+
+    NaN p-values are excluded from ranking so they do not consume
+    multiplier slots; they are returned as NaN in the output.
+    """
     n = len(p_values)
     if n == 0:
         return []
-    # Sort ascending; multiply smallest p by n, next by n-1, etc.
+    adjusted = [float("nan")] * n
+    # Separate finite p-values from NaN entries.
+    finite = [(i, p) for i, p in enumerate(p_values) if not np.isnan(p)]
+    if not finite:
+        return adjusted
+    # Sort ascending; multiply smallest p by m, next by m-1, etc.
     # Enforce monotonicity via running maximum (step-down).
-    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
-    adjusted = [0.0] * n
+    finite.sort(key=lambda x: x[1])
+    m = len(finite)
     previous_adj = 0.0
-    for rank, (orig_idx, p) in enumerate(indexed):
-        multiplier = n - rank
-        if np.isnan(p):
-            adjusted[orig_idx] = float("nan")
-        else:
-            adj = min(1.0, max(previous_adj, p * multiplier))
-            adjusted[orig_idx] = adj
-            previous_adj = adj
+    for rank, (orig_idx, p) in enumerate(finite):
+        multiplier = m - rank
+        adj = min(1.0, max(previous_adj, p * multiplier))
+        adjusted[orig_idx] = adj
+        previous_adj = adj
     return adjusted
 
 
@@ -241,14 +247,14 @@ def run_analysis(
             loaded[cond] = []
 
     baseline_results = loaded["baseline"]
-    if not baseline_results:
-        print("ERROR: baseline data is empty.")
+    if len(baseline_results) < 2:
+        print("ERROR: baseline needs >= 2 seeds for MWU tests.")
         sys.exit(1)
 
     print("\nComputing per-condition summaries...")
     summaries = {cond: _summarize_condition(results) for cond, results in loaded.items()}
 
-    # Pairwise comparisons vs baseline — skip conditions with no data
+    # Pairwise comparisons vs baseline — skip conditions with < 2 seeds
     baseline_aucs: list[float] = summaries["baseline"]["survival_auc"]["per_seed"]
     comparisons: dict[str, dict] = {}
     _all_comparison_conds = ["criterion8_on", "criterion8_ablated", "sham"]
