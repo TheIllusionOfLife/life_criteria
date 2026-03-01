@@ -933,7 +933,12 @@ impl World {
 
         let t0 = Instant::now();
         let live_flags = self.live_flags();
-        let tree = spatial::build_index_active(&self.agents, &live_flags);
+        let tree = spatial::build_index_active(
+            &self.agents,
+            &live_flags,
+            self.config.sensing_radius,
+            self.config.world_size,
+        );
         let spatial_build_us = t0.elapsed().as_micros() as u64;
 
         let t1 = Instant::now();

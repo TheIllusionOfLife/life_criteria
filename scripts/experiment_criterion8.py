@@ -204,8 +204,7 @@ def main() -> None:
     args = parse_args()
     seeds: list[int] = args.seeds if args.seeds is not None else TIER_SEEDS[args.tier]
     active_conditions = {
-        k: v for k, v in CONDITIONS.items()
-        if args.conditions is None or k in args.conditions
+        k: v for k, v in CONDITIONS.items() if args.conditions is None or k in args.conditions
     }
 
     log(f"Life Criteria v{life_criteria.version()}")

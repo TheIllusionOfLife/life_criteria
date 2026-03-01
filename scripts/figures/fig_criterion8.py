@@ -29,10 +29,10 @@ from figures._shared import FIG_DIR, PROJECT_ROOT, load_json
 # ---------------------------------------------------------------------------
 
 _COLORS = {
-    "baseline": "#000000",          # black
-    "criterion8_on": "#0072B2",     # blue
-    "criterion8_ablated": "#D55E00", # vermillion
-    "sham": "#CC79A7",              # reddish purple
+    "baseline": "#000000",  # black
+    "criterion8_on": "#0072B2",  # blue
+    "criterion8_ablated": "#D55E00",  # vermillion
+    "sham": "#CC79A7",  # reddish purple
 }
 
 _LABELS = {
@@ -77,6 +77,7 @@ def _trajectories(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Return (steps, median, q25, q75) across seeds for `field`."""
     from collections import defaultdict
+
     step_vals: dict[int, list[float]] = defaultdict(list)
     for r in results:
         for s in r.get("samples", []):
@@ -102,8 +103,7 @@ def _trajectories(
 def _panel_violin(ax, conditions: dict[str, list[dict]], analysis: dict | None) -> None:
     """Panel A: Survival AUC violin + strip plot, 4 conditions."""
     data_by_cond = {
-        cond: [_survival_auc(r) for r in conditions.get(cond, [])]
-        for cond in _COND_ORDER
+        cond: [_survival_auc(r) for r in conditions.get(cond, [])] for cond in _COND_ORDER
     }
 
     xs = list(range(len(_COND_ORDER)))
@@ -113,8 +113,9 @@ def _panel_violin(ax, conditions: dict[str, list[dict]], analysis: dict | None) 
             continue
         color = _COLORS[cond]
         # Violin
-        parts = ax.violinplot([vals], positions=[xi], widths=0.6,
-                              showmedians=True, showextrema=False)
+        parts = ax.violinplot(
+            [vals], positions=[xi], widths=0.6, showmedians=True, showextrema=False
+        )
         for part in parts["bodies"]:
             part.set_facecolor(color)
             part.set_alpha(0.35)
@@ -149,13 +150,17 @@ def _panel_violin(ax, conditions: dict[str, list[dict]], analysis: dict | None) 
             c8_xi = _COND_ORDER.index("criterion8_on")
             ax.annotate(
                 "",
-                xy=(c8_xi, y_ann), xytext=(baseline_xi, y_ann),
+                xy=(c8_xi, y_ann),
+                xytext=(baseline_xi, y_ann),
                 arrowprops=dict(arrowstyle="-", color="0.4", lw=1.0),
             )
             ax.text(
-                (c8_xi + baseline_xi) / 2, y_ann * 1.01,
+                (c8_xi + baseline_xi) / 2,
+                y_ann * 1.01,
                 f"{sig} (d={d:.2f})" if d is not None else sig,
-                ha="center", va="bottom", fontsize=7,
+                ha="center",
+                va="bottom",
+                fontsize=7,
             )
 
     ax.set_xticks(xs)
@@ -206,8 +211,7 @@ def _panel_memory_trace(ax, conditions: dict[str, list[dict]]) -> None:
         ax.plot(steps, med, color=color, linewidth=1.8, label=_LABELS[cond])
 
     # Reference line at 0.5 (uniform random expectation for sham)
-    ax.axhline(0.5, color="#888888", linewidth=0.8, linestyle=":",
-               label="Sham expected (0.5)")
+    ax.axhline(0.5, color="#888888", linewidth=0.8, linestyle=":", label="Sham expected (0.5)")
 
     ax.set_ylabel("Memory trace — mean IS[0] EMA")
     ax.set_ylim(0.0, 1.0)
@@ -230,8 +234,13 @@ def _panel_ablation(ax, conditions: dict[str, list[dict]]) -> None:
         ax.fill_between(steps, q25, q75, color=color, alpha=0.15)
         ax.plot(steps, med, color=color, linewidth=1.8, label=_LABELS[cond])
 
-    ax.axvline(_ABLATION_STEP, color="#888888", linewidth=1.0, linestyle="--",
-               label=f"Ablation step ({_ABLATION_STEP:,d})")
+    ax.axvline(
+        _ABLATION_STEP,
+        color="#888888",
+        linewidth=1.0,
+        linestyle="--",
+        label=f"Ablation step ({_ABLATION_STEP:,d})",
+    )
 
     ax.set_ylabel("Alive count (median)")
     ax.set_ylim(bottom=0)
@@ -269,8 +278,13 @@ def generate_criterion8() -> None:
     _panel_violin(ax_a, conditions, analysis)
     ax_a.set_title("A  Survival AUC by condition", loc="left", fontsize=9)
     ax_a.text(
-        0.98, 0.97, f"$n$={n_seeds} seeds",
-        transform=ax_a.transAxes, ha="right", va="top", fontsize=7,
+        0.98,
+        0.97,
+        f"$n$={n_seeds} seeds",
+        transform=ax_a.transAxes,
+        ha="right",
+        va="top",
+        fontsize=7,
     )
 
     # --- Panel B: alive_count trajectories ---

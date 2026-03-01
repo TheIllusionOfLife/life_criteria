@@ -1,5 +1,3 @@
-use rstar::{RTreeObject, AABB};
-
 #[derive(Clone, Debug)]
 pub struct Agent {
     pub id: u32,
@@ -18,13 +16,5 @@ impl Agent {
             velocity: [0.0; 2],
             internal_state: [0.5; 4],
         }
-    }
-}
-
-impl RTreeObject for Agent {
-    type Envelope = AABB<[f64; 2]>;
-
-    fn envelope(&self) -> Self::Envelope {
-        AABB::from_point(self.position)
     }
 }

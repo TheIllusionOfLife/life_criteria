@@ -6,8 +6,10 @@ experiment_pairwise.py, and experiment_evolution.py.
 """
 
 import json
+import os
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import life_criteria
@@ -103,6 +105,36 @@ def run_single(seed: int, overrides: dict, steps: int = 2000, sample_every: int 
     config_json = make_config(seed, overrides)
     result_json = life_criteria.run_experiment_json(config_json, steps, sample_every)
     return json.loads(result_json)
+
+
+def _run_single_worker(args: tuple) -> dict:
+    """Module-level worker for ProcessPoolExecutor (must not be a closure for spawn)."""
+    seed, overrides, steps, sample_every = args
+    # Prevent rayon from spawning threads inside each worker
+    os.environ["RAYON_NUM_THREADS"] = "1"
+    return run_single(seed, overrides, steps, sample_every)
+
+
+def run_seeds_parallel(
+    seeds: list[int],
+    overrides: dict,
+    steps: int = 2000,
+    sample_every: int = 50,
+    max_workers: int = 4,
+) -> list[dict]:
+    """Run seeds in parallel using ProcessPoolExecutor.
+
+    Each worker loads tuned_baseline.json independently (no shared state).
+    Results are sorted by seed for deterministic output order.
+    """
+    work_items = [(seed, overrides, steps, sample_every) for seed in seeds]
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(_run_single_worker, work_items))
+
+    # Sort by seed for deterministic ordering
+    seed_to_result = dict(zip(seeds, results, strict=True))
+    return [seed_to_result[s] for s in sorted(seed_to_result)]
 
 
 def print_header() -> None:

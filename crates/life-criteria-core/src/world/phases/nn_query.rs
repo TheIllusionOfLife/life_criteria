@@ -1,12 +1,10 @@
 use crate::spatial;
-use crate::spatial::AgentLocation;
-use rstar::RTree;
 
 use super::super::World;
 
 impl World {
     /// Compute neighbor-informed neural deltas for all agents.
-    pub(in crate::world) fn step_nn_query_phase(&mut self, tree: &RTree<AgentLocation>) {
+    pub(in crate::world) fn step_nn_query_phase(&mut self, grid: &spatial::UniformGrid) {
         let deltas = &mut self.deltas_buffer;
         let neighbor_sums = &mut self.neighbor_sums_buffer;
         let neighbor_counts = &mut self.neighbor_counts_buffer;
@@ -45,7 +43,7 @@ impl World {
             let effective_radius = config.sensing_radius * dev_sensing as f64;
 
             let neighbor_count = spatial::count_neighbors(
-                tree,
+                grid,
                 agent.position,
                 effective_radius,
                 agent.id,

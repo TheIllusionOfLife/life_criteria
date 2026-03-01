@@ -49,7 +49,7 @@ import time
 from pathlib import Path
 
 import life_criteria
-from experiment_common import log, make_config_dict, run_single
+from experiment_common import log, make_config_dict, run_seeds_parallel, run_single
 
 # ---------------------------------------------------------------------------
 # Experiment parameters
@@ -183,6 +183,13 @@ def parse_args() -> argparse.Namespace:
         help="Run only the named conditions (default: all 4).",
     )
     parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Number of parallel workers for seed execution (default: 1).",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print resolved config JSON for the first seed of each condition.",
@@ -202,6 +209,7 @@ def _run_condition(
     out_dir: Path,
     filename_prefix: str,
     dry_run: bool,
+    workers: int = 1,
 ) -> None:
     """Run one condition over all seeds and write results JSON."""
     out_path = out_dir / f"{filename_prefix}{cond_name}.json"
@@ -209,7 +217,7 @@ def _run_condition(
     log(f"  Steps: {STEPS}  sample_every: {SAMPLE_EVERY}  seeds: {seeds}")
     filtered = {k: v for k, v in overrides.items() if k != "metabolism_mode"}
     log(f"  Overrides: {json.dumps(filtered)}")
-    log(f"  Output: {out_path}")
+    log(f"  Output: {out_path}  workers: {workers}")
 
     if dry_run:
         seed = seeds[0]
@@ -220,29 +228,51 @@ def _run_condition(
         return
 
     cond_start = time.perf_counter()
-    results: list[dict] = []
 
-    for seed in seeds:
-        t0 = time.perf_counter()
-        result = run_single(seed, overrides, steps=STEPS, sample_every=SAMPLE_EVERY)
-        elapsed = time.perf_counter() - t0
-
-        result["seed"] = seed
-        result["condition"] = cond_name
-        results.append(result)
-
-        last_sample = result["samples"][-1] if result["samples"] else {}
-        mem_str = (
-            f"  mem={last_sample.get('memory_mean', 0.0):.3f}"
-            if "memory_mean" in last_sample
-            else ""
+    if workers > 1:
+        raw_results = run_seeds_parallel(
+            seeds, overrides, steps=STEPS, sample_every=SAMPLE_EVERY, max_workers=workers
         )
-        log(
-            f"  seed={seed:3d}  alive={result['final_alive_count']:4d}"
-            f"  samples={len(result['samples']):5d}"
-            f"{mem_str}"
-            f"  {elapsed:.1f}s"
-        )
+        results: list[dict] = []
+        for seed, result in zip(sorted(seeds), raw_results, strict=True):
+            result["seed"] = seed
+            result["condition"] = cond_name
+            results.append(result)
+            last_sample = result["samples"][-1] if result["samples"] else {}
+            mem_str = (
+                f"  mem={last_sample.get('memory_mean', 0.0):.3f}"
+                if "memory_mean" in last_sample
+                else ""
+            )
+            log(
+                f"  seed={seed:3d}  alive={result['final_alive_count']:4d}"
+                f"  samples={len(result['samples']):5d}"
+                f"{mem_str}"
+            )
+        log(f"  Batch completed in {time.perf_counter() - cond_start:.1f}s")
+    else:
+        results = []
+        for seed in seeds:
+            t0 = time.perf_counter()
+            result = run_single(seed, overrides, steps=STEPS, sample_every=SAMPLE_EVERY)
+            elapsed = time.perf_counter() - t0
+
+            result["seed"] = seed
+            result["condition"] = cond_name
+            results.append(result)
+
+            last_sample = result["samples"][-1] if result["samples"] else {}
+            mem_str = (
+                f"  mem={last_sample.get('memory_mean', 0.0):.3f}"
+                if "memory_mean" in last_sample
+                else ""
+            )
+            log(
+                f"  seed={seed:3d}  alive={result['final_alive_count']:4d}"
+                f"  samples={len(result['samples']):5d}"
+                f"{mem_str}"
+                f"  {elapsed:.1f}s"
+            )
 
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2)
@@ -272,6 +302,7 @@ def main() -> None:
     log(f"  Seeds: {seeds}  (n={len(seeds)})")
     log(f"  Regime overrides: {json.dumps(regime_ovr)}")
     log(f"  Conditions: {list(active_conditions)}")
+    log(f"  Workers: {args.workers}")
     if args.dry_run:
         log("  [dry-run mode — no simulation will be executed]")
     log("")
@@ -293,6 +324,7 @@ def main() -> None:
             out_dir=out_dir,
             filename_prefix=filename_prefix,
             dry_run=args.dry_run,
+            workers=args.workers,
         )
 
     if not args.dry_run:
