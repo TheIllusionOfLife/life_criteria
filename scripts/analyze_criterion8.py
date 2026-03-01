@@ -105,18 +105,29 @@ def _cohen_d(a: list[float], b: list[float]) -> float | None:
 
 
 def _holm_bonferroni(p_values: list[float]) -> list[float]:
-    """Holm-Bonferroni correction.  Returns adjusted p-values in the same order."""
+    """Holm-Bonferroni step-down correction.  Returns adjusted p-values in the same order.
+
+    NaN p-values are excluded from ranking so they do not consume
+    multiplier slots; they are returned as NaN in the output.
+    """
     n = len(p_values)
     if n == 0:
         return []
-    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
-    adjusted = [0.0] * n
-    running_min = 1.0
-    for rank, (orig_idx, p) in enumerate(reversed(indexed)):
-        k = rank + 1  # multiplier: 1 for largest p, n for smallest p (step-down)
-        adj = min(running_min, p * k)
-        running_min = adj
+    adjusted = [float("nan")] * n
+    # Separate finite p-values from NaN entries.
+    finite = [(i, p) for i, p in enumerate(p_values) if not np.isnan(p)]
+    if not finite:
+        return adjusted
+    # Sort ascending; multiply smallest p by m, next by m-1, etc.
+    # Enforce monotonicity via running maximum (step-down).
+    finite.sort(key=lambda x: x[1])
+    m = len(finite)
+    previous_adj = 0.0
+    for rank, (orig_idx, p) in enumerate(finite):
+        multiplier = m - rank
+        adj = min(1.0, max(previous_adj, p * multiplier))
         adjusted[orig_idx] = adj
+        previous_adj = adj
     return adjusted
 
 
@@ -221,8 +232,7 @@ def run_analysis(
     # Load all conditions — abort if baseline is missing
     if not condition_files["baseline"].exists():
         print(
-            f"ERROR: {condition_files['baseline']} not found — "
-            "run experiment_criterion8.py first."
+            f"ERROR: {condition_files['baseline']} not found — run experiment_criterion8.py first."
         )
         sys.exit(1)
 
@@ -237,20 +247,19 @@ def run_analysis(
             loaded[cond] = []
 
     baseline_results = loaded["baseline"]
-    if not baseline_results:
-        print("ERROR: baseline data is empty.")
+    if len(baseline_results) < 2:
+        print("ERROR: baseline needs >= 2 seeds for MWU tests.")
         sys.exit(1)
 
     print("\nComputing per-condition summaries...")
     summaries = {cond: _summarize_condition(results) for cond, results in loaded.items()}
 
-    # Pairwise comparisons vs baseline — skip conditions with no data
+    # Pairwise comparisons vs baseline — skip conditions with < 2 seeds
     baseline_aucs: list[float] = summaries["baseline"]["survival_auc"]["per_seed"]
     comparisons: dict[str, dict] = {}
     _all_comparison_conds = ["criterion8_on", "criterion8_ablated", "sham"]
     comparison_conds = [
-        c for c in _all_comparison_conds
-        if summaries[c]["survival_auc"]["per_seed"]
+        c for c in _all_comparison_conds if len(summaries[c]["survival_auc"]["per_seed"]) >= 2
     ]
     raw_pvalues: list[float] = []
 
