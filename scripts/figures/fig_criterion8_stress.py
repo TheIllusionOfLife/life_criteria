@@ -46,7 +46,7 @@ _COND_ORDER = ["baseline", "sham", "criterion8_ablated", "criterion8_on"]
 
 _EXP_DIR = PROJECT_ROOT / "experiments"
 
-_FAMINE_SHIFT_STEP = 3_000
+_FAMINE_SHIFT_STEP = 4_000
 _CYCLE_PERIOD = 1_000
 
 # ---------------------------------------------------------------------------

@@ -45,7 +45,7 @@ _REGIMES = ["famine", "boom_bust"]
 _CONDITIONS = ["baseline", "criterion8_on", "criterion8_ablated", "sham"]
 
 # Famine-specific constants
-_FAMINE_SHIFT_STEP = 3_000
+_FAMINE_SHIFT_STEP = 4_000
 
 # Boom-bust constants
 _CYCLE_PERIOD = 1_000  # bust at odd half-cycles: [1k,2k), [3k,4k), [5k,6k), [7k,8k), [9k,10k)
@@ -375,7 +375,10 @@ def _analyze_boom_bust(loaded: dict[str, list[dict]]) -> dict:
     baseline_slopes = summaries["baseline"]["learning_curve_slope"]["per_seed"]
     baseline_slopes_valid = [s for s in baseline_slopes if s is not None]
     for cond in ["criterion8_on", "sham"]:
-        cond_slopes = summaries[cond]["learning_curve_slope"]["per_seed"]
+        lc_data = summaries[cond].get("learning_curve_slope")
+        if not lc_data:
+            continue
+        cond_slopes = lc_data["per_seed"]
         cond_slopes_valid = [s for s in cond_slopes if s is not None]
         if len(cond_slopes_valid) >= 2 and len(baseline_slopes_valid) >= 2:
             u, p = _mwu_test(cond_slopes_valid, baseline_slopes_valid)

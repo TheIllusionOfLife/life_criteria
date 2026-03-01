@@ -72,15 +72,37 @@ _BASE_OVERRIDES: dict = {
 # ---------------------------------------------------------------------------
 
 # Famine: sharp resource crash at step 3,000
+# Calibration v1 (rate=0.001): 0% extinction — deficit too slow.
+# Calibration v2 (rate=0.0, boundary_decay=0.005): 0% extinction — energy
+#   drops to 0.163 at step 10k but death_energy_threshold=0.0 means nobody dies.
+# v3: zero regen + reduced metabolism efficiency + raised death threshold.
+#   Energy drains faster and organisms die at 0.15 instead of 0.0.
+# Calibration history (baseline extinction rate):
+#   v1: rate=0.001, no extras → 0% (organisms reach equilibrium)
+#   v2: rate=0.0, boundary_decay=0.005 → 0% (energy=0.163 at 10k, threshold=0.0)
+#   v3: rate=0.0, efficiency=0.3, threshold=0.15 → 100% (too harsh)
+#   v4: rate=0.0, efficiency=0.5, threshold=0.15 → ~100% (still too harsh)
+#   v5: rate=0.001, threshold=0.15, boundary_decay=0.003 → 0% (equilib at 0.83)
+#   v6: rate=0.0, efficiency=0.7, threshold=0.10 → ~95% extinct (cliff)
+#   v7: rate=0.0, efficiency=0.8, threshold=0.10 → 85-100% (still cliff)
+#   v8: rate=0.001, eff=0.8, thresh=0.10 → 0% (trickle → equilibrium)
+#   Insight: phase transition — any trickle → 0%, zero → ~100%.
+#   v9: rate=0.0, eff=0.8, thresh=0.10, shift=5k → 0-31% (too mild)
+#   v10: shift=4k → 6k post-shift (between v7's 7k→100% and v9's 5k→10%)
 _FAMINE_OVERRIDES: dict = {
-    "environment_shift_step": 3_000,
-    "environment_shift_resource_rate": 0.001,
+    "environment_shift_step": 4_000,
+    "environment_shift_resource_rate": 0.0,
+    "metabolism_efficiency_multiplier": 0.8,
+    "death_energy_threshold": 0.10,
 }
 
 # Boom-Bust: cyclic resource with period 1,000 (10 half-cycles, 5 busts)
+# Efficiency + threshold create real bust-phase mortality.
 _BOOM_BUST_OVERRIDES: dict = {
     "environment_cycle_period": 1_000,
-    "environment_cycle_low_rate": 0.001,
+    "environment_cycle_low_rate": 0.0,
+    "metabolism_efficiency_multiplier": 0.8,
+    "death_energy_threshold": 0.10,
 }
 
 REGIME_OVERRIDES: dict[str, dict] = {
