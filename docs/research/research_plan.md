@@ -9,7 +9,9 @@ The goal here is to make a **drastic conceptual jump**: not “we added another 
 
 ## 0) One-sentence thesis (what ALIFE reviewers should remember)
 
-**Thesis:** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.* 
+**Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
+
+**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework and both yielded bounded null results (all |d| < 0.42, below SESOI of d = 0.5). The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.* 
 
 ---
 
@@ -301,3 +303,64 @@ Please answer as many as you can; even short answers are fine.
 6. Are you open to including **one external substrate** comparison (even a minimal one), or must this stay within your current system?
 
 If you answer these, I’ll revise this Markdown into a more *execution-ready* version with: exact experimental grid, exact metrics, and a proposed “main theorem-like claim + falsification tests” tailored to your constraints.
+
+---
+
+## 10) Experimental Results (completed)
+
+### Status: Both candidates tested, both null. Paper in progress.
+
+The following summarizes the completed experiments across Phases 1–3.
+
+### Candidate A: Learning & Memory (within-lifetime adaptation)
+
+**Implementation**: EMA memory vector ($\mathbf{m}_t \in \mathbb{R}^8$), genome-encoded decay $\alpha$. Controller input expanded from 8→16 dims (212→388 weights). Sham: random Gaussian updates at same compute cost.
+
+**Suite 1 — Normal conditions** (30 seeds × 10k steps, held-out seeds 100–129):
+- Survival AUC: +106.5 vs baseline ($d = 0.13$, $p_\text{adj} = 0.94$) → **null**
+- Memory mechanism verified: EMA late variance $p < 10^{-9}$ vs sham
+
+**Suite 2 — Famine stress** (resource drop at step 3000):
+- Post-shock AUC: +7.3 ($d = 0.03$, $p_\text{adj} = 1.0$) → **null**
+- Extinction: 93.3% enabled vs 86.7% baseline
+
+**Suite 3 — Boom-bust stress** (cyclic period 2500):
+- Survival AUC: −103.2 ($d = -0.28$, $p_\text{adj} = 0.46$) → **null**
+- Extinction: 93.3% enabled, 93.3% baseline
+
+**Diagnosis**: Memory mechanism converges correctly (EMA works) but provides no survival advantage. The perturbation regimes lack learnable temporal structure for memory to exploit.
+
+### Candidate B: Collective Organization (kin-sensing)
+
+**Implementation**: `kin_fraction` channel (input 8→9 dims, 212→228 weights). Single-pass `count_neighbors_split()` for kin/non-kin counting. Sham: permute real kin_fraction across alive agents.
+
+**Suite 4 — Famine stress**:
+- Post-shock AUC: −38.3 ($d = -0.13$, $p_\text{adj} = 1.0$) → **null**
+- Extinction: 96.7% enabled vs 86.7% baseline
+
+**Suite 5 — Boom-bust stress**:
+- Survival AUC: −32.3 ($d = -0.08$, $p_\text{adj} = 1.0$) → **null**
+- Extinction: 76.7% enabled vs 83.3% baseline
+
+**Diagnosis**: Organisms converge to ~1 agent each under population cap, making `kin_fraction` degenerate (~0–3%). This is an **observability failure**: the kin signal exists in principle but becomes sparse under the tested demographic regime.
+
+### Summary
+
+| Candidate | Regime | Δ AUC | Cohen’s d | p_adj | Result |
+|-----------|--------|-------|-----------|-------|--------|
+| A (Memory) | Normal | +106.5 | 0.13 | 0.94 | Null |
+| A (Memory) | Famine | +7.3 | 0.03 | 1.00 | Null |
+| A (Memory) | Boom-bust | −103.2 | −0.28 | 0.46 | Null |
+| B (Kin) | Famine | −38.3 | −0.13 | 1.00 | Null |
+| B (Kin) | Boom-bust | −32.3 | −0.08 | 1.00 | Null |
+
+All $|d| < 0.42$, well below SESOI of $d = 0.5$. This supports a **positive equivalence claim**: any effect of either candidate is bounded below practical significance under the tested regimes.
+
+### Pivot outcome
+
+Per the pivot strategy, both Candidate A and B are null. The contribution pivots from “we found the 8th” to:
+1. **Validated falsifiable protocol** for testing candidate criteria
+2. **Bounded null results** with mechanistic diagnoses
+3. **Design lessons** for future ALife systems testing experiential/collective criteria
+
+Paper: `paper/main.tex` — “Searching for an Eighth Criterion of Life: A Falsifiable Framework and Two Null Results”
