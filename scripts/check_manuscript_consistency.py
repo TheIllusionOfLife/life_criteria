@@ -318,11 +318,7 @@ def main() -> int:
     required = [DEFAULT_PAPER, DEFAULT_MANIFEST, DEFAULT_BINDINGS]
     if not all(p.exists() for p in required):
         missing = [str(p) for p in required if not p.exists()]
-        print(
-            json.dumps(
-                {"ok": True, "skipped": True, "missing": missing, "checks": []}, indent=2
-            )
-        )
+        print(json.dumps({"ok": True, "skipped": True, "missing": missing, "checks": []}, indent=2))
         return 0
     report = run_checks(DEFAULT_PAPER, DEFAULT_MANIFEST, DEFAULT_BINDINGS)
     print(json.dumps(report, indent=2))

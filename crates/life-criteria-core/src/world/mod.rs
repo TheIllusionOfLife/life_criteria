@@ -933,11 +933,16 @@ impl World {
 
         let t0 = Instant::now();
         let live_flags = self.live_flags();
-        let tree = spatial::build_index_active(&self.agents, &live_flags);
+        let grid = spatial::build_index_active(
+            &self.agents,
+            &live_flags,
+            self.config.sensing_radius,
+            self.config.world_size,
+        );
         let spatial_build_us = t0.elapsed().as_micros() as u64;
 
         let t1 = Instant::now();
-        self.step_nn_query_phase(&tree);
+        self.step_nn_query_phase(&grid);
         let nn_query_us = t1.elapsed().as_micros() as u64;
 
         let t2 = Instant::now();
@@ -961,7 +966,7 @@ impl World {
             self.prune_dead_entities();
         }
 
-        self.step_environment_phase(&tree);
+        self.step_environment_phase(&grid);
 
         let state_update_us = t2.elapsed().as_micros() as u64;
 

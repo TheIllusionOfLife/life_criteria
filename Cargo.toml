@@ -9,8 +9,11 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
 [workspace.dependencies]
-rstar = "0.12"
 rand = "0.9"
 rand_chacha = "0.9"
 rayon = "1.10"

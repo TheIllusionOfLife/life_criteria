@@ -1,11 +1,9 @@
 use super::super::World;
 use crate::spatial;
-use crate::spatial::AgentLocation;
-use rstar::RTree;
 
 impl World {
     /// Apply optional sham work and environment updates.
-    pub(in crate::world) fn step_environment_phase(&mut self, tree: &RTree<AgentLocation>) {
+    pub(in crate::world) fn step_environment_phase(&mut self, grid: &spatial::UniformGrid) {
         if self.config.enable_sham_process {
             let mut _sham_sum: f64 = 0.0;
             for agent in &self.agents {
@@ -15,7 +13,7 @@ impl World {
                 }
                 let effective_radius = self.effective_sensing_radius(org_idx);
                 let neighbor_count = spatial::count_neighbors(
-                    tree,
+                    grid,
                     agent.position,
                     effective_radius,
                     agent.id,
