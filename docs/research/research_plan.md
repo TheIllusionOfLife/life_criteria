@@ -11,7 +11,7 @@ The goal here is to make a **drastic conceptual jump**: not “we added another 
 
 **Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
 
-**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results (all |d| < 0.42, below SESOI of d = 0.5). The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
+**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results: all enabled-vs-baseline |d| ≤ 0.28, largest across all conditions |d| = 0.41 (boom-bust sham, Candidate A), all below SESOI of d = 0.5. The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
 
 ---
 
@@ -299,34 +299,41 @@ The following summarizes the completed experiments across Phases 1–3.
 ### Candidate A: Learning & Memory (within-lifetime adaptation)
 
 **Implementation**: EMA-driven homeostatic correction phase. 2-element EMA tracking mean internal-state channels IS[0] and IS[1], with configurable decay $\alpha$. Four genome-encoded parameters (2 gains, 2 targets) modulate correction strength and set-point. NN architecture unchanged (212 weights for 8-input base topology). Sham: uniform random draws replace EMA trace each timestep at same compute cost.
+- Source: `crates/life-criteria-core/src/world/phases/memory.rs`, `crates/life-criteria-core/src/genome.rs` (segment 7)
 
 **Suite 1 — Normal conditions** (30 seeds × 10k steps, held-out seeds 100–129):
 - Survival AUC: +106.5 vs baseline ($d = 0.13$, $p_\text{adj} = 0.94$) → **null**
 - Memory mechanism verified: EMA late variance $p < 10^{-9}$ vs sham
+- Artifacts: `experiments/criterion8_manifest.json`, `experiments/criterion8_analysis.json` (keys: `pairwise_vs_baseline.criterion8_on`, `memory_stability`)
 
 **Suite 2 — Famine stress** (resource drop at step 3000):
 - Post-shock AUC: +7.3 ($d = 0.03$, $p_\text{adj} = 1.0$) → **null**
 - Extinction: 93.3% enabled vs 86.7% baseline
+- Artifacts: `experiments/stress_manifest.json`, `experiments/stress_analysis.json` (key: `famine.pairwise_vs_baseline.criterion8_on`)
 
 **Suite 3 — Boom-bust stress** (cyclic period 2500):
 - Survival AUC: −103.2 ($d = -0.28$, $p_\text{adj} = 0.46$) → **null**
 - Extinction: 93.3% enabled, 93.3% baseline
+- Artifacts: `experiments/stress_manifest.json`, `experiments/stress_analysis.json` (key: `boom_bust.pairwise_vs_baseline.criterion8_on`)
 
 **Diagnosis**: Memory mechanism converges correctly (EMA works) but provides no survival advantage. The perturbation regimes lack learnable temporal structure for memory to exploit.
 
 ### Candidate B: Collective Organization (kin-sensing)
 
 **Implementation**: `kin_fraction` channel (input 8→9 dims, 212→228 weights). Single-pass `count_neighbors_split()` for kin/non-kin counting. Sham: permute real kin_fraction across alive agents.
+- Source: `crates/life-criteria-core/src/spatial.rs` (`count_neighbors_split`), `crates/life-criteria-core/src/world/phases/nn_query.rs` (kin_fraction input), `crates/life-criteria-core/src/nn.rs` (INPUT_SIZE=9)
 
 **Suite 4 — Famine stress**:
 - Post-shock AUC: −38.3 ($d = -0.13$, $p_\text{adj} = 1.0$) → **null**
 - Extinction: 96.7% enabled vs 86.7% baseline
+- Artifacts: `experiments/candidateB_stress_manifest.json`, `experiments/candidateB_stress_analysis.json` (key: `famine.pairwise_vs_baseline.candidateB_on`; kin fraction: `famine.summaries.candidateB_on.kin_fraction_final`)
 
 **Suite 5 — Boom-bust stress**:
 - Survival AUC: −32.3 ($d = -0.08$, $p_\text{adj} = 1.0$) → **null**
 - Extinction: 76.7% enabled vs 83.3% baseline
+- Artifacts: `experiments/candidateB_stress_manifest.json`, `experiments/candidateB_stress_analysis.json` (key: `boom_bust.pairwise_vs_baseline.candidateB_on`; kin fraction: `boom_bust.summaries.candidateB_on.kin_fraction_final`)
 
-**Diagnosis**: Organisms converge to ~1 agent each under population cap, making `kin_fraction` degenerate (~0–3%). This is an **observability failure**: the kin signal exists in principle but becomes sparse under the tested demographic regime.
+**Diagnosis**: Organisms converge to ~1 agent each under population cap, making `kin_fraction` degenerate (mean 0.03 famine, 0.19 boom-bust—high variance driven by rare multi-agent survivors). This is an **observability failure**: the kin signal exists in principle but becomes sparse under the tested demographic regime.
 
 ### Summary
 
