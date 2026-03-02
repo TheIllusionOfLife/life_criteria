@@ -340,7 +340,9 @@ mod tests {
             ..MutationRates::default()
         };
         g.mutate(&mut rng, &rates);
-        let non_nn_changed = g.data()[NeuralNet::WEIGHT_COUNT..].iter().any(|&v| v != 0.0);
+        let non_nn_changed = g.data()[NeuralNet::WEIGHT_COUNT..]
+            .iter()
+            .any(|&v| v != 0.0);
         assert!(non_nn_changed, "mutation should affect non-NN segments too");
     }
 

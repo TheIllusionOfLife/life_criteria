@@ -593,7 +593,9 @@ def main() -> None:
     run_analysis()
 
     if not args.no_figure:
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        scripts_dir = str(Path(__file__).resolve().parent)
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
         try:
             from figures.fig_candidateB_stress import generate_candidateB_stress
 

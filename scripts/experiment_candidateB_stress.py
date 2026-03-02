@@ -155,7 +155,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=1,
         metavar="N",
-        help="Number of parallel workers for seed execution (default: 1).",
+        help="Number of parallel workers for seed execution (default: 1, max: cpu_count).",
     )
     parser.add_argument(
         "--dry-run",
@@ -256,6 +256,11 @@ def _run_condition(
 
 def main() -> None:
     args = parse_args()
+    import os
+
+    max_workers = os.cpu_count() or 4
+    if args.workers > max_workers:
+        args.workers = max_workers
     seeds: list[int] = args.seeds if args.seeds is not None else TIER_SEEDS[args.tier]
     regime = args.regime
     regime_ovr = REGIME_OVERRIDES[regime]

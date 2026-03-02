@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-02T10:57:45.975912+00:00",
+  "timestamp": "2026-03-02T11:34:49.015664+00:00",
   "candidate": "B (kin-sensing / collective organisation)",
   "regimes": {
     "famine": {
@@ -19,9 +19,9 @@
       },
       "extinction_rates": {
         "baseline": 0.8666666666666667,
-        "candidateB_on": 0.8333333333333334,
+        "candidateB_on": 0.9666666666666667,
         "candidateB_ablated": 0.8666666666666667,
-        "sham": 0.9
+        "sham": 0.8
       }
     },
     "boom_bust": {
@@ -41,9 +41,9 @@
       },
       "extinction_rates": {
         "baseline": 0.8333333333333334,
-        "candidateB_on": 0.8333333333333334,
-        "candidateB_ablated": 0.8333333333333334,
-        "sham": 0.9
+        "candidateB_on": 0.7666666666666667,
+        "candidateB_ablated": 0.8666666666666667,
+        "sham": 0.8
       }
     }
   }

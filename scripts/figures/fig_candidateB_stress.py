@@ -180,7 +180,8 @@ def _panel_famine_boxplot(ax, conditions: dict[str, list[dict]], analysis: dict 
                 sig = "*"
             else:
                 sig = "ns"
-            y_max = max(max(vals) for vals in data if vals)
+            all_vals = [v for vals in data if vals for v in vals]
+            y_max = max(all_vals) if all_vals else 0
             y_ann = y_max * 1.05
             baseline_xi = plotted_conds.index("baseline") + 1
             cb_xi = plotted_conds.index("candidateB_on") + 1

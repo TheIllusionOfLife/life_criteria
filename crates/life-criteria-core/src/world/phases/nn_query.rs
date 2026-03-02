@@ -8,6 +8,8 @@ impl World {
         let deltas = &mut self.deltas_buffer;
         let neighbor_sums = &mut self.neighbor_sums_buffer;
         let neighbor_counts = &mut self.neighbor_counts_buffer;
+        let kin_fracs = &mut self.agent_kin_fractions_buffer;
+        let total_counts = &mut self.agent_total_counts_buffer;
         let agents = &self.agents;
         let organisms = &self.organisms;
         let config = &self.config;
@@ -29,15 +31,32 @@ impl World {
         // Pass 1: compute per-agent kin_fraction and neighbor counts.
         // When collective sensing is disabled, we still need neighbor counts
         // for the existing channel 7 input.
+        // Also accumulates encounter metrics (nc_sum, with_neighbors, alive_agents)
+        // in the same pass to avoid a redundant iteration.
         // ------------------------------------------------------------------
-        let mut agent_kin_fractions: Vec<f32> = Vec::with_capacity(agents.len());
-        let mut agent_total_counts: Vec<usize> = Vec::with_capacity(agents.len());
+        kin_fracs.clear();
+        kin_fracs.reserve(agents.len());
+        total_counts.clear();
+        total_counts.reserve(agents.len());
+
+        // Build agent ID → organism_id map for kin-sensing lookups.
+        // Agent IDs are not contiguous after pruning, so we cannot use them
+        // as slice indices.
+        let agent_id_to_org: std::collections::HashMap<u32, u16> = if use_kin_sensing {
+            agents.iter().map(|a| (a.id, a.organism_id)).collect()
+        } else {
+            std::collections::HashMap::new()
+        };
+
+        let mut nc_sum = 0.0f32;
+        let mut with_neighbors = 0usize;
+        let mut alive_agents = 0usize;
 
         for agent in agents {
             let org_idx = agent.organism_id as usize;
             if !organisms.get(org_idx).map(|o| o.alive).unwrap_or(false) {
-                agent_kin_fractions.push(0.0);
-                agent_total_counts.push(0);
+                kin_fracs.push(0.0);
+                total_counts.push(0);
                 continue;
             }
 
@@ -52,14 +71,14 @@ impl World {
             };
             let effective_radius = config.sensing_radius * dev_sensing as f64;
 
-            if use_kin_sensing {
+            let (kf, tc) = if use_kin_sensing {
                 let (kin_count, non_kin_count) = spatial::count_neighbors_split(
                     grid,
                     agent.position,
                     effective_radius,
                     agent.id,
                     agent.organism_id,
-                    agents,
+                    &agent_id_to_org,
                     config.world_size,
                 );
                 let total_count = kin_count + non_kin_count;
@@ -68,10 +87,7 @@ impl World {
                 } else {
                     0.0
                 };
-                agent_kin_fractions.push(kin_fraction);
-                agent_total_counts.push(total_count);
-                neighbor_sums[org_idx] += total_count as f32;
-                neighbor_counts[org_idx] += 1;
+                (kin_fraction, total_count)
             } else {
                 let neighbor_count = spatial::count_neighbors(
                     grid,
@@ -80,10 +96,19 @@ impl World {
                     agent.id,
                     config.world_size,
                 );
-                agent_kin_fractions.push(0.0);
-                agent_total_counts.push(neighbor_count);
-                neighbor_sums[org_idx] += neighbor_count as f32;
-                neighbor_counts[org_idx] += 1;
+                (0.0, neighbor_count)
+            };
+
+            kin_fracs.push(kf);
+            total_counts.push(tc);
+            neighbor_sums[org_idx] += tc as f32;
+            neighbor_counts[org_idx] += 1;
+
+            // Accumulate encounter metrics in the same pass
+            alive_agents += 1;
+            nc_sum += tc as f32;
+            if tc > 0 {
+                with_neighbors += 1;
             }
         }
 
@@ -109,34 +134,23 @@ impl World {
                 .collect();
 
             // Extract their kin_fractions, shuffle, write back
-            let mut alive_fracs: Vec<f32> =
-                alive_indices.iter().map(|&i| agent_kin_fractions[i]).collect();
+            let mut alive_fracs: Vec<f32> = alive_indices.iter().map(|&i| kin_fracs[i]).collect();
             alive_fracs.shuffle(&mut self.sham_rng);
             for (&idx, &frac) in alive_indices.iter().zip(alive_fracs.iter()) {
-                agent_kin_fractions[idx] = frac;
+                kin_fracs[idx] = frac;
             }
         }
 
         // ------------------------------------------------------------------
-        // Accumulate encounter metrics for StepMetrics.
+        // Finalize encounter metrics (kf_sum must come after sham permutation).
         // ------------------------------------------------------------------
         {
             let mut kf_sum = 0.0f32;
-            let mut with_neighbors = 0usize;
-            let mut nc_sum = 0.0f32;
-            let mut alive_agents = 0usize;
             for (i, agent) in agents.iter().enumerate() {
                 let org_idx = agent.organism_id as usize;
-                if !organisms.get(org_idx).map(|o| o.alive).unwrap_or(false) {
-                    continue;
+                if organisms.get(org_idx).map(|o| o.alive).unwrap_or(false) {
+                    kf_sum += kin_fracs[i];
                 }
-                alive_agents += 1;
-                let tc = agent_total_counts[i];
-                nc_sum += tc as f32;
-                if tc > 0 {
-                    with_neighbors += 1;
-                }
-                kf_sum += agent_kin_fractions[i];
             }
             self.last_kin_fraction_sum = kf_sum;
             self.last_agents_with_neighbors = with_neighbors;
@@ -154,10 +168,10 @@ impl World {
                 continue;
             }
 
-            let total_count = agent_total_counts[agent_idx];
+            let total_count = total_counts[agent_idx];
             let kin_fraction = if config.enable_collective_sensing || config.enable_sham_collective
             {
-                agent_kin_fractions[agent_idx]
+                kin_fracs[agent_idx]
             } else {
                 0.0
             };

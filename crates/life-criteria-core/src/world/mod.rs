@@ -76,6 +76,8 @@ pub struct World {
     deltas_buffer: Vec<[f32; 4]>,
     neighbor_sums_buffer: Vec<f32>,
     neighbor_counts_buffer: Vec<usize>,
+    agent_kin_fractions_buffer: Vec<f32>,
+    agent_total_counts_buffer: Vec<usize>,
     homeostasis_sums_buffer: Vec<f32>,
     homeostasis_counts_buffer: Vec<usize>,
     /// Reusable buffer for sham memory pre-computation — avoids per-step Vec allocation.
@@ -303,6 +305,8 @@ impl World {
             deltas_buffer: Vec::with_capacity(agent_count),
             neighbor_sums_buffer: Vec::with_capacity(org_count),
             neighbor_counts_buffer: Vec::with_capacity(org_count),
+            agent_kin_fractions_buffer: Vec::with_capacity(agent_count),
+            agent_total_counts_buffer: Vec::with_capacity(agent_count),
             homeostasis_sums_buffer: Vec::with_capacity(org_count),
             homeostasis_counts_buffer: Vec::with_capacity(org_count),
             sham_vals_buffer: Vec::with_capacity(org_count),
@@ -553,7 +557,11 @@ impl World {
         let kin_fraction_mean = self.last_kin_fraction_sum / n;
         let agents_with_neighbors_frac = self.last_agents_with_neighbors as f32 / n;
         let neighbor_count_mean = self.last_neighbor_count_sum / n;
-        (kin_fraction_mean, agents_with_neighbors_frac, neighbor_count_mean)
+        (
+            kin_fraction_mean,
+            agents_with_neighbors_frac,
+            neighbor_count_mean,
+        )
     }
 
     pub fn run_experiment(&mut self, steps: usize, sample_every: usize) -> RunSummary {

@@ -876,6 +876,16 @@ mod tests {
     }
 
     #[test]
+    fn collective_sensing_ablation_target_deserializes() {
+        let json = r#"{"ablation_step": 50, "ablation_targets": ["collective_sensing"]}"#;
+        let cfg: SimConfig =
+            serde_json::from_str(json).expect("should parse collective_sensing ablation target");
+        assert!(cfg
+            .ablation_targets
+            .contains(&AblationTarget::CollectiveSensing));
+    }
+
+    #[test]
     fn legacy_config_deserializes_enable_memory_false() {
         // Configs without memory fields should default to enable_memory=false.
         let legacy_json = r#"{"seed": 1, "num_organisms": 1, "agents_per_organism": 1}"#;
