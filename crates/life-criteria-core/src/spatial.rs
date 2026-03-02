@@ -404,10 +404,7 @@ mod tests {
     fn small_grid_dim2_no_duplicate_neighbors() {
         // world_size=10, sensing_radius=5 → grid_dim=2, but extent=1 means 3×3 scan
         // wraps around the 2×2 grid, causing cell revisits without dedup.
-        let agents = vec![
-            make_agent(0, 1.0, 1.0),
-            make_agent(1, 6.0, 6.0),
-        ];
+        let agents = vec![make_agent(0, 1.0, 1.0), make_agent(1, 6.0, 6.0)];
         let grid = build_index(&agents, 5.0, 10.0);
         assert_eq!(grid.grid_dim, 2);
         // Distance between (1,1) and (6,6) toroidally = sqrt((5)^2+(5)^2) = 7.07
