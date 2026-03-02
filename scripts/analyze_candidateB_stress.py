@@ -478,7 +478,8 @@ def _print_famine_summary(famine: dict) -> None:
         s = summaries.get(cond, {})
         ps = s.get("post_shock_auc", {})
         if ps.get("mean") is not None:
-            print(f"    {cond:25s}  mean={ps['mean']:10.1f}  std={ps.get('std', 0):8.1f}")
+            std_val = ps.get("std") or 0
+            print(f"    {cond:25s}  mean={ps['mean']:10.1f}  std={std_val:8.1f}")
 
     print("\n  Pairwise vs baseline (post-shock AUC, Holm-Bonferroni):")
     for cond in ["candidateB_on", "candidateB_ablated", "sham"]:
@@ -527,7 +528,8 @@ def _print_boom_bust_summary(bb: dict) -> None:
         s = summaries.get(cond, {})
         lc = s.get("learning_curve_slope", {})
         if lc.get("mean") is not None:
-            print(f"    {cond:25s}  mean={lc['mean']:.4f}  std={lc.get('std', 0):.4f}")
+            std_val = lc.get("std") or 0
+            print(f"    {cond:25s}  mean={lc['mean']:.4f}  std={std_val:.4f}")
 
     if learning:
         print("\n  Learning curve slope comparison vs baseline:")

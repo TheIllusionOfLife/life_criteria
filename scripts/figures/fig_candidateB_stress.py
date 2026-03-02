@@ -343,12 +343,14 @@ def _n_seeds_str(
 ) -> str:
     """Build a concise seed count string for figure title."""
     parts = []
-    if famine:
-        n = max((len(v) for v in famine.values()), default=0)
-        if n > 0:
-            parts.append(f"famine n={n}")
-    if boom_bust:
-        n = max((len(v) for v in boom_bust.values()), default=0)
-        if n > 0:
-            parts.append(f"boom-bust n={n}")
+    for label, data in [("famine", famine), ("boom-bust", boom_bust)]:
+        if not data:
+            continue
+        counts = sorted({len(v) for v in data.values() if v})
+        if not counts:
+            continue
+        if len(counts) == 1:
+            parts.append(f"{label} n={counts[0]}")
+        else:
+            parts.append(f"{label} n={counts[0]}\u2013{counts[-1]}")
     return ", ".join(parts) if parts else "no data"

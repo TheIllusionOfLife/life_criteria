@@ -948,6 +948,7 @@ impl World {
                 }
                 AblationTarget::CollectiveSensing => {
                     self.config.enable_collective_sensing = false;
+                    self.config.enable_sham_collective = false;
                 }
             }
         }
