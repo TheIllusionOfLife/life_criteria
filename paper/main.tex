@@ -367,12 +367,16 @@ provide information.
 
 \subsection{Interpreting Double-Null Results}
 
-Both candidates yield null results across all tested regimes.  Under
-our SESOI framing, we can bound the observed effect size of each
-candidate below $d = 0.5$ with 80\% power.  The largest observed effect across all comparisons
-is $|d| = 0.41$ (Candidate~A, boom-bust, sham condition), which
-remains non-significant after Holm--Bonferroni correction
-($p_\mathrm{adj} = 0.33$).
+Both candidates yield null results across all tested regimes.  All
+point estimates are small: the largest observed effect is $|d| = 0.41$
+(Candidate~A, boom-bust, sham; 95\% CI $[-0.92, 0.10]$;
+$p_\mathrm{adj} = 0.33$).  However, with $n = 30$ per condition, the
+95\% confidence intervals for Cohen's~$d$ are wide (typical half-width
+$\approx 0.51$), and no single comparison's CI falls entirely within
+$[-0.5, 0.5]$.  Thus, while all point estimates lie below our SESOI,
+the data cannot formally exclude medium effects---a power limitation
+inherent to the sample size.  Formal equivalence testing (TOST) would
+require either larger samples or pooling across regimes.
 
 Importantly, these are \emph{diagnosed} nulls.  Each candidate fails
 for a different reason:

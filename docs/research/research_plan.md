@@ -292,7 +292,7 @@ If learning still wins under novel perturbations, the 8th looks real.
 
 ## 10) Experimental Results (completed)
 
-### Status: Both candidates tested, both null. Paper in progress.
+### Status: Both candidates tested, both null. Paper complete (`paper/main.tex`).
 
 The following summarizes the completed experiments across Phases 1–3.
 
@@ -330,15 +330,15 @@ The following summarizes the completed experiments across Phases 1–3.
 
 ### Summary
 
-| Candidate | Regime | Δ AUC | Cohen’s d | p_adj | Result |
-|-----------|--------|-------|-----------|-------|--------|
-| A (Memory) | Normal | +106.5 | 0.13 | 0.94 | Null |
-| A (Memory) | Famine | +7.3 | 0.03 | 1.00 | Null |
-| A (Memory) | Boom-bust | −103.2 | −0.28 | 0.46 | Null |
-| B (Kin) | Famine | −38.3 | −0.13 | 1.00 | Null |
-| B (Kin) | Boom-bust | −32.3 | −0.08 | 1.00 | Null |
+| Candidate | Regime | Δ AUC | Cohen’s d | 95% CI(d) | p_adj | Result |
+|-----------|--------|-------|-----------|-----------|-------|--------|
+| A (Memory) | Normal | +106.5 | 0.13 | [−0.38, 0.64] | 0.94 | Null |
+| A (Memory) | Famine | +7.3 | 0.03 | [−0.48, 0.54] | 1.00 | Null |
+| A (Memory) | Boom-bust | −103.2 | −0.28 | [−0.79, 0.23] | 0.46 | Null |
+| B (Kin) | Famine | −38.3 | −0.13 | [−0.64, 0.38] | 1.00 | Null |
+| B (Kin) | Boom-bust | −32.3 | −0.08 | [−0.59, 0.43] | 1.00 | Null |
 
-All $|d| < 0.42$, well below SESOI of $d = 0.5$. This supports a **positive equivalence claim**: any effect of either candidate is bounded below practical significance under the tested regimes.
+All point estimates $|d| \leq 0.28$ (largest observed: $d = -0.28$, boom-bust Candidate A), well below the SESOI of $d = 0.5$. However, the 95% CIs extend past $\pm 0.5$ for every comparison due to the sample size ($n = 30$), so **formal equivalence (TOST) cannot be claimed**. The results support a **bounded-null interpretation**: observed effects are consistently small, but the data cannot definitively exclude medium effects in either direction. Larger samples or meta-analytic combination across regimes would be needed for a formal equivalence claim.
 
 ### Pivot outcome
 
