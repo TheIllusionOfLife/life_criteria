@@ -133,6 +133,8 @@ def run_seeds_parallel(
         results = list(executor.map(_run_single_worker, work_items))
 
     # Sort by seed for deterministic ordering
+    if len(seeds) != len(set(seeds)):
+        raise ValueError(f"Duplicate seeds detected: {seeds}")
     seed_to_result = dict(zip(seeds, results, strict=True))
     return [seed_to_result[s] for s in sorted(seed_to_result)]
 

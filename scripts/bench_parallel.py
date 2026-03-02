@@ -3,6 +3,7 @@
 import json
 import time
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 
 import life_criteria
 
@@ -10,7 +11,8 @@ import life_criteria
 def _load_config(seed: int, overrides: dict) -> str:
     config = json.loads(life_criteria.default_config_json())
     config["seed"] = seed
-    with open("configs/tuned_baseline.json") as f:
+    config_path = Path(__file__).resolve().parent.parent / "configs" / "tuned_baseline.json"
+    with open(config_path) as f:
         baseline = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
     config.update(baseline)
     config.update(overrides)
@@ -36,7 +38,7 @@ def main() -> None:
         "metabolism_efficiency_multiplier": 0.8,
         "death_energy_threshold": 0.10,
     }
-    seeds4 = [0, 1, 2, 3]
+    seeds4 = [200, 201, 202, 203]
     steps = 2000
     sample_every = 100
 
@@ -51,7 +53,7 @@ def main() -> None:
     print()
 
     for n_workers in [2, 4, 6]:
-        seeds = list(range(n_workers))
+        seeds = list(range(200, 200 + n_workers))
         print(f"=== Parallel {n_workers} workers ({n_workers} seeds, 2k steps) ===")
         t0 = time.perf_counter()
         with ProcessPoolExecutor(max_workers=n_workers) as exe:

@@ -24,7 +24,6 @@ pub struct UniformGrid {
     entries: Vec<GridEntry>,
     cell_size: f64,
     grid_dim: usize,
-    _world_size: f64,
 }
 
 impl UniformGrid {
@@ -75,7 +74,6 @@ impl UniformGrid {
             entries,
             cell_size,
             grid_dim,
-            _world_size: world_size,
         }
     }
 
@@ -125,11 +123,29 @@ fn for_each_unique_neighbor(
     // For larger effective radii (e.g. growth-boosted sensing), we widen the scan.
     let extent = (radius / cell_size).ceil() as isize;
 
+    // When 2*extent+1 > grid_dim, multiple (dx,dy) offsets wrap to the same cell.
+    // Track visited cells to avoid counting agents multiple times.
+    let scan_width = (2 * extent + 1) as usize;
+    let needs_dedup = scan_width > grid_dim;
+    let num_cells = grid_dim * grid_dim;
+    let mut visited = if needs_dedup {
+        vec![false; num_cells]
+    } else {
+        Vec::new()
+    };
+
     for dy in -extent..=extent {
         for dx in -extent..=extent {
-            let nx = ((cx + dx) % gd + gd) % gd;
-            let ny = ((cy + dy) % gd + gd) % gd;
+            let nx = (cx + dx).rem_euclid(gd);
+            let ny = (cy + dy).rem_euclid(gd);
             let cell = (ny as usize) * grid_dim + (nx as usize);
+
+            if needs_dedup {
+                if visited[cell] {
+                    continue;
+                }
+                visited[cell] = true;
+            }
 
             for entry in grid.cell_entries(cell) {
                 if entry.id == self_id {
@@ -364,6 +380,41 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn small_grid_no_duplicate_neighbors() {
+        // With world_size=5 and sensing_radius=5, grid_dim=1 (single cell).
+        // All agents share one cell, so the scan wraps multiple offsets to cell 0.
+        // Without dedup, agents would be visited multiple times.
+        let agents = vec![
+            make_agent(0, 1.0, 1.0),
+            make_agent(1, 2.0, 2.0),
+            make_agent(2, 3.0, 3.0),
+        ];
+        let grid = build_index(&agents, 5.0, 5.0);
+        assert_eq!(grid.grid_dim, 1);
+        let result = query_neighbors(&grid, [1.0, 1.0], 5.0, 0, 5.0);
+        // Each agent should appear exactly once
+        assert_eq!(result, vec![1, 2]);
+        assert_eq!(count_neighbors(&grid, [1.0, 1.0], 5.0, 0, 5.0), 2);
+    }
+
+    #[test]
+    fn small_grid_dim2_no_duplicate_neighbors() {
+        // world_size=10, sensing_radius=5 → grid_dim=2, but extent=1 means 3×3 scan
+        // wraps around the 2×2 grid, causing cell revisits without dedup.
+        let agents = vec![
+            make_agent(0, 1.0, 1.0),
+            make_agent(1, 6.0, 6.0),
+        ];
+        let grid = build_index(&agents, 5.0, 10.0);
+        assert_eq!(grid.grid_dim, 2);
+        // Distance between (1,1) and (6,6) toroidally = sqrt((5)^2+(5)^2) = 7.07
+        // With radius=10 (covers whole world), both should appear once
+        let result = query_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0);
+        assert_eq!(result, vec![1]);
+        assert_eq!(count_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0), 1);
     }
 
     #[test]

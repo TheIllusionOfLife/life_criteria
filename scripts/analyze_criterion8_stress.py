@@ -159,7 +159,7 @@ def _learning_curve_slope(per_cycle: list[float]) -> float | None:
     Positive slope = organisms improve across successive bust cycles.
     """
     n = len(per_cycle)
-    if n < 3:
+    if n < 2:
         return None
     x = np.arange(n, dtype=float)
     y = np.array(per_cycle, dtype=float)
@@ -321,7 +321,7 @@ def _analyze_boom_bust(loaded: dict[str, list[dict]]) -> dict:
         valid_slopes = [s for s in slopes if s is not None]
 
         # Mean per-cycle across seeds (element-wise)
-        n_cycles = 5
+        n_cycles = max((len(pc) for pc in per_cycle_all), default=0)
         mean_per_cycle = []
         for ci in range(n_cycles):
             vals = [pc[ci] for pc in per_cycle_all if ci < len(pc)]

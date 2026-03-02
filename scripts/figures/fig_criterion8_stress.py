@@ -140,6 +140,7 @@ def _panel_famine_boxplot(ax, conditions: dict[str, list[dict]], analysis: dict 
     data = []
     labels = []
     colors = []
+    plotted_conds: list[str] = []
     for cond in _COND_ORDER:
         results = conditions.get(cond, [])
         if not results:
@@ -148,6 +149,7 @@ def _panel_famine_boxplot(ax, conditions: dict[str, list[dict]], analysis: dict 
         data.append(aucs)
         labels.append(_LABELS[cond])
         colors.append(_COLORS[cond])
+        plotted_conds.append(cond)
 
     if not data:
         return
@@ -170,7 +172,7 @@ def _panel_famine_boxplot(ax, conditions: dict[str, list[dict]], analysis: dict 
         ax.scatter(xi + 1 + jitter, vals, color=color, s=10, alpha=0.6, zorder=3)
 
     # Significance annotation from analysis
-    if analysis:
+    if analysis and "baseline" in plotted_conds and "criterion8_on" in plotted_conds:
         famine_data = analysis.get("famine", {})
         comp = famine_data.get("pairwise_vs_baseline", {})
         c8_on = comp.get("criterion8_on", {})
@@ -187,8 +189,8 @@ def _panel_famine_boxplot(ax, conditions: dict[str, list[dict]], analysis: dict 
                 sig = "ns"
             y_max = max(max(vals) for vals in data if vals)
             y_ann = y_max * 1.05
-            baseline_xi = _COND_ORDER.index("baseline") + 1
-            c8_xi = _COND_ORDER.index("criterion8_on") + 1
+            baseline_xi = plotted_conds.index("baseline") + 1
+            c8_xi = plotted_conds.index("criterion8_on") + 1
             ax.annotate(
                 "",
                 xy=(c8_xi, y_ann),
