@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-03-02T03:05:56.907201+00:00",
+  "regimes": {
+    "famine": {
+      "conditions": {
+        "baseline": {
+          "n_seeds": 30
+        },
+        "criterion8_on": {
+          "n_seeds": 30
+        },
+        "criterion8_ablated": {
+          "n_seeds": 30
+        },
+        "sham": {
+          "n_seeds": 30
+        }
+      },
+      "extinction_rates": {
+        "baseline": 0.8666666666666667,
+        "criterion8_on": 0.9333333333333333,
+        "criterion8_ablated": 0.7666666666666667,
+        "sham": 0.8
+      }
+    },
+    "boom_bust": {
+      "conditions": {
+        "baseline": {
+          "n_seeds": 30
+        },
+        "criterion8_on": {
+          "n_seeds": 30
+        },
+        "criterion8_ablated": {
+          "n_seeds": 30
+        },
+        "sham": {
+          "n_seeds": 30
+        }
+      },
+      "extinction_rates": {
+        "baseline": 0.9333333333333333,
+        "criterion8_on": 0.9333333333333333,
+        "criterion8_ablated": 0.7,
+        "sham": 0.6666666666666666
+      }
+    }
+  }
+}

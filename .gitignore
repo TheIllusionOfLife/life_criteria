@@ -35,6 +35,7 @@ build/
 !/experiments/final_statistics.json
 !/experiments/criterion8_manifest.json
 !/experiments/lifelikeness_manifest.json
+!/experiments/stress_manifest.json
 
 
 # IDE/editor
