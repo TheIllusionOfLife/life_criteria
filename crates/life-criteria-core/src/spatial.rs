@@ -192,6 +192,38 @@ pub fn build_index_active(
     )
 }
 
+/// Count neighbors within `radius` of `center`, split into kin (same organism)
+/// and non-kin (different organism). Returns `(kin_count, non_kin_count)`.
+///
+/// Uses `for_each_unique_neighbor` internally for a single-pass count.
+/// Requires the full `agents` slice to look up each neighbor's `organism_id`.
+pub fn count_neighbors_split(
+    grid: &UniformGrid,
+    center: [f64; 2],
+    radius: f64,
+    self_id: u32,
+    self_organism_id: u16,
+    agents: &[Agent],
+    world_size: f64,
+) -> (usize, usize) {
+    let mut kin = 0usize;
+    let mut non_kin = 0usize;
+    for_each_unique_neighbor(grid, center, radius, self_id, world_size, |neighbor_id| {
+        // Look up neighbor's organism_id from the agents slice.
+        // Grid entries store agent IDs but we need organism membership.
+        let is_kin = agents
+            .get(neighbor_id as usize)
+            .map(|a| a.organism_id == self_organism_id)
+            .unwrap_or(false);
+        if is_kin {
+            kin += 1;
+        } else {
+            non_kin += 1;
+        }
+    });
+    (kin, non_kin)
+}
+
 /// Count neighbors within `radius` of `center` (excludes agent with `self_id`).
 pub fn count_neighbors(
     grid: &UniformGrid,
@@ -412,6 +444,59 @@ mod tests {
         let result = query_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0);
         assert_eq!(result, vec![1]);
         assert_eq!(count_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0), 1);
+    }
+
+    #[test]
+    fn count_neighbors_split_distinguishes_kin_and_non_kin() {
+        // Agents 0,1 belong to organism 0; agent 2 belongs to organism 1
+        let agents = vec![
+            Agent::new(0, 0, [5.0, 5.0]),
+            Agent::new(1, 0, [6.0, 5.0]),
+            Agent::new(2, 1, [5.5, 5.0]),
+        ];
+        let grid = build_default(&agents);
+        // Query from agent 0's perspective (organism 0)
+        let (kin, non_kin) = count_neighbors_split(
+            &grid,
+            [5.0, 5.0],
+            2.0,
+            0,    // self_id
+            0,    // self_organism_id
+            &agents,
+            100.0,
+        );
+        assert_eq!(kin, 1, "agent 1 is kin (same organism)");
+        assert_eq!(non_kin, 1, "agent 2 is non-kin (different organism)");
+    }
+
+    #[test]
+    fn count_neighbors_split_all_kin() {
+        // All agents belong to organism 0
+        let agents = vec![
+            Agent::new(0, 0, [5.0, 5.0]),
+            Agent::new(1, 0, [6.0, 5.0]),
+            Agent::new(2, 0, [5.5, 5.0]),
+        ];
+        let grid = build_default(&agents);
+        let (kin, non_kin) = count_neighbors_split(
+            &grid, [5.0, 5.0], 2.0, 0, 0, &agents, 100.0,
+        );
+        assert_eq!(kin, 2);
+        assert_eq!(non_kin, 0);
+    }
+
+    #[test]
+    fn count_neighbors_split_no_neighbors() {
+        let agents = vec![
+            Agent::new(0, 0, [5.0, 5.0]),
+            Agent::new(1, 1, [50.0, 50.0]),
+        ];
+        let grid = build_default(&agents);
+        let (kin, non_kin) = count_neighbors_split(
+            &grid, [5.0, 5.0], 2.0, 0, 0, &agents, 100.0,
+        );
+        assert_eq!(kin, 0);
+        assert_eq!(non_kin, 0);
     }
 
     #[test]

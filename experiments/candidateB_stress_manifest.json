@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-02T10:57:45.975912+00:00",
+  "candidate": "B (kin-sensing / collective organisation)",
+  "regimes": {
+    "famine": {
+      "conditions": {
+        "baseline": {
+          "n_seeds": 30
+        },
+        "candidateB_on": {
+          "n_seeds": 30
+        },
+        "candidateB_ablated": {
+          "n_seeds": 30
+        },
+        "sham": {
+          "n_seeds": 30
+        }
+      },
+      "extinction_rates": {
+        "baseline": 0.8666666666666667,
+        "candidateB_on": 0.8333333333333334,
+        "candidateB_ablated": 0.8666666666666667,
+        "sham": 0.9
+      }
+    },
+    "boom_bust": {
+      "conditions": {
+        "baseline": {
+          "n_seeds": 30
+        },
+        "candidateB_on": {
+          "n_seeds": 30
+        },
+        "candidateB_ablated": {
+          "n_seeds": 30
+        },
+        "sham": {
+          "n_seeds": 30
+        }
+      },
+      "extinction_rates": {
+        "baseline": 0.8333333333333334,
+        "candidateB_on": 0.8333333333333334,
+        "candidateB_ablated": 0.8333333333333334,
+        "sham": 0.9
+      }
+    }
+  }
+}

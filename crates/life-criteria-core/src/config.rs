@@ -38,6 +38,8 @@ pub enum AblationTarget {
     Growth,
     /// 8th criterion: learning/memory (within-lifetime homeostatic adaptation).
     Memory,
+    /// Candidate B: collective sensing (kin-fraction input channel).
+    CollectiveSensing,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -196,6 +198,18 @@ pub struct SimConfig {
     /// Must be in `[0, 1]`. Also used to initialize `organism.memory` at birth,
     /// so validated unconditionally (even when `enable_memory = false`).
     pub memory_target: f32,
+
+    // -----------------------------------------------------------------------
+    // Candidate B: Collective Sensing (kin-fraction / self-non-self recognition)
+    // -----------------------------------------------------------------------
+    /// Enable Candidate B: kin-sensing (self/non-self recognition).
+    /// When true, NN input channel 8 receives kin_fraction (ratio of same-organism
+    /// neighbors to total neighbors). When false, channel 8 is always 0.0.
+    pub enable_collective_sensing: bool,
+    /// Enable sham collective sensing (compute-matched control).
+    /// When true, kin_fraction values are permuted across agents within each step,
+    /// preserving the empirical distribution while breaking the causal link.
+    pub enable_sham_collective: bool,
 }
 
 impl Default for SimConfig {
@@ -269,6 +283,8 @@ impl Default for SimConfig {
             memory_decay: 0.99,
             memory_gain: 0.1,
             memory_target: 0.5,
+            enable_collective_sensing: false,
+            enable_sham_collective: false,
         }
     }
 }

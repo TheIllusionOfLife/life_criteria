@@ -80,6 +80,11 @@ pub struct World {
     homeostasis_counts_buffer: Vec<usize>,
     /// Reusable buffer for sham memory pre-computation — avoids per-step Vec allocation.
     sham_vals_buffer: Vec<[f32; 2]>,
+    /// Per-step encounter metrics, updated in nn_query phase.
+    last_kin_fraction_sum: f32,
+    last_agents_with_neighbors: usize,
+    last_neighbor_count_sum: f32,
+    last_alive_agent_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -301,6 +306,10 @@ impl World {
             homeostasis_sums_buffer: Vec::with_capacity(org_count),
             homeostasis_counts_buffer: Vec::with_capacity(org_count),
             sham_vals_buffer: Vec::with_capacity(org_count),
+            last_kin_fraction_sum: 0.0,
+            last_agents_with_neighbors: 0,
+            last_neighbor_count_sum: 0.0,
+            last_alive_agent_count: 0,
         })
     }
 
@@ -538,6 +547,15 @@ impl World {
         self.config.sensing_radius * dev_sensing as f64
     }
 
+    /// Compute encounter-rate metrics from the last nn_query phase.
+    fn encounter_metrics(&self) -> (f32, f32, f32) {
+        let n = self.last_alive_agent_count.max(1) as f32;
+        let kin_fraction_mean = self.last_kin_fraction_sum / n;
+        let agents_with_neighbors_frac = self.last_agents_with_neighbors as f32 / n;
+        let neighbor_count_mean = self.last_neighbor_count_sum / n;
+        (kin_fraction_mean, agents_with_neighbors_frac, neighbor_count_mean)
+    }
+
     pub fn run_experiment(&mut self, steps: usize, sample_every: usize) -> RunSummary {
         self.try_run_experiment(steps, sample_every)
             .unwrap_or_else(|e| panic!("{e}"))
@@ -576,6 +594,7 @@ impl World {
         for step in 1..=steps {
             self.step();
             if step % sample_every == 0 || step == steps {
+                let (kfm, awnf, ncm) = self.encounter_metrics();
                 samples.push(crate::metrics::collect_step_metrics(
                     step,
                     self.step_index,
@@ -587,6 +606,9 @@ impl World {
                     &self.organisms,
                     &self.agents,
                     self.config.enable_memory,
+                    kfm,
+                    awnf,
+                    ncm,
                 ));
             }
         }
@@ -678,6 +700,7 @@ impl World {
         for step in 1..=steps {
             self.step();
             if step % sample_every == 0 || step == steps {
+                let (kfm, awnf, ncm) = self.encounter_metrics();
                 samples.push(crate::metrics::collect_step_metrics(
                     step,
                     self.step_index,
@@ -689,6 +712,9 @@ impl World {
                     &self.organisms,
                     &self.agents,
                     self.config.enable_memory,
+                    kfm,
+                    awnf,
+                    ncm,
                 ));
             }
             if snapshot_steps_set.contains(&step) {
@@ -911,6 +937,9 @@ impl World {
                 AblationTarget::Memory => {
                     self.config.enable_memory = false;
                     zero_memories = true;
+                }
+                AblationTarget::CollectiveSensing => {
+                    self.config.enable_collective_sensing = false;
                 }
             }
         }
