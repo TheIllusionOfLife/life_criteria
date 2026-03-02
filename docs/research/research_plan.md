@@ -9,9 +9,7 @@ The goal here is to make a **drastic conceptual jump**: not “we added another 
 
 ## 0) One-sentence thesis (what ALIFE reviewers should remember)
 
-**Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
-
-**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results: all enabled-vs-baseline |d| ≤ 0.28, largest observed |d| = 0.28 (boom-bust Candidate A), below SESOI of d = 0.5. The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
+**Thesis:** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results: all enabled-vs-baseline |d| ≤ 0.28, largest observed |d| = 0.28 (boom-bust Candidate A), below SESOI of d = 0.5. The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
 
 ---
 
@@ -278,6 +276,8 @@ If learning still wins under novel perturbations, the 8th looks real.
 
 <details>
 <summary>Click to expand</summary>
+
+**Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
 
 1. Which 8th? → A) Learning/Memory (Phase 1), then B) Collective organization (Phase 3)
 2. Implementation? → EMA-driven homeostatic correction (separate phase, not NN input expansion)
