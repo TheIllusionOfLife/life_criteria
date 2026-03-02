@@ -11,7 +11,7 @@ The goal here is to make a **drastic conceptual jump**: not “we added another 
 
 **Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
 
-**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results: all enabled-vs-baseline |d| ≤ 0.28, largest across all conditions |d| = 0.41 (boom-bust sham, Candidate A), all below SESOI of d = 0.5. The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
+**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results: all enabled-vs-baseline |d| ≤ 0.28, largest observed |d| = 0.28 (boom-bust Candidate A), below SESOI of d = 0.5. The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
 
 ---
 
@@ -345,7 +345,11 @@ The following summarizes the completed experiments across Phases 1–3.
 | B (Kin) | Famine | −38.3 | −0.13 | [−0.64, 0.38] | 1.00 | Null |
 | B (Kin) | Boom-bust | −32.3 | −0.08 | [−0.59, 0.43] | 1.00 | Null |
 
-All point estimates $|d| \leq 0.28$ (largest observed: $d = -0.28$, boom-bust Candidate A), well below the SESOI of $d = 0.5$. However, the 95% CIs extend past $\pm 0.5$ for every comparison due to the sample size ($n = 30$), so **formal equivalence (TOST) cannot be claimed**. The results support a **bounded-null interpretation**: observed effects are consistently small, but the data cannot definitively exclude medium effects in either direction. Larger samples or meta-analytic combination across regimes would be needed for a formal equivalence claim.
+**Point estimates vs SESOI.** All enabled-vs-baseline point estimates are small: $|d| \leq 0.28$ (largest: $d = -0.28$, boom-bust Candidate A), well below the pre-specified SESOI of $d = 0.5$.
+
+**Confidence intervals and power.** The 95% CIs for Cohen's $d$ extend past $\pm 0.5$ for every comparison (typical half-width $\approx 0.51$), due to the sample size ($n = 30$ per condition). No single comparison's CI falls entirely within $[-0.5, 0.5]$.
+
+**Interpretation.** Formal equivalence via TOST cannot be claimed. The results support a **bounded-null interpretation**: observed effects are consistently small, but the data cannot definitively exclude medium effects in either direction. Larger samples or meta-analytic combination across regimes would be needed for a formal equivalence claim.
 
 ### Pivot outcome
 
