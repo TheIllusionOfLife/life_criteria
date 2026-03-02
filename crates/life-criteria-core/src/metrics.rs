@@ -39,6 +39,12 @@ pub struct StepMetrics {
     pub memory_mean_ch1: f32,
     /// Std-dev of organism memory[1] across alive organisms (0.0 when memory disabled).
     pub memory_std_ch1: f32,
+    /// Mean kin_fraction across all alive agents (0.0 when collective sensing disabled).
+    pub kin_fraction_mean: f32,
+    /// Fraction of alive agents that have at least one neighbor.
+    pub agents_with_neighbors_frac: f32,
+    /// Mean total neighbor count across alive agents.
+    pub neighbor_count_mean: f32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -229,6 +235,9 @@ pub fn collect_step_metrics(
     organisms: &[OrganismRuntime],
     agents: &[Agent],
     enable_memory: bool,
+    kin_fraction_mean: f32,
+    agents_with_neighbors_frac: f32,
+    neighbor_count_mean: f32,
 ) -> StepMetrics {
     let alive = organisms.iter().filter(|o| o.alive).count();
     let denom = alive.max(1) as f32;
@@ -372,5 +381,8 @@ pub fn collect_step_metrics(
         memory_std,
         memory_mean_ch1,
         memory_std_ch1,
+        kin_fraction_mean,
+        agents_with_neighbors_frac,
+        neighbor_count_mean,
     }
 }

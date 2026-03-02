@@ -192,6 +192,39 @@ pub fn build_index_active(
     )
 }
 
+/// Count neighbors within `radius` of `center`, split into kin (same organism)
+/// and non-kin (different organism). Returns `(kin_count, non_kin_count)`.
+///
+/// Uses `for_each_unique_neighbor` internally for a single-pass count.
+/// Requires the full `agents` slice to look up each neighbor's `organism_id`.
+pub fn count_neighbors_split(
+    grid: &UniformGrid,
+    center: [f64; 2],
+    radius: f64,
+    self_id: u32,
+    self_organism_id: u16,
+    agent_id_to_org: &std::collections::HashMap<u32, u16>,
+    world_size: f64,
+) -> (usize, usize) {
+    let mut kin = 0usize;
+    let mut non_kin = 0usize;
+    for_each_unique_neighbor(grid, center, radius, self_id, world_size, |neighbor_id| {
+        // Look up neighbor's organism_id via the ID→organism map.
+        // Agent IDs are not guaranteed to be contiguous slice indices
+        // (pruning compacts the vector without remapping IDs).
+        let is_kin = agent_id_to_org
+            .get(&neighbor_id)
+            .map(|&org| org == self_organism_id)
+            .unwrap_or(false);
+        if is_kin {
+            kin += 1;
+        } else {
+            non_kin += 1;
+        }
+    });
+    (kin, non_kin)
+}
+
 /// Count neighbors within `radius` of `center` (excludes agent with `self_id`).
 pub fn count_neighbors(
     grid: &UniformGrid,
@@ -412,6 +445,69 @@ mod tests {
         let result = query_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0);
         assert_eq!(result, vec![1]);
         assert_eq!(count_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0), 1);
+    }
+
+    fn build_id_to_org(agents: &[Agent]) -> std::collections::HashMap<u32, u16> {
+        agents.iter().map(|a| (a.id, a.organism_id)).collect()
+    }
+
+    #[test]
+    fn count_neighbors_split_distinguishes_kin_and_non_kin() {
+        // Agents 0,1 belong to organism 0; agent 2 belongs to organism 1
+        let agents = vec![
+            Agent::new(0, 0, [5.0, 5.0]),
+            Agent::new(1, 0, [6.0, 5.0]),
+            Agent::new(2, 1, [5.5, 5.0]),
+        ];
+        let grid = build_default(&agents);
+        let map = build_id_to_org(&agents);
+        // Query from agent 0's perspective (organism 0)
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, &map, 100.0);
+        assert_eq!(kin, 1, "agent 1 is kin (same organism)");
+        assert_eq!(non_kin, 1, "agent 2 is non-kin (different organism)");
+    }
+
+    #[test]
+    fn count_neighbors_split_all_kin() {
+        // All agents belong to organism 0
+        let agents = vec![
+            Agent::new(0, 0, [5.0, 5.0]),
+            Agent::new(1, 0, [6.0, 5.0]),
+            Agent::new(2, 0, [5.5, 5.0]),
+        ];
+        let grid = build_default(&agents);
+        let map = build_id_to_org(&agents);
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, &map, 100.0);
+        assert_eq!(kin, 2);
+        assert_eq!(non_kin, 0);
+    }
+
+    #[test]
+    fn count_neighbors_split_no_neighbors() {
+        let agents = vec![Agent::new(0, 0, [5.0, 5.0]), Agent::new(1, 1, [50.0, 50.0])];
+        let grid = build_default(&agents);
+        let map = build_id_to_org(&agents);
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, &map, 100.0);
+        assert_eq!(kin, 0);
+        assert_eq!(non_kin, 0);
+    }
+
+    #[test]
+    fn count_neighbors_split_non_contiguous_ids() {
+        // Simulate post-pruning state: agent IDs are sparse (100, 500, 1000)
+        // but the agents vector only has 3 elements.
+        // Before the HashMap fix, agents.get(500) would be out-of-bounds.
+        let agents = vec![
+            Agent::new(100, 0, [5.0, 5.0]),
+            Agent::new(500, 0, [6.0, 5.0]),
+            Agent::new(1000, 1, [5.5, 5.0]),
+        ];
+        let grid = build_default(&agents);
+        let map = build_id_to_org(&agents);
+        // Query from agent 100's perspective (organism 0)
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 100, 0, &map, 100.0);
+        assert_eq!(kin, 1, "agent 500 is kin (same organism 0)");
+        assert_eq!(non_kin, 1, "agent 1000 is non-kin (organism 1)");
     }
 
     #[test]

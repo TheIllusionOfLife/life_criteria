@@ -168,6 +168,7 @@ impl Default for MutationRates {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::NeuralNet;
     use proptest::prelude::*;
     use rand::SeedableRng;
     use rand_chacha::ChaCha12Rng;
@@ -200,7 +201,7 @@ mod tests {
 
     #[test]
     fn segment_layout_has_correct_sizes() {
-        let nn_len = 212;
+        let nn_len = NeuralNet::WEIGHT_COUNT;
         let g = Genome::with_nn_weights(vec![0.0; nn_len]);
         let segs = g.segments();
 
@@ -224,7 +225,7 @@ mod tests {
 
     #[test]
     fn memory_weights_accessor_returns_segment_7() {
-        let nn_len = 212;
+        let nn_len = NeuralNet::WEIGHT_COUNT;
         let g = Genome::with_nn_weights(vec![0.0; nn_len]);
         let mw = g.memory_weights();
         assert_eq!(mw.len(), Genome::MEMORY_SIZE);
@@ -239,7 +240,7 @@ mod tests {
         use rand::SeedableRng;
         use rand_chacha::ChaCha12Rng;
 
-        let nn_len = 212;
+        let nn_len = NeuralNet::WEIGHT_COUNT;
         let legacy_len = nn_len
             + Genome::METABOLIC_SIZE
             + Genome::HOMEOSTASIS_SIZE
@@ -268,7 +269,7 @@ mod tests {
         use rand_chacha::ChaCha12Rng;
 
         // A genome whose total size equals the legacy (pre-memory) size
-        let nn_len = 212;
+        let nn_len = NeuralNet::WEIGHT_COUNT;
         let legacy_len = nn_len
             + Genome::METABOLIC_SIZE
             + Genome::HOMEOSTASIS_SIZE
@@ -303,7 +304,7 @@ mod tests {
 
     #[test]
     fn segment_data_returns_correct_slices() {
-        let g = Genome::with_nn_weights(vec![1.0; 212]);
+        let g = Genome::with_nn_weights(vec![1.0; NeuralNet::WEIGHT_COUNT]);
         assert_eq!(g.segment_data(1).len(), 16);
         assert!(
             g.segment_data(1).iter().all(|&v| v == 0.0),
@@ -314,7 +315,7 @@ mod tests {
 
     #[test]
     fn set_segment_data_overwrites_zeros() {
-        let mut g = Genome::with_nn_weights(vec![0.0; 212]);
+        let mut g = Genome::with_nn_weights(vec![0.0; NeuralNet::WEIGHT_COUNT]);
         let data = [
             0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6,
         ];
@@ -325,13 +326,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_segment_data_panics_on_wrong_size() {
-        let mut g = Genome::with_nn_weights(vec![0.0; 212]);
+        let mut g = Genome::with_nn_weights(vec![0.0; NeuralNet::WEIGHT_COUNT]);
         g.set_segment_data(1, &[0.0; 8]); // segment 1 is 16 floats
     }
 
     #[test]
     fn mutation_covers_all_segments() {
-        let mut g = Genome::with_nn_weights(vec![0.0; 212]);
+        let mut g = Genome::with_nn_weights(vec![0.0; NeuralNet::WEIGHT_COUNT]);
         let mut rng = ChaCha12Rng::seed_from_u64(99);
         let rates = MutationRates {
             point_rate: 0.5,
@@ -339,14 +340,16 @@ mod tests {
             ..MutationRates::default()
         };
         g.mutate(&mut rng, &rates);
-        let non_nn_changed = g.data()[212..].iter().any(|&v| v != 0.0);
+        let non_nn_changed = g.data()[NeuralNet::WEIGHT_COUNT..]
+            .iter()
+            .any(|&v| v != 0.0);
         assert!(non_nn_changed, "mutation should affect non-NN segments too");
     }
 
     proptest! {
         #[test]
         fn proptest_mutation_always_stays_within_limit(seed: u64, steps in 1usize..64) {
-            let mut g = Genome::with_nn_weights(vec![0.0; 212]);
+            let mut g = Genome::with_nn_weights(vec![0.0; NeuralNet::WEIGHT_COUNT]);
             let rates = MutationRates {
                 point_rate: 0.4,
                 point_scale: 2.0,

@@ -1,18 +1,18 @@
-//! Trivial feedforward neural network: 8 inputs → 16 hidden (tanh) → 4 outputs (tanh).
-//! Stack-allocated, no heap. 212 weights total.
+//! Trivial feedforward neural network: 9 inputs → 16 hidden (tanh) → 4 outputs (tanh).
+//! Stack-allocated, no heap. 228 weights total.
 //!
-//! Inputs:  position(2) + velocity(2) + internal_state(3) + neighbor_count(1) = 8
+//! Inputs:  position(2) + velocity(2) + internal_state(3) + neighbor_count(1) + kin_fraction(1) = 9
 //! Outputs: velocity_delta(2) + state_delta(2) = 4
 
-const INPUT_SIZE: usize = 8;
+const INPUT_SIZE: usize = 9;
 const HIDDEN_SIZE: usize = 16;
 const OUTPUT_SIZE: usize = 4;
 
 #[derive(Clone, Debug)]
 pub struct NeuralNet {
-    // weights: input→hidden (8×16) + hidden bias (16) + hidden→output (16×4) + output bias (4)
-    // Total: 128 + 16 + 64 + 4 = 212 parameters
-    pub w_ih: [[f32; HIDDEN_SIZE]; INPUT_SIZE],  // 8×16
+    // weights: input→hidden (9×16) + hidden bias (16) + hidden→output (16×4) + output bias (4)
+    // Total: 144 + 16 + 64 + 4 = 228 parameters
+    pub w_ih: [[f32; HIDDEN_SIZE]; INPUT_SIZE],  // 9×16
     pub b_h: [f32; HIDDEN_SIZE],                 // 16
     pub w_ho: [[f32; OUTPUT_SIZE]; HIDDEN_SIZE], // 16×4
     pub b_o: [f32; OUTPUT_SIZE],                 // 4
@@ -24,7 +24,7 @@ impl NeuralNet {
         let mut next = || {
             weights
                 .next()
-                .expect("insufficient weights: need WEIGHT_COUNT (212) elements")
+                .expect("insufficient weights: need WEIGHT_COUNT (228) elements")
         };
 
         let mut w_ih = [[0.0f32; HIDDEN_SIZE]; INPUT_SIZE];
@@ -113,8 +113,8 @@ mod tests {
 
     #[test]
     fn weight_count_matches_dimensions() {
-        assert_eq!(NeuralNet::WEIGHT_COUNT, 8 * 16 + 16 + 16 * 4 + 4);
-        assert_eq!(NeuralNet::WEIGHT_COUNT, 212);
+        assert_eq!(NeuralNet::WEIGHT_COUNT, 9 * 16 + 16 + 16 * 4 + 4);
+        assert_eq!(NeuralNet::WEIGHT_COUNT, 228);
     }
 
     #[test]
