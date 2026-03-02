@@ -45,10 +45,10 @@ _REGIMES = ["famine", "boom_bust"]
 _CONDITIONS = ["baseline", "criterion8_on", "criterion8_ablated", "sham"]
 
 # Famine-specific constants
-_FAMINE_SHIFT_STEP = 4_000
+_FAMINE_SHIFT_STEP = 3_000
 
 # Boom-bust constants
-_CYCLE_PERIOD = 1_000  # bust at odd half-cycles: [1k,2k), [3k,4k), [5k,6k), [7k,8k), [9k,10k)
+_CYCLE_PERIOD = 2_500  # bust at odd half-cycles: [2.5k,5k), [7.5k,10k)
 
 # ---------------------------------------------------------------------------
 # Data loading
@@ -145,9 +145,10 @@ def _extinction_rate(results: list[dict]) -> float:
 def _per_cycle_survival(result: dict, period: int = _CYCLE_PERIOD) -> list[float]:
     """Alive count at the end of each bust phase (boom-bust regime).
 
-    Bust phases end at steps: 2k, 4k, 6k, 8k, 10k (end of odd half-cycles).
+    Bust phases end at steps: period*2, period*4, ... (end of odd half-cycles).
+    With period=2500: bust phases at [2.5k,5k) and [7.5k,10k), ending at 5k and 10k.
     """
-    bust_end_steps = [period * (2 * i + 2) for i in range(5)]  # 2000, 4000, 6000, 8000, 10000
+    bust_end_steps = [period * (2 * i + 2) for i in range(10_000 // (period * 2))]
     sample_map = {s["step"]: s["alive_count"] for s in result.get("samples", [])}
     return [float(sample_map.get(step, 0)) for step in bust_end_steps]
 

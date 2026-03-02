@@ -46,8 +46,8 @@ _COND_ORDER = ["baseline", "sham", "criterion8_ablated", "criterion8_on"]
 
 _EXP_DIR = PROJECT_ROOT / "experiments"
 
-_FAMINE_SHIFT_STEP = 4_000
-_CYCLE_PERIOD = 1_000
+_FAMINE_SHIFT_STEP = 3_000
+_CYCLE_PERIOD = 2_500
 
 # ---------------------------------------------------------------------------
 # Data helpers
@@ -96,7 +96,7 @@ def _post_shock_auc(result: dict, shock_step: int = _FAMINE_SHIFT_STEP) -> float
 
 def _per_cycle_survival(result: dict, period: int = _CYCLE_PERIOD) -> list[float]:
     """Alive count at end of each bust phase."""
-    bust_end_steps = [period * (2 * i + 2) for i in range(5)]
+    bust_end_steps = [period * (2 * i + 2) for i in range(10_000 // (period * 2))]
     sample_map = {s["step"]: s["alive_count"] for s in result.get("samples", [])}
     return [float(sample_map.get(step, 0)) for step in bust_end_steps]
 
@@ -220,7 +220,8 @@ def _panel_famine_boxplot(ax, conditions: dict[str, list[dict]], analysis: dict 
 def _panel_boom_bust_trajectories(ax, conditions: dict[str, list[dict]]) -> None:
     """Panel C: Population trajectories with bust-phase shading."""
     # Shade bust phases (odd half-cycles)
-    for i in range(5):
+    n_cycles = 10_000 // (_CYCLE_PERIOD * 2)
+    for i in range(n_cycles):
         bust_start = _CYCLE_PERIOD * (2 * i + 1)
         bust_end = _CYCLE_PERIOD * (2 * i + 2)
         ax.axvspan(bust_start, bust_end, color="#FFE0E0", alpha=0.4, zorder=0)
@@ -252,7 +253,8 @@ def _panel_learning_curve(ax, conditions: dict[str, list[dict]]) -> None:
     criterion8_on should show a positive slope (improving across busts),
     while baseline and sham should be flat or declining.
     """
-    cycle_numbers = np.arange(1, 6)
+    n_cycles = 10_000 // (_CYCLE_PERIOD * 2)
+    cycle_numbers = np.arange(1, n_cycles + 1)
 
     for cond in _COND_ORDER:
         results = conditions.get(cond, [])
@@ -262,12 +264,12 @@ def _panel_learning_curve(ax, conditions: dict[str, list[dict]]) -> None:
         if not per_cycle_all:
             continue
 
-        arr = np.array(per_cycle_all)  # (n_seeds, 5)
+        arr = np.array(per_cycle_all)  # (n_seeds, n_cycles)
         means = np.mean(arr, axis=0)
         if arr.shape[0] > 1:
             sems = np.std(arr, axis=0, ddof=1) / np.sqrt(arr.shape[0])
         else:
-            sems = np.zeros(5)
+            sems = np.zeros(n_cycles)
 
         color = _COLORS[cond]
         ax.fill_between(cycle_numbers, means - sems, means + sems, color=color, alpha=0.15)
