@@ -29,19 +29,20 @@ swarm-organism simulator implementing all seven criteria as
 interdependent, ablatable processes, we test two candidates under
 famine and boom-bust perturbation regimes ($n=30$ seeds per condition,
 held-out test set): \textbf{Candidate~A} (within-lifetime
-learning/memory via EMA state) and \textbf{Candidate~B} (collective
-organization via kin-sensing).  Both yield null results: all adjusted
-$p$-values $\geq 0.33$ (Holm--Bonferroni), all $|d| < 0.42$
+learning via EMA-driven homeostatic correction) and \textbf{Candidate~B}
+(collective organization via kin-sensing).  Both yield null results: all
+adjusted $p$-values $\geq 0.33$ (Holm--Bonferroni), all $|d| < 0.42$
 (Cohen's~$d$), below our pre-specified smallest effect size of interest
 ($d = 0.5$).  Crucially, the nulls are \emph{diagnosed}: Candidate~A's
 memory mechanism converges correctly (EMA late variance $p < 10^{-9}$
 vs.\ sham) but provides no survival advantage; Candidate~B's kin signal
-becomes degenerate ($\sim\!1\%$) as organisms converge to single-agent
-configurations under population caps.  These bounded null results
-positively constrain the effect size of each candidate below practical
-significance in the tested regimes, while the validated protocol and
-diagnostic methodology provide a reusable template for future candidate
-evaluation.
+becomes degenerate (mean \texttt{kin\_fraction} 0.03 under famine, 0.19
+under boom-bust---driven by rare multi-agent survivors) as organisms
+converge to single-agent configurations under population caps.  These
+bounded null results constrain the observed effect size of each candidate
+below practical significance in the tested regimes, while the validated
+protocol and diagnostic methodology provide a reusable template for
+future candidate evaluation.
 \end{abstract}
 
 %% ================================================================
@@ -100,7 +101,7 @@ Reporting null results is essential for cumulative science
 \citep{rosenthal_1979_file, fanelli_2012_negative}.  By defining our
 smallest effect size of interest (SESOI) \emph{a priori} and bounding
 all observed effects below it, we transform ``failure to reject $H_0$''
-into a positive equivalence claim
+into a bounded null result
 \citep{lakens_2017_equivalence, lakens_2018_sesoi}: the effect of each
 candidate, if any, is smaller than a medium effect size under the tested
 regimes.
@@ -169,6 +170,11 @@ A candidate that fails any legitimacy test under a given regime receives
 a \emph{regime-specific null}, not a universal rejection---the
 candidate may succeed under different ecological conditions.
 
+In this study, we focus on \textbf{causal necessity} (ablation testing)
+as the primary empirical test, supplemented by mechanism verification.
+Orthogonality and non-reducibility analyses remain important for
+future work with positive-result candidates (see Limitations).
+
 
 \subsection{Experimental Design}
 
@@ -206,8 +212,11 @@ We pre-specify a smallest effect size of interest (SESOI) of $d \geq
 0.5$ (medium effect per Cohen's conventions).  With $n = 30$ per
 condition, we have approximately 80\% power to detect $d \geq 0.5$.
 If all observed $|d| < 0.5$ and adjusted $p$-values remain
-non-significant, we make a positive equivalence claim: the candidate's
-effect is bounded below practical significance in the tested regime.
+non-significant, we interpret this as a bounded null: the candidate's
+effect, if any, is smaller than a medium effect size in the tested
+regime.  We note that formal equivalence testing (e.g., TOST;
+\citealt{lakens_2017_equivalence}) would further strengthen this claim
+but is beyond the scope of the current analysis.
 
 
 %% ================================================================
@@ -215,51 +224,59 @@ effect is bounded below practical significance in the tested regime.
 
 \subsection{Implementation}
 
-Candidate~A adds a \textbf{memory vector} $\mathbf{m}_t \in
-\mathbb{R}^8$ to each organism, updated via exponential moving average
-(EMA):
+Candidate~A adds a \textbf{memory-driven homeostatic correction phase}
+operating alongside (but separately from) the neural controller.  Each
+organism maintains a 2-element exponential moving average (EMA) tracking
+the mean internal state of its agents:
 \begin{equation}
-\mathbf{m}_{t+1} = \alpha \cdot \mathbf{m}_t + (1 - \alpha) \cdot
-\mathbf{s}_t
+m_{t+1}^{(i)} = \alpha \cdot m_t^{(i)} + (1 - \alpha) \cdot
+\bar{s}_t^{(i)}, \quad i \in \{0, 1\}
 \end{equation}
-where $\mathbf{s}_t$ is the current sensory input and $\alpha \in
-[0, 1]$ is a genome-encoded decay parameter.  The controller's input
-expands from 8 to 16 dimensions (observation $\oplus$ memory),
-increasing the weight count from 212 to 388 to accommodate the wider
-input layer.  Memory is initialized to zero at birth and accumulates a
-running average of the organism's sensory experience.
+where $\bar{s}_t^{(i)}$ is the mean of internal-state channel~$i$ across
+the organism's agents, and $\alpha \in [0, 1]$ is a configurable decay
+parameter.  The memory trace drives a proportional correction toward a
+genome-modulated target: four genome-encoded parameters (two gains, two
+targets) control the strength and set-point of the correction, which is
+applied directly to agent internal states each timestep.  Memory is
+initialized to zero at birth.  The neural controller architecture
+(212~weights for the base 8-input topology) is unchanged; the memory
+phase adds only four evolvable genome parameters.
 
 This design satisfies the functional analogy conditions: it is a dynamic
-process (continuous EMA updates), its ablation is clean (zero the memory
-vector), and it couples with response-to-stimuli and homeostasis through
-the shared neural controller.  The additional condition for Candidate~A
-is \textbf{experience-dependence}: performance should improve as a
-function of within-lifetime experience under stationary genetics.
+process (continuous EMA updates consuming internal-state signals), its
+ablation is clean (skip the correction phase), and it couples with
+homeostasis (modifying internal state) and response-to-stimuli (internal
+state feeds the neural controller).  The additional condition for
+Candidate~A is \textbf{experience-dependence}: performance should improve
+as a function of within-lifetime experience under stationary genetics.
 
-The \textbf{sham control} applies random Gaussian updates to the memory
-vector at the same computational cost, preserving the expanded input
-dimensionality while destroying information content.
+The \textbf{sham control} replaces the EMA trace with independent uniform
+random draws each timestep, preserving the correction code path and
+computational cost while destroying temporal coherence
+\citep{floreano_2000_evolutionary, soltoggio_2018_born}.
 
 \subsection{Results}
 
 Table~\ref{tab:results} summarizes outcomes across three experiment
 suites.
 
-\paragraph{Normal conditions (no perturbation).}
+\subsubsection*{Normal conditions (no perturbation)}
 Survival AUC: $+106.5$ vs.\ baseline ($d = 0.13$, $p_\mathrm{adj} =
 0.94$).  No significant effect.  Ablated and sham conditions are
 similarly indistinguishable from baseline ($d < 0.10$).
 
-\paragraph{Famine stress.}
+\subsubsection*{Famine stress}
 Post-shock AUC: $+7.3$ ($d = 0.03$, $p_\mathrm{adj} = 1.0$).  Baseline
 extinction rate 86.7\%, enabled 93.3\%.  Memory provides no survival
 advantage under acute resource deprivation.
 
-\paragraph{Boom-bust stress.}
+\subsubsection*{Boom-bust stress}
 Survival AUC: $-103.2$ ($d = -0.28$, $p_\mathrm{adj} = 0.46$).
-Extinction rates similarly high across all conditions (93.3\% baseline
-and enabled, 70.0\% ablated).  The slight negative trend is
-non-significant and within noise.
+Extinction: 93.3\% for both baseline and enabled, but only 70.0\% for
+the ablated condition and 66.7\% for sham---a pattern suggesting that
+disabling or randomizing the memory correction may reduce destabilizing
+homeostatic interference under cyclic stress, though none of these
+differences reach significance after correction.
 
 \subsection{Mechanism Verification}
 
@@ -283,8 +300,10 @@ for memory-contingent behaviors.
 
 \subsection{Implementation}
 
-Candidate~B adds a \textbf{kin-sensing channel} that provides each agent
-with information about nearby relatives.  A single-pass neighbor count
+Inspired by Hamilton's inclusive fitness theory
+\citep{hamilton_1964_genetical, west_2007_social}, Candidate~B adds a
+\textbf{kin-sensing channel} that provides each agent with information
+about nearby relatives.  A single-pass neighbor count
 (\texttt{count\_neighbors\_split}) partitions nearby agents into kin
 (same genome lineage) and non-kin, computing a \texttt{kin\_fraction}
 $\in [0, 1]$ that enters the neural controller as an additional input
@@ -310,12 +329,12 @@ organism and its actual neighbors.
 Table~\ref{tab:results} shows Candidate~B results under both
 perturbation regimes.
 
-\paragraph{Famine stress.}
+\subsubsection*{Famine stress}
 Post-shock AUC: $-38.3$ vs.\ baseline ($d = -0.13$, $p_\mathrm{adj} =
 1.0$).  Extinction: 96.7\% enabled vs.\ 86.7\% baseline.  All
 conditions statistically equivalent.
 
-\paragraph{Boom-bust stress.}
+\subsubsection*{Boom-bust stress}
 Survival AUC: $-32.3$ ($d = -0.08$, $p_\mathrm{adj} = 1.0$).
 Extinction: 76.7\% enabled vs.\ 83.3\% baseline.  Again, no significant
 differences.
@@ -349,9 +368,8 @@ provide information.
 \subsection{Interpreting Double-Null Results}
 
 Both candidates yield null results across all tested regimes.  Under
-our equivalence framing, this is a \emph{positive} finding: we can
-bound the effect size of each candidate below $d = 0.5$ (our SESOI)
-with 80\% power.  The largest observed effect across all comparisons
+our SESOI framing, we can bound the observed effect size of each
+candidate below $d = 0.5$ with 80\% power.  The largest observed effect across all comparisons
 is $|d| = 0.41$ (Candidate~A, boom-bust, sham condition), which
 remains non-significant after Holm--Bonferroni correction
 ($p_\mathrm{adj} = 0.33$).
@@ -429,6 +447,13 @@ simulator.  Different substrate architectures (e.g., continuous CA,
 voxel-based robots) may support different candidate mechanisms more
 naturally.
 
+\textbf{Legitimacy test scope.}  Of the three proposed legitimacy tests,
+we empirically evaluated only causal necessity (ablation) and mechanism
+verification.  Orthogonality and non-reducibility analyses---which
+require fitting predictive models and running retuned baselines---are
+most informative for positive-result candidates and remain as future
+work.
+
 
 \subsection{What Would Count as Success}
 
@@ -484,8 +509,7 @@ to that search.
 \caption{Summary of results across all experiment suites.  $\Delta$AUC
 is the difference in mean AUC (enabled $-$ baseline).  $d$ is Cohen's
 $d$.  $p_\mathrm{adj}$ is the Holm--Bonferroni adjusted $p$-value.
-Ext.\ is extinction rate.  All $|d| < 0.5$ (our SESOI), supporting
-equivalence.}
+Ext.\ is extinction rate.  All $|d| < 0.5$ (our SESOI).}
 \label{tab:results}
 \small
 \begin{tabular}{@{}llrrrrl@{}}

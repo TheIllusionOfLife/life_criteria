@@ -11,7 +11,7 @@ The goal here is to make a **drastic conceptual jump**: not “we added another 
 
 **Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
 
-**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework and both yielded bounded null results (all |d| < 0.42, below SESOI of d = 0.5). The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.* 
+**Thesis (updated, post-experiment):** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results (all |d| < 0.42, below SESOI of d = 0.5). The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
 
 ---
 
@@ -272,37 +272,21 @@ If learning still wins under novel perturbations, the 8th looks real.
 
 ---
 
-# Questions for you (so I can update this document precisely)
+## Archived: Pre-Experiment Questionnaire
 
-Please answer as many as you can; even short answers are fine.
+*The following questions guided the initial experiment design (answered during Phase 0 planning). Preserved for reference.*
 
-1. **Which 8th are you leaning toward right now?**
+<details>
+<summary>Click to expand</summary>
 
-   * A) Learning/Memory (within lifetime)
-   * B) Collective organization
-   * C) Open-ended novelty
-   * D) Other (describe)
+1. Which 8th? → A) Learning/Memory (Phase 1), then B) Collective organization (Phase 3)
+2. Implementation? → EMA-driven homeostatic correction (separate phase, not NN input expansion)
+3. Perturbations? → Famine (resource drop at step 3000), Boom-bust (cyclic period 2500)
+4. Framing? → “8th functionality axis” (safer for ALIFE)
+5. Compute budget? → n=30 seeds × 10k steps per condition (4 conditions × 2 regimes)
+6. External substrate? → No, single system only
 
-2. If **Learning/Memory**: which implementation feels most compatible with your current codebase?
-
-   * A1 plastic weights, A2 memory vector (RNN-lite), A3 fast variables
-
-3. **What perturbations are easiest to implement in your environment today?**
-
-   * resource relocation, waste toxicity change, sensor corruption, predators/parasites, other?
-
-4. Do you want the 8th to be framed as:
-
-   * **(i)** “8th life criterion” (strong claim)
-   * **(ii)** “8th functionality axis for life-likeness / robustness” (safer, often better for ALIFE)
-
-5. What’s your **compute budget** for the new experiments (roughly):
-
-   * same as current (n=30 seeds × 2000 steps), or can you do longer/more regimes?
-
-6. Are you open to including **one external substrate** comparison (even a minimal one), or must this stay within your current system?
-
-If you answer these, I’ll revise this Markdown into a more *execution-ready* version with: exact experimental grid, exact metrics, and a proposed “main theorem-like claim + falsification tests” tailored to your constraints.
+</details>
 
 ---
 
@@ -314,7 +298,7 @@ The following summarizes the completed experiments across Phases 1–3.
 
 ### Candidate A: Learning & Memory (within-lifetime adaptation)
 
-**Implementation**: EMA memory vector ($\mathbf{m}_t \in \mathbb{R}^8$), genome-encoded decay $\alpha$. Controller input expanded from 8→16 dims (212→388 weights). Sham: random Gaussian updates at same compute cost.
+**Implementation**: EMA-driven homeostatic correction phase. 2-element EMA tracking mean internal-state channels IS[0] and IS[1], with configurable decay $\alpha$. Four genome-encoded parameters (2 gains, 2 targets) modulate correction strength and set-point. NN architecture unchanged (212 weights for 8-input base topology). Sham: uniform random draws replace EMA trace each timestep at same compute cost.
 
 **Suite 1 — Normal conditions** (30 seeds × 10k steps, held-out seeds 100–129):
 - Survival AUC: +106.5 vs baseline ($d = 0.13$, $p_\text{adj} = 0.94$) → **null**
