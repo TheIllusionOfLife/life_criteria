@@ -4,15 +4,16 @@ Two regimes test whether memory provides survival benefit under genuine stress:
 
 Famine
 ------
-  Sharp resource crash at step 3,000.  Regen drops to 0.001 (1.0/step)
-  vs consumption ~4.0/step, creating a real deficit that should cause
-  50-80% baseline extinction over the remaining 7,000 steps.
+  Sharp resource crash at step 3,000.  Regen drops to 0.0 with raised
+  death threshold (0.25) so organisms can't equilibrate at low energy.
+  Calibrated to ~60% baseline extinction (3/5 seeds).
 
 Boom-Bust
 ---------
-  Cyclic resource availability with period 1,000 (5 bust phases in 10k steps).
-  During bust, regen = 0.001.  Organisms that "learned" from bust #1 should
-  survive bust #2 better — ideal for testing memory's experience-dependence.
+  Cyclic resource availability with period 2,500 (2 bust phases in 10k steps).
+  Weak boom-phase regen (0.002) prevents full recovery between busts.
+  Organisms that "learned" from bust #1 should survive bust #2 better.
+  Calibrated to ~60% baseline extinction (3/5 seeds).
 
 Conditions (same 4 as criterion8 experiment)
 ---------------------------------------------
@@ -72,37 +73,50 @@ _BASE_OVERRIDES: dict = {
 # ---------------------------------------------------------------------------
 
 # Famine: sharp resource crash at step 3,000
-# Calibration v1 (rate=0.001): 0% extinction — deficit too slow.
-# Calibration v2 (rate=0.0, boundary_decay=0.005): 0% extinction — energy
-#   drops to 0.163 at step 10k but death_energy_threshold=0.0 means nobody dies.
-# v3: zero regen + reduced metabolism efficiency + raised death threshold.
-#   Energy drains faster and organisms die at 0.15 instead of 0.0.
-# Calibration history (baseline extinction rate):
-#   v1: rate=0.001, no extras → 0% (organisms reach equilibrium)
-#   v2: rate=0.0, boundary_decay=0.005 → 0% (energy=0.163 at 10k, threshold=0.0)
-#   v3: rate=0.0, efficiency=0.3, threshold=0.15 → 100% (too harsh)
-#   v4: rate=0.0, efficiency=0.5, threshold=0.15 → ~100% (still too harsh)
-#   v5: rate=0.001, threshold=0.15, boundary_decay=0.003 → 0% (equilib at 0.83)
-#   v6: rate=0.0, efficiency=0.7, threshold=0.10 → ~95% extinct (cliff)
-#   v7: rate=0.0, efficiency=0.8, threshold=0.10 → 85-100% (still cliff)
-#   v8: rate=0.001, eff=0.8, thresh=0.10 → 0% (trickle → equilibrium)
+# Calibration history (baseline extinction rate, 5 seeds):
+#   v1:  rate=0.001, no extras → 0%
+#   v2:  rate=0.0, boundary_decay=0.005 → 0% (energy=0.163 at 10k, threshold=0.0)
+#   v3:  rate=0.0, eff=0.3, thresh=0.15 → 100% (too harsh)
+#   v4:  rate=0.0, eff=0.5, thresh=0.15 → ~100%
+#   v5:  rate=0.001, thresh=0.15, boundary_decay=0.003 → 0%
+#   v6:  rate=0.0, eff=0.7, thresh=0.10 → ~95%
+#   v7:  rate=0.0, eff=0.8, thresh=0.10 → 85-100%
+#   v8:  rate=0.001, eff=0.8, thresh=0.10 → 0%
 #   Insight: phase transition — any trickle → 0%, zero → ~100%.
-#   v9: rate=0.0, eff=0.8, thresh=0.10, shift=5k → 0-31% (too mild)
-#   v10: shift=4k → 6k post-shift (between v7's 7k→100% and v9's 5k→10%)
+#   v9:  rate=0.0, eff=0.8, thresh=0.10, shift=5k → 0-31%
+#   v10: shift=4k, rate=0.0, eff=0.8, thresh=0.10 → 0% (decline 38-93%, no extinction)
+#   v11: shift=4k, rate=0.0, eff=0.8, thresh=0.15 → 0% (alive 1-32, equil ~0.23)
+#   v12: shift=4k, rate=0.0, eff=0.8, thresh=0.20 → 0% (alive 2-38, equil ~0.29)
+#   Insight: organisms find stable low-energy equilibrium above threshold.
+#   v13: shift=3k, rate=0.0, eff=0.5, thresh=0.20 → 60% ✓
+#   v14: shift=3k, rate=0.0, eff=0.8, thresh=0.25 → 60% ✓ (selected)
 _FAMINE_OVERRIDES: dict = {
-    "environment_shift_step": 4_000,
+    "environment_shift_step": 3_000,
     "environment_shift_resource_rate": 0.0,
     "metabolism_efficiency_multiplier": 0.8,
-    "death_energy_threshold": 0.10,
+    "death_energy_threshold": 0.25,
 }
 
-# Boom-Bust: cyclic resource with period 1,000 (10 half-cycles, 5 busts)
-# Efficiency + threshold create real bust-phase mortality.
+# Boom-Bust: cyclic resource with period 2,500 (2 bust phases in 10k steps)
+# Calibration history (baseline extinction rate, 5 seeds):
+#   v1:  cycle=1k, regen=0.01, eff=0.8, thresh=0.10 → 0% (min alive=100+)
+#   v2:  cycle=1k, regen=0.01, eff=0.6, thresh=0.15 → 0% (min alive=100+)
+#   v3:  cycle=2k, regen=0.005, eff=0.5, thresh=0.20 → 0%
+#   v4:  cycle=1k, regen=0.01, eff=0.3, thresh=0.20 → 0% (min alive=68)
+#   v5:  cycle=1k, regen=0.002, eff=0.5, thresh=0.20 → 0%
+#   v6:  cycle=1k, regen=0.001, eff=0.5, thresh=0.15 → 0% (min alive=87)
+#   Insight: short cycles (1k) allow full recovery during boom; need longer busts.
+#   v9:  cycle=5k, regen=0.001, eff=0.5, thresh=0.20 → 100% (only 1 bust, too harsh)
+#   v10: cycle=5k, regen=0.001, eff=0.5, thresh=0.25 → 80%
+#   v13: cycle=2.5k, regen=0.002, eff=0.5, thresh=0.25 → 60% ✓ (selected)
+#   v18: cycle=2.5k, regen=0.0025, eff=0.5, thresh=0.25 → 0% (alive 1-14, no extinction)
+#   v19: cycle=2.5k, regen=0.002, eff=0.6, thresh=0.25 → 80% (too harsh)
 _BOOM_BUST_OVERRIDES: dict = {
-    "environment_cycle_period": 1_000,
+    "resource_regeneration_rate": 0.002,
+    "environment_cycle_period": 2_500,
     "environment_cycle_low_rate": 0.0,
-    "metabolism_efficiency_multiplier": 0.8,
-    "death_energy_threshold": 0.10,
+    "metabolism_efficiency_multiplier": 0.5,
+    "death_energy_threshold": 0.25,
 }
 
 REGIME_OVERRIDES: dict[str, dict] = {
