@@ -1,0 +1,555 @@
+\documentclass[letterpaper]{article}
+\usepackage{natbib,alifeconf}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{url}
+
+\title{Searching for an Eighth Criterion of Life:\\
+A Falsifiable Framework and Two Null Results}
+
+\author{Anonymous}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The textbook seven criteria of life---cellular organization, metabolism,
+homeostasis, growth, reproduction, response to stimuli, and
+evolution---are widely used to characterize living systems, yet it
+remains unclear whether they suffice to explain resilience under novel
+perturbations.  We present a falsifiable framework for evaluating
+candidate eighth criteria, grounded in functional analogy: each
+criterion must be a dynamic, energy-consuming process whose ablation
+causes measurable degradation and whose activity forms feedback loops
+with other criteria.  We extend this framework with an additional
+requirement for candidate eighth criteria---experience-dependence or
+collective signal utilization---and define three legitimacy tests:
+orthogonality, non-reducibility, and causal necessity.  Using a hybrid
+swarm-organism simulator implementing all seven criteria as
+interdependent, ablatable processes, we test two candidates under
+famine and boom-bust perturbation regimes ($n=30$ seeds per condition,
+held-out test set): \textbf{Candidate~A} (within-lifetime
+learning via EMA-driven homeostatic correction) and \textbf{Candidate~B}
+(collective organization via kin-sensing).  Both yield null results: all
+adjusted $p$-values $\geq 0.33$ (Holm--Bonferroni), all $|d| < 0.42$
+(Cohen's~$d$), below our pre-specified smallest effect size of interest
+($d = 0.5$).  Crucially, the nulls are \emph{diagnosed}: Candidate~A's
+memory mechanism converges correctly (EMA late variance $p < 10^{-9}$
+vs.\ sham) but provides no survival advantage; Candidate~B's kin signal
+becomes degenerate (mean \texttt{kin\_fraction} 0.03 under famine, 0.19
+under boom-bust---driven by rare multi-agent survivors) as organisms
+converge to single-agent configurations under population caps.  These
+bounded null results constrain the observed effect size of each candidate
+below practical significance in the tested regimes, while the validated
+protocol and diagnostic methodology provide a reusable template for
+future candidate evaluation.
+\end{abstract}
+
+%% ================================================================
+\section{Introduction}
+
+What makes a system life-like?  Introductory biology textbooks
+commonly enumerate seven criteria: cellular organization, metabolism,
+homeostasis, growth and development, reproduction, response to stimuli,
+and evolution \citep{urry_2020_campbell}.  These criteria serve as a
+practical checklist, yet whether they constitute a \emph{sufficient}
+characterization of life---especially under novel or extreme
+conditions---remains an open question
+\citep{cleland_2002_defining, benner_2010_defining}.
+
+Artificial life research has long sought to operationalize these
+criteria computationally.  Systems such as Tierra \citep{ray_1991_approach},
+Avida \citep{ofria_2004_avida}, Polyworld \citep{yaeger_1994_computational},
+Lenia \citep{chan_2019_lenia}, and ALIEN \citep{heinemann_2008_alien}
+each implement subsets of life-like properties, from self-replication and
+open-ended evolution to continuous morphogenesis.  Recent work on
+Flow-Lenia \citep{plantec_2023_flow} and Coralai
+\citep{barbieux_2024_coralai} pushes toward mass-conserving,
+embodied neural ecosystems.  Theoretical frameworks from autopoiesis
+\citep{maturana_1980_autopoiesis} through chemoton theory
+\citep{ganti_2003_principles} emphasize the integration of metabolic,
+boundary, and informational subsystems as minimal requirements
+\citep{ruizmirazo_2004_universal}.
+
+Despite this rich landscape, few systems implement \emph{all seven}
+criteria as interdependent, individually ablatable processes---and
+fewer still ask whether the seven are \emph{sufficient}.
+\citet{bedau_2000_open} identified open problems in ALife that implicitly
+point beyond the seven, including the evolution of adaptive behavior
+and the emergence of collective organization.
+The question we address is methodological: \emph{how should one
+rigorously test whether an additional criterion provides explanatory
+power beyond the existing seven?}
+
+We contribute:
+\begin{enumerate}
+\item A \textbf{falsifiable evaluation protocol} for candidate eighth
+  criteria, extending the functional analogy framework with three
+  legitimacy tests (orthogonality, non-reducibility, causal necessity)
+  and equivalence-based statistical framing.
+\item \textbf{Rigorous null results} for two candidates---within-lifetime
+  learning/memory and collective kin-sensing---each tested under two
+  perturbation regimes with $n=30$ seeds, four conditions (baseline,
+  candidate enabled, ablated, sham control), and Holm--Bonferroni
+  correction.
+\item \textbf{Mechanistic diagnoses} explaining each null: the memory
+  mechanism works but adds no survival advantage; the kin signal becomes
+  degenerate under the tested demographic regime.
+\end{enumerate}
+
+Reporting null results is essential for cumulative science
+\citep{rosenthal_1979_file, fanelli_2012_negative}.  By defining our
+smallest effect size of interest (SESOI) \emph{a priori} and bounding
+all observed effects below it, we transform ``failure to reject $H_0$''
+into a bounded null result
+\citep{lakens_2017_equivalence, lakens_2018_sesoi}: the effect of each
+candidate, if any, is smaller than a medium effect size under the tested
+regimes.
+
+
+%% ================================================================
+\section{Methods}
+
+\subsection{System Architecture}
+
+Our simulator implements a hybrid two-layer architecture.  At the lower
+level, \textbf{swarm agents} (10--50 per organism) inhabit a continuous
+2D environment and maintain organism cohesion through local coordination.
+At the upper level, \textbf{organisms} (10--50 per simulation) emerge
+from coordinated agent groups and possess individual genomes, neural
+controllers, and metabolic state.
+
+Each of the seven biological criteria is realized as a \emph{functional
+analogy}: a computational process that (a)~is a dynamic process
+requiring sustained resource consumption, (b)~whose removal causes
+measurable degradation of organism self-maintenance, and (c)~forms
+feedback loops with at least one other criterion.  The seven criteria
+map to specific subsystems:
+\begin{enumerate}
+\item \textbf{Cellular organization}: Active boundary maintenance via
+  swarm coordination; degrades without energy.
+\item \textbf{Metabolism}: Graph-based multi-step transformation
+  network converting environmental resources to internal energy.
+\item \textbf{Homeostasis}: Neural network controller regulates an
+  internal state vector within viable ranges.
+\item \textbf{Growth/Development}: Minimal seed state develops into
+  mature organism via genetically encoded developmental program.
+\item \textbf{Reproduction}: Organism-initiated division when
+  metabolically ready; offspring develop from seed.
+\item \textbf{Response to stimuli}: Local sensory field processed by
+  neural network; emergent behavioral repertoire.
+\item \textbf{Evolution}: Heritable genomes with mutation and
+  recombination; differential survival drives adaptation.
+\end{enumerate}
+
+All organisms share a fixed-topology neural controller
+($8 \to 16 \to 4$, 212 weights) with genome-encoded weights evolved
+through tournament selection.  Simulations run for 10{,}000 timesteps
+with deterministic seeding (same seed $+$ config $\to$ identical
+output).
+
+
+\subsection{Extending to an Eighth Criterion}
+
+To avoid the ``arbitrary add-on'' criticism, we require any candidate
+eighth criterion to satisfy the same functional analogy conditions
+(a)--(c) plus an additional condition specific to the candidate's
+domain.  We further define three \textbf{legitimacy tests}:
+
+\begin{enumerate}
+\item \textbf{Orthogonality}: The candidate must explain outcome
+  variance \emph{after controlling for} signals from the existing seven
+  criteria.
+\item \textbf{Non-reducibility}: The baseline (seven criteria only)
+  cannot match the candidate's effect by retuning existing parameters.
+\item \textbf{Causal necessity}: Ablating the candidate causes
+  measurable degradation under appropriate conditions.
+\end{enumerate}
+
+A candidate that fails any legitimacy test under a given regime receives
+a \emph{regime-specific null}, not a universal rejection---the
+candidate may succeed under different ecological conditions.
+
+In this study, we focus on \textbf{causal necessity} (ablation testing)
+as the primary empirical test, supplemented by mechanism verification.
+Orthogonality and non-reducibility analyses remain important for
+future work with positive-result candidates (see Limitations).
+
+
+\subsection{Experimental Design}
+
+For each candidate $\times$ perturbation regime, we run four conditions
+on $n = 30$ held-out seeds (seeds 100--129, disjoint from the
+calibration set 0--99):
+\begin{enumerate}
+\item \textbf{Baseline}: Seven criteria active, candidate inactive.
+\item \textbf{Candidate enabled}: Candidate mechanism active.
+\item \textbf{Candidate ablated}: Candidate mechanism zeroed/disabled,
+  everything else identical to the enabled condition.
+\item \textbf{Sham control}: Compute-matched random updates replacing
+  the candidate's actual mechanism.
+\end{enumerate}
+
+Two perturbation regimes stress the system beyond normal operating
+conditions:
+\begin{itemize}
+\item \textbf{Famine}: Resource availability drops to near-zero at
+  step~3{,}000, creating acute survival pressure.
+\item \textbf{Boom-bust}: Cyclic resource availability with period
+  2{,}500 steps, creating recurring bottlenecks.
+\end{itemize}
+
+\paragraph{Statistical pipeline.}
+Primary outcomes are survival AUC (total organism-steps) and
+post-shock AUC (organism-steps after perturbation onset).  Pairwise
+comparisons use Mann--Whitney $U$ tests \citep{mann_1947_test} with
+Holm--Bonferroni correction \citep{holm_1979_simple} for multiple
+comparisons.  Effect sizes are reported as Cohen's~$d$
+\citep{cohen_1988_statistical}.
+
+\paragraph{Equivalence framing.}
+We pre-specify a smallest effect size of interest (SESOI) of $d \geq
+0.5$ (medium effect per Cohen's conventions).  With $n = 30$ per
+condition, we have approximately 80\% power to detect $d \geq 0.5$.
+If all observed $|d| < 0.5$ and adjusted $p$-values remain
+non-significant, we interpret this as a bounded null: the candidate's
+effect, if any, is smaller than a medium effect size in the tested
+regime.  We note that formal equivalence testing (e.g., TOST;
+\citealt{lakens_2017_equivalence}) would further strengthen this claim
+but is beyond the scope of the current analysis.
+
+
+%% ================================================================
+\section{Candidate A: Within-Lifetime Memory}
+
+\subsection{Implementation}
+
+Candidate~A adds a \textbf{memory-driven homeostatic correction phase}
+operating alongside (but separately from) the neural controller.  Each
+organism maintains a 2-element exponential moving average (EMA) tracking
+the mean internal state of its agents:
+\begin{equation}
+m_{t+1}^{(i)} = \alpha \cdot m_t^{(i)} + (1 - \alpha) \cdot
+\bar{s}_t^{(i)}, \quad i \in \{0, 1\}
+\end{equation}
+where $\bar{s}_t^{(i)}$ is the mean of internal-state channel~$i$ across
+the organism's agents, and $\alpha \in [0, 1]$ is a configurable decay
+parameter.  The memory trace drives a proportional correction toward a
+genome-modulated target: four genome-encoded parameters (two gains, two
+targets) control the strength and set-point of the correction, which is
+applied directly to agent internal states each timestep.  Memory is
+initialized to zero at birth.  The neural controller architecture
+(212~weights for the base 8-input topology) is unchanged; the memory
+phase adds only four evolvable genome parameters.
+
+This design satisfies the functional analogy conditions: it is a dynamic
+process (continuous EMA updates consuming internal-state signals), its
+ablation is clean (skip the correction phase), and it couples with
+homeostasis (modifying internal state) and response-to-stimuli (internal
+state feeds the neural controller).  The additional condition for
+Candidate~A is \textbf{experience-dependence}: performance should improve
+as a function of within-lifetime experience under stationary genetics.
+
+The \textbf{sham control} replaces the EMA trace with independent uniform
+random draws each timestep, preserving the correction code path and
+computational cost while destroying temporal coherence
+\citep{floreano_2000_evolutionary, soltoggio_2018_born}.
+
+\subsection{Results}
+
+Table~\ref{tab:results} summarizes outcomes across three experiment
+suites.
+
+\subsubsection*{Normal conditions (no perturbation)}
+Survival AUC: $+106.5$ vs.\ baseline ($d = 0.13$, $p_\mathrm{adj} =
+0.94$).  No significant effect.  Ablated and sham conditions are
+similarly indistinguishable from baseline ($d < 0.10$).
+
+\subsubsection*{Famine stress}
+Post-shock AUC: $+7.3$ ($d = 0.03$, $p_\mathrm{adj} = 1.0$).  Baseline
+extinction rate 86.7\%, enabled 93.3\%.  Memory provides no survival
+advantage under acute resource deprivation.
+
+\subsubsection*{Boom-bust stress}
+Survival AUC: $-103.2$ ($d = -0.28$, $p_\mathrm{adj} = 0.46$).
+Extinction: 93.3\% for both baseline and enabled, but only 70.0\% for
+the ablated condition and 66.7\% for sham---a pattern suggesting that
+disabling or randomizing the memory correction may reduce destabilizing
+homeostatic interference under cyclic stress, though none of these
+differences reach significance after correction.
+
+\subsection{Mechanism Verification}
+
+Despite the null survival effect, the memory mechanism itself operates
+correctly.  The EMA late variance (variance of memory vectors across
+the final 1{,}000 timesteps) is significantly lower for the enabled
+condition ($\bar{\sigma}^2 = 1.04 \times 10^{-4}$) than for the sham
+control ($\bar{\sigma}^2 = 7.29 \times 10^{-4}$; Mann--Whitney
+$U = 33$, $p < 10^{-9}$).  This confirms that the EMA converges to a
+stable representation of sensory experience---it simply does not
+provide actionable information for survival under the tested regimes.
+
+The distinction between ``mechanism works'' and ``mechanism helps'' is
+critical: the memory faithfully encodes experience, but the
+evolutionary landscape under these perturbation regimes does not select
+for memory-contingent behaviors.
+
+
+%% ================================================================
+\section{Candidate B: Collective Kin-Sensing}
+
+\subsection{Implementation}
+
+Inspired by Hamilton's inclusive fitness theory
+\citep{hamilton_1964_genetical, west_2007_social}, Candidate~B adds a
+\textbf{kin-sensing channel} that provides each agent with information
+about nearby relatives.  A single-pass neighbor count
+(\texttt{count\_neighbors\_split}) partitions nearby agents into kin
+(same genome lineage) and non-kin, computing a \texttt{kin\_fraction}
+$\in [0, 1]$ that enters the neural controller as an additional input
+(channel~8, expanding the input from 8 to 9 dimensions; 228 total
+weights).
+
+This satisfies the functional analogy: it is a dynamic process
+(recomputed each timestep from local spatial information), its ablation
+is clean (fix \texttt{kin\_fraction} = 0), and it couples with
+cellular organization (spatial structure determines kin encounters) and
+reproduction (kin density reflects reproductive success).  The
+additional condition for Candidate~B is \textbf{collective signal
+utilization}: organisms with access to kin information should exhibit
+measurably different (and more resilient) collective behavior.
+
+The \textbf{sham control} permutes real \texttt{kin\_fraction} values
+across alive agents each timestep, preserving the population-level
+distribution while destroying the spatial correlation between an
+organism and its actual neighbors.
+
+\subsection{Results}
+
+Table~\ref{tab:results} shows Candidate~B results under both
+perturbation regimes.
+
+\subsubsection*{Famine stress}
+Post-shock AUC: $-38.3$ vs.\ baseline ($d = -0.13$, $p_\mathrm{adj} =
+1.0$).  Extinction: 96.7\% enabled vs.\ 86.7\% baseline.  All
+conditions statistically equivalent.
+
+\subsubsection*{Boom-bust stress}
+Survival AUC: $-32.3$ ($d = -0.08$, $p_\mathrm{adj} = 1.0$).
+Extinction: 76.7\% enabled vs.\ 83.3\% baseline.  Again, no significant
+differences.
+
+\subsection{Signal Sparsity Diagnosis}
+
+The null result for Candidate~B has a clear mechanistic explanation:
+\textbf{organisms converge to approximately one agent each} under the
+population cap.  When organisms consist of a single agent, the
+kin-sensing neighborhood is dominated by non-kin agents from other
+single-agent organisms, yielding a \texttt{kin\_fraction} near zero.
+
+Quantitatively, the mean \texttt{kin\_fraction} at simulation end is
+0.03 under famine and 0.19 under boom-bust (with high variance driven
+by rare multi-agent survivors).  In the pre-shock phase, organisms
+maintain larger swarms ($\sim$90--100 agents), but the perturbation
+collapses populations to single-agent organisms within a few hundred
+steps.
+
+This is an \emph{observability failure}: the kin signal exists in
+principle but becomes degenerate under the tested demographic regime.
+The null does not reject kin-sensing as a criterion \emph{in general},
+but rather identifies a specific boundary condition---population caps
+that force single-agent organisms---under which the signal cannot
+provide information.
+
+
+%% ================================================================
+\section{Discussion}
+
+\subsection{Interpreting Double-Null Results}
+
+Both candidates yield null results across all tested regimes.  All
+point estimates are small: the largest observed effect is $|d| = 0.41$
+(Candidate~A, boom-bust, sham; 95\% CI $[-0.92, 0.10]$;
+$p_\mathrm{adj} = 0.33$).  However, with $n = 30$ per condition, the
+95\% confidence intervals for Cohen's~$d$ are wide (typical half-width
+$\approx 0.51$), and no single comparison's CI falls entirely within
+$[-0.5, 0.5]$.  Thus, while all point estimates lie below our SESOI,
+the data cannot formally exclude medium effects---a power limitation
+inherent to the sample size.  Formal equivalence testing (TOST) would
+require either larger samples or pooling across regimes.
+
+Importantly, these are \emph{diagnosed} nulls.  Each candidate fails
+for a different reason:
+
+\begin{itemize}
+\item \textbf{Candidate~A} (Memory): The mechanism works---EMA converges
+  correctly and encodes sensory history---but the evolutionary landscape
+  does not select for memory-contingent behaviors under the tested
+  perturbations.  The within-lifetime information the memory accumulates
+  is not \emph{actionable} given the structure of the perturbation
+  regimes (sudden onset with no recovery signal to learn from).
+\item \textbf{Candidate~B} (Kin-Sensing): The mechanism is rendered
+  non-functional by demographic convergence to single-agent organisms
+  under population caps, making the kin signal degenerate before it can
+  be utilized.  This is a regime-specific boundary condition, not a
+  general failure of kin-based collective sensing.
+\end{itemize}
+
+\subsection{Implications for Multi-Scale ALife Design}
+
+The diagnosed nulls reveal important design principles for ALife
+systems aiming to test collective or experiential criteria:
+
+\textbf{Signal viability precedes signal utility.}  Candidate~B
+demonstrates that a theoretically well-motivated mechanism can fail not
+because of its logic but because ecological dynamics eliminate the
+conditions under which the signal carries information.  Future systems
+testing collective organization must ensure that multi-agent organisms
+persist at sufficient scale for inter-organism signals to be
+meaningful.
+
+\textbf{Perturbation structure matters for learning.}  Candidate~A's
+memory accumulates information, but the famine regime offers no
+within-lifetime gradient to learn from---it is a single catastrophic
+event.  Future tests of learning/memory should include perturbation
+regimes with \emph{repeated, learnable structure} (e.g., predictable
+seasonal cycles where past experience is informative about future
+conditions).
+
+\textbf{Mechanism verification is essential.}  Without the EMA
+convergence test (Candidate~A) and kin-fraction analysis
+(Candidate~B), the null results would be uninterpretable---they could
+indicate either ``the mechanism doesn't help'' or ``the mechanism
+doesn't work.''  Separating these cases is critical for cumulative
+progress.
+
+
+\subsection{Limitations}
+
+Several limitations constrain the generalizability of our findings.
+
+\textbf{Regime specificity.}  Our two perturbation regimes (famine,
+boom-bust) represent acute environmental stress.  Candidates may succeed
+under gradual perturbations, repeated exposure regimes, or spatial
+heterogeneity---conditions we did not test.
+
+\textbf{Population caps.}  The population cap
+($\texttt{max\_alive\_organisms} = 100$) creates a demographic ceiling
+that drives convergence to minimal-size organisms.  This is a design
+constraint (compute budget on M2 Pro hardware), not a theoretical
+necessity.  Relaxing this constraint could restore the viability of
+kin-based signals.
+
+\textbf{Controller capacity.}  The fixed-topology neural controller
+($8/9 \to 16 \to 4$) may lack the representational capacity to exploit
+memory or kin information.  Larger or more flexible controllers (e.g.,
+NEAT-style topology evolution; \citealt{stanley_2002_evolving}) could
+change the outcome.
+
+\textbf{Two candidates, one system.}  We test two candidates in one
+simulator.  Different substrate architectures (e.g., continuous CA,
+voxel-based robots) may support different candidate mechanisms more
+naturally.
+
+\textbf{Legitimacy test scope.}  Of the three proposed legitimacy tests,
+we empirically evaluated only causal necessity (ablation) and mechanism
+verification.  Orthogonality and non-reducibility analyses---which
+require fitting predictive models and running retuned baselines---are
+most informative for positive-result candidates and remain as future
+work.
+
+
+\subsection{What Would Count as Success}
+
+To guide future work, we pre-specify criteria that a successful
+candidate eighth criterion must meet:
+
+\begin{enumerate}
+\item \textbf{Effect size}: Cohen's $d \geq 0.5$ on survival AUC for
+  enabled vs.\ baseline, sustained across $\geq 2$ perturbation regimes.
+\item \textbf{Ablation}: Significant degradation ($p_\mathrm{adj}
+  < 0.05$) when the candidate is ablated relative to the enabled
+  condition.
+\item \textbf{Sham inequality}: Enabled condition significantly
+  outperforms the sham control, ruling out compute confounds.
+\item \textbf{Mechanism verification}: Quantitative evidence that the
+  candidate mechanism operates as designed (analogous to our EMA
+  convergence test).
+\end{enumerate}
+
+
+%% ================================================================
+\section{Conclusion}
+
+We presented a falsifiable framework for evaluating candidate eighth
+criteria of life-likeness, grounded in functional analogy, ablation
+controls, sham comparisons, and equivalence-based statistical analysis.
+Applying this framework to two candidates---within-lifetime memory
+(Candidate~A) and collective kin-sensing (Candidate~B)---across two
+perturbation regimes with $n = 30$ seeds each, we obtain bounded null
+results: all effects are below our pre-specified SESOI of $d = 0.5$.
+
+The contribution is threefold.  First, the evaluation protocol itself is
+reusable and extensible to future candidates---it defines what would
+count as evidence for or against any proposed criterion.  Second, the
+diagnosed nulls constrain the design space: future candidates targeting
+within-lifetime adaptation should ensure perturbation regimes with
+learnable temporal structure, and candidates targeting collective
+organization should ensure multi-agent organisms persist at viable
+scale.  Third, by reporting these null results explicitly, we contribute
+to the cumulative record of what has been tested and ruled out under
+specific conditions.
+
+The search for what, if anything, lies beyond the textbook seven criteria
+remains open.  Our framework provides a systematic, falsifiable approach
+to that search.
+
+
+%% ================================================================
+
+% Results table
+\begin{table*}[t]
+\centering
+\caption{Summary of results across all experiment suites.  $\Delta$AUC
+is the difference in mean AUC (enabled $-$ baseline).  $d$ is Cohen's
+$d$.  $p_\mathrm{adj}$ is the Holm--Bonferroni adjusted $p$-value.
+Ext.\ is extinction rate.  All $|d| < 0.5$ (our SESOI).}
+\label{tab:results}
+\small
+\begin{tabular}{@{}llrrrrl@{}}
+\toprule
+\textbf{Candidate} & \textbf{Regime} & \textbf{Metric} &
+\textbf{$\Delta$AUC} & \textbf{$d$} & \textbf{$p_\mathrm{adj}$} &
+\textbf{Ext.\ (\%)} \\
+\midrule
+\multicolumn{7}{@{}l}{\textit{Candidate A: Memory}} \\
+\quad Enabled & Normal & Surv.\ AUC & $+106.5$ & $0.13$ & $0.94$ & --- \\
+\quad Ablated & Normal & Surv.\ AUC & $+80.7$ & $0.10$ & $0.94$ & --- \\
+\quad Sham    & Normal & Surv.\ AUC & $+76.6$ & $0.09$ & $0.94$ & --- \\
+\addlinespace
+\quad Enabled & Famine & Post-shock & $+7.3$ & $0.03$ & $1.00$ & 93.3 \\
+\quad Ablated & Famine & Post-shock & $+19.9$ & $0.08$ & $1.00$ & 76.7 \\
+\quad Sham    & Famine & Post-shock & $+46.0$ & $0.18$ & $1.00$ & 80.0 \\
+\addlinespace
+\quad Enabled & Boom-bust & Surv.\ AUC & $-103.2$ & $-0.28$ & $0.46$ & 93.3 \\
+\quad Ablated & Boom-bust & Surv.\ AUC & $-120.2$ & $-0.31$ & $0.46$ & 70.0 \\
+\quad Sham    & Boom-bust & Surv.\ AUC & $-167.8$ & $-0.41$ & $0.33$ & 66.7 \\
+\midrule
+\multicolumn{7}{@{}l}{\textit{Candidate B: Kin-Sensing}} \\
+\quad Enabled & Famine & Post-shock & $-38.3$ & $-0.13$ & $1.00$ & 96.7 \\
+\quad Ablated & Famine & Post-shock & $-49.8$ & $-0.16$ & $1.00$ & 86.7 \\
+\quad Sham    & Famine & Post-shock & $+31.7$ & $0.11$ & $1.00$ & 80.0 \\
+\addlinespace
+\quad Enabled & Boom-bust & Surv.\ AUC & $-32.3$ & $-0.08$ & $1.00$ & 76.7 \\
+\quad Ablated & Boom-bust & Surv.\ AUC & $+100.9$ & $0.28$ & $0.75$ & 86.7 \\
+\quad Sham    & Boom-bust & Surv.\ AUC & $+44.2$ & $0.11$ & $1.00$ & 80.0 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+
+\footnotesize
+\bibliographystyle{apalike}
+\bibliography{references}
+
+\end{document}

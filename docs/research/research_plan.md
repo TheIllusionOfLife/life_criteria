@@ -9,7 +9,7 @@ The goal here is to make a **drastic conceptual jump**: not “we added another 
 
 ## 0) One-sentence thesis (what ALIFE reviewers should remember)
 
-**Thesis:** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.* 
+**Thesis:** *Two candidate eighth criteria—Learning/Memory and Collective Kin-Sensing—were rigorously tested using a falsifiable ablation framework. Both yielded bounded null results: all enabled-vs-baseline |d| ≤ 0.28, largest observed |d| = 0.28 (boom-bust Candidate A), below SESOI of d = 0.5. The contribution is the validated testing protocol, mechanistic diagnoses, and design lessons for future candidate evaluation.*
 
 ---
 
@@ -270,34 +270,92 @@ If learning still wins under novel perturbations, the 8th looks real.
 
 ---
 
-# Questions for you (so I can update this document precisely)
+## Archived: Pre-Experiment Questionnaire
 
-Please answer as many as you can; even short answers are fine.
+*The following questions guided the initial experiment design (answered during Phase 0 planning). Preserved for reference.*
 
-1. **Which 8th are you leaning toward right now?**
+<details>
+<summary>Click to expand</summary>
 
-   * A) Learning/Memory (within lifetime)
-   * B) Collective organization
-   * C) Open-ended novelty
-   * D) Other (describe)
+**Thesis (original):** *The textbook seven criteria are not sufficient to explain resilience and generalization under novel perturbations; an additional functionality—**Learning/Memory (within-lifetime adaptation)** / **Collective Organization** / **Novelty Generation**—accounts for systematic variance beyond the seven, and its necessity can be tested with the same falsifiable ablation framework you already established.*
 
-2. If **Learning/Memory**: which implementation feels most compatible with your current codebase?
+1. Which 8th? → A) Learning/Memory (Phase 1), then B) Collective organization (Phase 3)
+2. Implementation? → EMA-driven homeostatic correction (separate phase, not NN input expansion)
+3. Perturbations? → Famine (resource drop at step 3000), Boom-bust (cyclic period 2500)
+4. Framing? → “8th functionality axis” (safer for ALIFE)
+5. Compute budget? → n=30 seeds × 10k steps per condition (4 conditions × 2 regimes)
+6. External substrate? → No, single system only
 
-   * A1 plastic weights, A2 memory vector (RNN-lite), A3 fast variables
+</details>
 
-3. **What perturbations are easiest to implement in your environment today?**
+---
 
-   * resource relocation, waste toxicity change, sensor corruption, predators/parasites, other?
+## 10) Experimental Results (completed)
 
-4. Do you want the 8th to be framed as:
+### Status: Both candidates tested, both null. Paper complete (`paper/main.tex`).
 
-   * **(i)** “8th life criterion” (strong claim)
-   * **(ii)** “8th functionality axis for life-likeness / robustness” (safer, often better for ALIFE)
+The following summarizes the completed experiments across Phases 1–3.
 
-5. What’s your **compute budget** for the new experiments (roughly):
+### Candidate A: Learning & Memory (within-lifetime adaptation)
 
-   * same as current (n=30 seeds × 2000 steps), or can you do longer/more regimes?
+**Implementation**: EMA-driven homeostatic correction phase. 2-element EMA tracking mean internal-state channels IS[0] and IS[1], with configurable decay $\alpha$. Four genome-encoded parameters (2 gains, 2 targets) modulate correction strength and set-point. NN architecture unchanged (212 weights for 8-input base topology). Sham: uniform random draws replace EMA trace each timestep at same compute cost.
+- Source: `crates/life-criteria-core/src/world/phases/memory.rs`, `crates/life-criteria-core/src/genome.rs` (segment 7)
 
-6. Are you open to including **one external substrate** comparison (even a minimal one), or must this stay within your current system?
+**Suite 1 — Normal conditions** (30 seeds × 10k steps, held-out seeds 100–129):
+- Survival AUC: +106.5 vs baseline ($d = 0.13$, $p_\text{adj} = 0.94$) → **null**
+- Memory mechanism verified: EMA late variance $p < 10^{-9}$ vs sham
+- Artifacts: `experiments/criterion8_manifest.json`, `experiments/criterion8_analysis.json` (keys: `pairwise_vs_baseline.criterion8_on`, `memory_stability`)
 
-If you answer these, I’ll revise this Markdown into a more *execution-ready* version with: exact experimental grid, exact metrics, and a proposed “main theorem-like claim + falsification tests” tailored to your constraints.
+**Suite 2 — Famine stress** (resource drop at step 3000):
+- Post-shock AUC: +7.3 ($d = 0.03$, $p_\text{adj} = 1.0$) → **null**
+- Extinction: 93.3% enabled vs 86.7% baseline
+- Artifacts: `experiments/stress_manifest.json`, `experiments/stress_analysis.json` (key: `famine.pairwise_vs_baseline.criterion8_on`)
+
+**Suite 3 — Boom-bust stress** (cyclic period 2500):
+- Survival AUC: −103.2 ($d = -0.28$, $p_\text{adj} = 0.46$) → **null**
+- Extinction: 93.3% enabled, 93.3% baseline
+- Artifacts: `experiments/stress_manifest.json`, `experiments/stress_analysis.json` (key: `boom_bust.pairwise_vs_baseline.criterion8_on`)
+
+**Diagnosis**: Memory mechanism converges correctly (EMA works) but provides no survival advantage. The perturbation regimes lack learnable temporal structure for memory to exploit.
+
+### Candidate B: Collective Organization (kin-sensing)
+
+**Implementation**: `kin_fraction` channel (input 8→9 dims, 212→228 weights). Single-pass `count_neighbors_split()` for kin/non-kin counting. Sham: permute real kin_fraction across alive agents.
+- Source: `crates/life-criteria-core/src/spatial.rs` (`count_neighbors_split`), `crates/life-criteria-core/src/world/phases/nn_query.rs` (kin_fraction input), `crates/life-criteria-core/src/nn.rs` (INPUT_SIZE=9)
+
+**Suite 4 — Famine stress**:
+- Post-shock AUC: −38.3 ($d = -0.13$, $p_\text{adj} = 1.0$) → **null**
+- Extinction: 96.7% enabled vs 86.7% baseline
+- Artifacts: `experiments/candidateB_stress_manifest.json`, `experiments/candidateB_stress_analysis.json` (key: `famine.pairwise_vs_baseline.candidateB_on`; kin fraction: `famine.summaries.candidateB_on.kin_fraction_final`)
+
+**Suite 5 — Boom-bust stress**:
+- Survival AUC: −32.3 ($d = -0.08$, $p_\text{adj} = 1.0$) → **null**
+- Extinction: 76.7% enabled vs 83.3% baseline
+- Artifacts: `experiments/candidateB_stress_manifest.json`, `experiments/candidateB_stress_analysis.json` (key: `boom_bust.pairwise_vs_baseline.candidateB_on`; kin fraction: `boom_bust.summaries.candidateB_on.kin_fraction_final`)
+
+**Diagnosis**: Organisms converge to ~1 agent each under population cap, making `kin_fraction` degenerate (mean 0.03 famine, 0.19 boom-bust—high variance driven by rare multi-agent survivors). This is an **observability failure**: the kin signal exists in principle but becomes sparse under the tested demographic regime.
+
+### Summary
+
+| Candidate | Regime | Δ AUC | Cohen’s d | 95% CI(d) | p_adj | Result |
+|-----------|--------|-------|-----------|-----------|-------|--------|
+| A (Memory) | Normal | +106.5 | 0.13 | [−0.38, 0.64] | 0.94 | Null |
+| A (Memory) | Famine | +7.3 | 0.03 | [−0.48, 0.54] | 1.00 | Null |
+| A (Memory) | Boom-bust | −103.2 | −0.28 | [−0.79, 0.23] | 0.46 | Null |
+| B (Kin) | Famine | −38.3 | −0.13 | [−0.64, 0.38] | 1.00 | Null |
+| B (Kin) | Boom-bust | −32.3 | −0.08 | [−0.59, 0.43] | 1.00 | Null |
+
+**Point estimates vs SESOI.** All enabled-vs-baseline point estimates are small: $|d| \leq 0.28$ (largest: $d = -0.28$, boom-bust Candidate A), well below the pre-specified SESOI of $d = 0.5$.
+
+**Confidence intervals and power.** The 95% CIs for Cohen's $d$ extend past $\pm 0.5$ for every comparison (typical half-width $\approx 0.51$), due to the sample size ($n = 30$ per condition). No single comparison's CI falls entirely within $[-0.5, 0.5]$.
+
+**Interpretation.** Formal equivalence via TOST cannot be claimed. The results support a **bounded-null interpretation**: observed effects are consistently small, but the data cannot definitively exclude medium effects in either direction. Larger samples or meta-analytic combination across regimes would be needed for a formal equivalence claim.
+
+### Pivot outcome
+
+Per the pivot strategy, both Candidate A and B are null. The contribution pivots from “we found the 8th” to:
+1. **Validated falsifiable protocol** for testing candidate criteria
+2. **Bounded null results** with mechanistic diagnoses
+3. **Design lessons** for future ALife systems testing experiential/collective criteria
+
+Paper: `paper/main.tex` — “Searching for an Eighth Criterion of Life: A Falsifiable Framework and Two Null Results”
