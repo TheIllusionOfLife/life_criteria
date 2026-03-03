@@ -130,14 +130,14 @@ def run_analysis() -> dict:
         analysis["regimes"][regime] = result
 
         # Print summary
-        print(f"\n  Kin-fraction (cap=400):")
+        print("\n  Kin-fraction (cap=400):")
         for cond in _CONDITIONS:
             s = result["summaries"].get(cond, {})
             kf = s.get("kin_fraction_overall_mean", {})
             if kf.get("mean") is not None:
                 print(f"    {cond:25s}  mean={kf['mean']:.4f}  median={kf['median']:.4f}")
 
-        print(f"\n  Survival AUC comparisons (paired Wilcoxon):")
+        print("\n  Survival AUC comparisons (paired Wilcoxon):")
         for cond in ["candidateB_on", "candidateB_ablated", "sham"]:
             c = result["pairwise_vs_baseline"].get(cond, {})
             if c:

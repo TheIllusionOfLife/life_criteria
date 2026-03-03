@@ -74,7 +74,7 @@ def generate_7criteria_ablation():
     bars = ax.bar(x, d_values, color=colors_list, alpha=0.7, edgecolor="black", lw=0.5)
 
     # Significance stars
-    for i, (bar, sig) in enumerate(zip(bars, significances)):
+    for _i, (bar, sig) in enumerate(zip(bars, significances, strict=True)):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + 0.2,

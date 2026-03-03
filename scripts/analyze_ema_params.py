@@ -116,9 +116,15 @@ def _analyze_dataset(label: str, c8_path: Path, sham_path: Path) -> dict | None:
         "n_c8": len(c8_data),
         "n_sham": len(sham_data),
         "c8_late_variance": distribution_stats(np.array(c8_variances)) if c8_variances else None,
-        "sham_late_variance": distribution_stats(np.array(sham_variances)) if sham_variances else None,
-        "c8_late_mean": distribution_stats(np.array(c8_late_means)) if c8_late_means else None,
-        "sham_late_mean": distribution_stats(np.array(sham_late_means)) if sham_late_means else None,
+        "sham_late_variance": (
+            distribution_stats(np.array(sham_variances)) if sham_variances else None
+        ),
+        "c8_late_mean": (
+            distribution_stats(np.array(c8_late_means)) if c8_late_means else None
+        ),
+        "sham_late_mean": (
+            distribution_stats(np.array(sham_late_means)) if sham_late_means else None
+        ),
     }
 
     # Paired comparison of late variances (c8 vs sham)

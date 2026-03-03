@@ -8,7 +8,6 @@ entirely within the bounds support a bounded null claim.
 import json
 
 import matplotlib.pyplot as plt
-import numpy as np
 from figures._shared import FIG_DIR, PROJECT_ROOT
 
 _EXP_DIR = PROJECT_ROOT / "experiments"
@@ -75,7 +74,7 @@ def generate_forest_plot():
     ax.axvline(-0.5, color="green", ls="--", lw=0.8, alpha=0.5)
     ax.axvline(0, color="black", ls="-", lw=0.5, alpha=0.3)
 
-    for i, (label, d, ci_lo, ci_hi) in enumerate(reversed(all_rows)):
+    for i, (_label, d, ci_lo, ci_hi) in enumerate(reversed(all_rows)):
         y = i
         within_sesoi = -0.5 <= ci_lo and ci_hi <= 0.5
         color = "#009E73" if within_sesoi else "#D55E00"

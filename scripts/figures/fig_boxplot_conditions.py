@@ -60,7 +60,7 @@ def _plot_panel(ax, data, colors, title):
         return
     vals = [data[c] for c in conditions]
     bp = ax.boxplot(vals, patch_artist=True, widths=0.5, showfliers=False)
-    for patch, cond in zip(bp["boxes"], conditions):
+    for patch, cond in zip(bp["boxes"], conditions, strict=True):
         patch.set_facecolor(colors.get(cond, "#999999"))
         patch.set_alpha(0.4)
     for patch in bp["medians"]:
@@ -68,7 +68,7 @@ def _plot_panel(ax, data, colors, title):
         patch.set_linewidth(1.5)
     # Jitter
     rng = np.random.default_rng(42)
-    for i, (cond, v) in enumerate(zip(conditions, vals)):
+    for i, (cond, v) in enumerate(zip(conditions, vals, strict=True)):
         jitter = rng.uniform(-0.15, 0.15, size=len(v))
         ax.scatter(
             np.full(len(v), i + 1) + jitter,

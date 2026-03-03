@@ -5,8 +5,8 @@ a taxonomy of possible 8th-criterion candidates, alongside untested
 alternatives.  Pure literature/conceptual figure — no experiment data.
 """
 
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 from figures._shared import FIG_DIR
 
 

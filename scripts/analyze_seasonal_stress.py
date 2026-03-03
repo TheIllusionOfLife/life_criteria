@@ -28,7 +28,6 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from analyses.results.statistics import (
-    distribution_stats,
     holm_bonferroni,
     run_paired_comparison,
 )
