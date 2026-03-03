@@ -43,6 +43,9 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import mannwhitneyu
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from analyses.results.statistics import run_paired_comparison
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -268,19 +271,30 @@ def run_analysis(
         u_stat, p_val = _mwu_test(other_aucs, baseline_aucs)
         d = _cohen_d(other_aucs, baseline_aucs)
         raw_pvalues.append(p_val)
+        # Paired analysis (primary — seeds are matched across conditions)
+        paired = run_paired_comparison(
+            np.array(other_aucs), np.array(baseline_aucs)
+        )
         comparisons[cond] = {
             "vs_baseline_mwu_u": u_stat,
             "vs_baseline_mwu_p_raw": p_val,
             "vs_baseline_cohen_d": d,
+            **paired,
         }
 
-    # Holm-Bonferroni correction
+    # Holm-Bonferroni correction (MWU)
     adjusted = _holm_bonferroni(raw_pvalues)
     for adj_p, cond in zip(adjusted, comparison_conds, strict=True):
         comparisons[cond]["vs_baseline_mwu_p_adj"] = adj_p
         comparisons[cond]["vs_baseline_significant_adj005"] = (
             adj_p < 0.05 if not (adj_p != adj_p) else None  # NaN check
         )
+
+    # Holm-Bonferroni correction (paired Wilcoxon — primary)
+    paired_raw = [comparisons[c]["wilcoxon_p"] for c in comparison_conds]
+    paired_adj = _holm_bonferroni(paired_raw)
+    for adj_p, cond in zip(paired_adj, comparison_conds, strict=True):
+        comparisons[cond]["wilcoxon_p_adj"] = adj_p
 
     # Memory stability check: real EMA should have lower variance than sham
     c8_mem_var = summaries["criterion8_on"]["memory_late_variance"]["mean"]
@@ -320,6 +334,17 @@ def run_analysis(
         print(f"  {cond:25s}  median={med}  mean={mean}  n={n}")
 
     print("\nPairwise vs baseline (Holm-Bonferroni corrected):")
+    print("  [Primary: Wilcoxon signed-rank (paired)]")
+    for cond in comparison_conds:
+        c = comparisons[cond]
+        d_str = f"{c['paired_cohens_d']:.3f}"
+        ci_str = f"[{c['paired_cohens_d_ci_lo']:.2f}, {c['paired_cohens_d_ci_hi']:.2f}]"
+        print(
+            f"  {cond:25s}  wilcoxon_p_adj={c['wilcoxon_p_adj']:.4f}"
+            f"  d_paired={d_str}  CI={ci_str}"
+            f"  tost_p={c['tost_p']:.4f}"
+        )
+    print("  [Secondary: Mann-Whitney U (unpaired)]")
     for cond in comparison_conds:
         c = comparisons[cond]
         d_val = c["vs_baseline_cohen_d"]
@@ -336,7 +361,10 @@ def run_analysis(
     print(f"Orthogonality: partial_corr(AUC, diversity | energy) = {orth_val}")
 
     analysis = {
-        "data_sources": {k: str(v) for k, v in condition_files.items()},
+        "data_sources": {
+            k: str(v.relative_to(_ROOT)) if isinstance(v, Path) else str(v)
+            for k, v in condition_files.items()
+        },
         "summaries": summaries,
         "pairwise_vs_baseline": comparisons,
         "memory_stability": memory_stability,

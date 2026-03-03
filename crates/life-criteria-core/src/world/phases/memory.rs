@@ -40,17 +40,19 @@ impl World {
         // -------------------------------------------------------------------
         // Pass 1: accumulate IS[0] and IS[1] sums per organism from agents
         // -------------------------------------------------------------------
-        let mut is_sums = vec![[0.0f32; 2]; n_orgs];
-        let mut is_counts = vec![0usize; n_orgs];
+        self.memory_is_sums_buffer.clear();
+        self.memory_is_sums_buffer.resize(n_orgs, [0.0f32; 2]);
+        self.memory_is_counts_buffer.clear();
+        self.memory_is_counts_buffer.resize(n_orgs, 0);
 
         for agent in &self.agents {
             let org_idx = agent.organism_id as usize;
             if !self.organisms.get(org_idx).is_some_and(|o| o.alive) {
                 continue;
             }
-            is_sums[org_idx][0] += agent.internal_state[0];
-            is_sums[org_idx][1] += agent.internal_state[1];
-            is_counts[org_idx] += 1;
+            self.memory_is_sums_buffer[org_idx][0] += agent.internal_state[0];
+            self.memory_is_sums_buffer[org_idx][1] += agent.internal_state[1];
+            self.memory_is_counts_buffer[org_idx] += 1;
         }
 
         // -------------------------------------------------------------------
@@ -76,13 +78,15 @@ impl World {
         // -------------------------------------------------------------------
         // Pass 3: update EMA memory trace (or sham override) and compute corrections
         // -------------------------------------------------------------------
-        let mut org_corrections = vec![[0.0f32; 2]; n_orgs];
+        self.memory_org_corrections_buffer.clear();
+        self.memory_org_corrections_buffer
+            .resize(n_orgs, [0.0f32; 2]);
 
         for (org_idx, org) in self.organisms.iter_mut().enumerate() {
             if !org.alive {
                 continue;
             }
-            let count = is_counts[org_idx].max(1) as f32;
+            let count = self.memory_is_counts_buffer[org_idx].max(1) as f32;
             let mw = org.genome.memory_weights();
 
             for i in 0..2 {
@@ -91,7 +95,7 @@ impl World {
                     org.memory[i] = self.sham_vals_buffer[org_idx][i];
                 } else {
                     // Real EMA: m = decay * m + (1 - decay) * mean_is
-                    let mean_is = is_sums[org_idx][i] / count;
+                    let mean_is = self.memory_is_sums_buffer[org_idx][i] / count;
                     org.memory[i] = decay * org.memory[i] + (1.0 - decay) * mean_is;
                 }
 
@@ -103,7 +107,8 @@ impl World {
                 let eff_target = (base_target + gene_target).clamp(0.0, 1.0);
 
                 // Proportional correction toward target, scaled by dt
-                org_corrections[org_idx][i] = eff_gain * (eff_target - org.memory[i]) * dt;
+                self.memory_org_corrections_buffer[org_idx][i] =
+                    eff_gain * (eff_target - org.memory[i]) * dt;
             }
         }
 
@@ -115,7 +120,7 @@ impl World {
             if !self.organisms.get(org_idx).is_some_and(|o| o.alive) {
                 continue;
             }
-            let corr = &org_corrections[org_idx];
+            let corr = &self.memory_org_corrections_buffer[org_idx];
             agent.internal_state[0] = (agent.internal_state[0] + corr[0]).clamp(0.0, 1.0);
             agent.internal_state[1] = (agent.internal_state[1] + corr[1]).clamp(0.0, 1.0);
         }

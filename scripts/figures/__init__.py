@@ -15,18 +15,25 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _FIG_DIR = _PROJECT_ROOT / "paper" / "figures"
 _FIG_DIR.mkdir(parents=True, exist_ok=True)
 
+# Peer-review revision figures
+from figures.fig_7criteria_ablation import generate_7criteria_ablation
 from figures.fig_ablation import generate_ablation_distributions
 from figures.fig_architecture import generate_architecture
+from figures.fig_boxplot_conditions import generate_boxplot_conditions
+from figures.fig_candidate_space import generate_candidate_space
 from figures.fig_coupling import generate_coupling
 from figures.fig_criterion8 import generate_criterion8
 from figures.fig_criterion8_stress import generate_criterion8_stress
 from figures.fig_cyclic import generate_cyclic, generate_cyclic_sweep
 from figures.fig_ecology_stress import generate_ecology_stress
+from figures.fig_ema_dynamics import generate_ema_dynamics
 from figures.fig_evolution import generate_evolution
 from figures.fig_evolution_evidence import generate_evolution_evidence
+from figures.fig_forest_plot import generate_forest_plot
 from figures.fig_graded import generate_graded
 from figures.fig_homeostasis import generate_homeostasis
 from figures.fig_invariance import generate_invariance
+from figures.fig_kin_fraction_timeseries import generate_kin_fraction_timeseries
 from figures.fig_lifelikeness_gap import generate_lifelikeness_gap
 from figures.fig_lineage import generate_lineage
 from figures.fig_midrun import generate_midrun_ablation
@@ -61,4 +68,11 @@ __all__ = [
     "generate_ecology_stress",
     "generate_trait_evolution",
     "generate_lifelikeness_gap",
+    # Peer-review revision figures
+    "generate_7criteria_ablation",
+    "generate_boxplot_conditions",
+    "generate_candidate_space",
+    "generate_ema_dynamics",
+    "generate_forest_plot",
+    "generate_kin_fraction_timeseries",
 ]

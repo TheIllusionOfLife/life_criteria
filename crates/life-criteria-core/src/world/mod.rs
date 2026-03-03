@@ -82,6 +82,12 @@ pub struct World {
     homeostasis_counts_buffer: Vec<usize>,
     /// Reusable buffer for sham memory pre-computation — avoids per-step Vec allocation.
     sham_vals_buffer: Vec<[f32; 2]>,
+    /// Reusable buffers for memory phase — avoids 3 per-step heap allocations.
+    memory_is_sums_buffer: Vec<[f32; 2]>,
+    memory_is_counts_buffer: Vec<usize>,
+    memory_org_corrections_buffer: Vec<[f32; 2]>,
+    /// Cached per-organism alive flags — avoids per-step Vec<bool> allocation in step().
+    live_flags_buffer: Vec<bool>,
     /// Per-step encounter metrics, updated in nn_query phase.
     last_kin_fraction_sum: f32,
     last_agents_with_neighbors: usize,
@@ -310,6 +316,10 @@ impl World {
             homeostasis_sums_buffer: Vec::with_capacity(org_count),
             homeostasis_counts_buffer: Vec::with_capacity(org_count),
             sham_vals_buffer: Vec::with_capacity(org_count),
+            memory_is_sums_buffer: Vec::with_capacity(org_count),
+            memory_is_counts_buffer: Vec::with_capacity(org_count),
+            memory_org_corrections_buffer: Vec::with_capacity(org_count),
+            live_flags_buffer: Vec::with_capacity(org_count),
             last_kin_fraction_sum: 0.0,
             last_agents_with_neighbors: 0,
             last_neighbor_count_sum: 0.0,
@@ -423,8 +433,10 @@ impl World {
         }
     }
 
-    fn live_flags(&self) -> Vec<bool> {
-        self.organisms.iter().map(|o| o.alive).collect()
+    fn rebuild_live_flags(&mut self) {
+        self.live_flags_buffer.clear();
+        self.live_flags_buffer
+            .extend(self.organisms.iter().map(|o| o.alive));
     }
 
     fn alive_count(&self) -> usize {
@@ -970,10 +982,10 @@ impl World {
         let boundary_terminal_threshold = self.terminal_boundary_threshold();
 
         let t0 = Instant::now();
-        let live_flags = self.live_flags();
+        self.rebuild_live_flags();
         let grid = spatial::build_index_active(
             &self.agents,
-            &live_flags,
+            &self.live_flags_buffer,
             self.config.sensing_radius,
             self.config.world_size,
         );
