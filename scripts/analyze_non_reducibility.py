@@ -229,7 +229,9 @@ def _load_and_analyze(
     print(f"    Signal: mean={result['signal_mean']:.4f}, std={result['signal_std']:.4f}")
     print(f"    In-sample R² = {result['r2_insample']:.4f}")
     print(f"    Cross-validated R² = {result['r2_cv_mean']:.4f}")
-    print(f"    Permutation null R² = {result['permutation_null_r2_mean']:.4f}, p = {result['permutation_p']:.4f}")
+    null_r2 = result["permutation_null_r2_mean"]
+    perm_p = result["permutation_p"]
+    print(f"    Permutation null R² = {null_r2:.4f}, p = {perm_p:.4f}")
     print(f"    Interpretation: {result['interpretation']}")
 
     return result

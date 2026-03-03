@@ -310,14 +310,23 @@ def analyze_candidate(name: str, files_map: dict) -> dict | None:
     }
 
     print(f"\n  {name}:")
-    print(f"    n = {result['n_observations']} (enabled={result['n_enabled']}, baseline={result['n_baseline']})")
-    print(f"    R² reduced (7 proxies only)   = {result['r2_reduced']:.4f}")
-    print(f"    R² full (7 proxies + 8th ind.) = {result['r2_full']:.4f}")
-    print(f"    ΔR²                            = {result['delta_r2']:.6f}")
-    print(f"    Partial F = {result['partial_f_stat']:.4f}, p = {result['partial_f_pval']:.6f}")
-    print(f"    Permutation ΔR² = {result['permutation_delta_r2']:.6f}, p = {result['permutation_p']:.4f}")
-    print(f"    Bootstrap 95% CI for ΔR²: [{result['bootstrap_ci_lo']:.6f}, {result['bootstrap_ci_hi']:.6f}]")
-    print(f"    Cross-validated ΔR²        = {result['cv_delta_r2']:.6f}")
+    n = result["n_observations"]
+    n_en = result["n_enabled"]
+    n_bl = result["n_baseline"]
+    print(f"    n = {n} (enabled={n_en}, baseline={n_bl})")
+    print(f"    R² reduced (7 proxies) = {result['r2_reduced']:.4f}")
+    print(f"    R² full (+8th ind.)    = {result['r2_full']:.4f}")
+    print(f"    ΔR²                    = {result['delta_r2']:.6f}")
+    f_s = result["partial_f_stat"]
+    f_p = result["partial_f_pval"]
+    print(f"    Partial F = {f_s:.4f}, p = {f_p:.6f}")
+    perm_d = result["permutation_delta_r2"]
+    perm_p = result["permutation_p"]
+    print(f"    Permutation ΔR² = {perm_d:.6f}, p = {perm_p:.4f}")
+    b_lo = result["bootstrap_ci_lo"]
+    b_hi = result["bootstrap_ci_hi"]
+    print(f"    Bootstrap 95% CI: [{b_lo:.6f}, {b_hi:.6f}]")
+    print(f"    CV ΔR² = {result['cv_delta_r2']:.6f}")
 
     return result
 
