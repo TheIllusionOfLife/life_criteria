@@ -32,6 +32,9 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import mannwhitneyu
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from analyses.results.statistics import run_paired_comparison
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -283,17 +286,22 @@ def _analyze_famine(loaded: dict[str, list[dict]]) -> dict:
         u, p = _mwu_test(other, baseline_post_aucs)
         d = _cohen_d(other, baseline_post_aucs)
         raw_pvalues.append(p)
+        paired = run_paired_comparison(np.array(other), np.array(baseline_post_aucs))
         comparisons[cond] = {
             "metric": "post_shock_auc",
             "vs_baseline_mwu_u": u,
             "vs_baseline_mwu_p_raw": p,
             "vs_baseline_cohen_d": d,
+            **paired,
         }
 
     adjusted = _holm_bonferroni(raw_pvalues)
-    for adj_p, cond in zip(adjusted, comparison_conds, strict=True):
+    paired_raw = [comparisons[c]["wilcoxon_p"] for c in comparison_conds]
+    paired_adj = _holm_bonferroni(paired_raw)
+    for adj_p, padj_p, cond in zip(adjusted, paired_adj, comparison_conds, strict=True):
         comparisons[cond]["vs_baseline_mwu_p_adj"] = adj_p
         comparisons[cond]["significant_adj005"] = adj_p < 0.05 if not np.isnan(adj_p) else None
+        comparisons[cond]["wilcoxon_p_adj"] = padj_p
 
     return {
         "regime": "famine",
@@ -359,17 +367,22 @@ def _analyze_boom_bust(loaded: dict[str, list[dict]]) -> dict:
         u, p = _mwu_test(other, baseline_aucs)
         d = _cohen_d(other, baseline_aucs)
         raw_pvalues.append(p)
+        paired = run_paired_comparison(np.array(other), np.array(baseline_aucs))
         comparisons[cond] = {
             "metric": "survival_auc",
             "vs_baseline_mwu_u": u,
             "vs_baseline_mwu_p_raw": p,
             "vs_baseline_cohen_d": d,
+            **paired,
         }
 
     adjusted = _holm_bonferroni(raw_pvalues)
-    for adj_p, cond in zip(adjusted, comparison_conds, strict=True):
+    paired_raw = [comparisons[c]["wilcoxon_p"] for c in comparison_conds]
+    paired_adj = _holm_bonferroni(paired_raw)
+    for adj_p, padj_p, cond in zip(adjusted, paired_adj, comparison_conds, strict=True):
         comparisons[cond]["vs_baseline_mwu_p_adj"] = adj_p
         comparisons[cond]["significant_adj005"] = adj_p < 0.05 if not np.isnan(adj_p) else None
+        comparisons[cond]["wilcoxon_p_adj"] = padj_p
 
     # Learning curve comparison: is slope for criterion8_on > baseline?
     learning_comparison: dict = {}

@@ -187,6 +187,35 @@ def paired_cohens_d_ci(
     return (d + t_crit_lo * se_d, d + t_crit_hi * se_d)
 
 
+def run_paired_comparison(
+    a: np.ndarray, b: np.ndarray, sesoi: float = 0.5
+) -> dict:
+    """Run full paired comparison suite: Wilcoxon + TOST + paired d + CI + Cliff's delta.
+
+    Arguments a and b must be seed-matched (same length, same seed order).
+    Returns a dict of results suitable for JSON serialization.
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    w_stat, w_p = wilcoxon_signed_rank(a, b)
+    p_upper, p_lower, tost_p = tost_equivalence(a, b, sesoi=sesoi)
+    d = paired_cohens_d(a, b)
+    d_lo, d_hi = paired_cohens_d_ci(a, b)
+    cd = cliffs_delta(a, b)
+    return {
+        "wilcoxon_stat": w_stat,
+        "wilcoxon_p": w_p,
+        "tost_p_upper": p_upper,
+        "tost_p_lower": p_lower,
+        "tost_p": tost_p,
+        "tost_sesoi": sesoi,
+        "paired_cohens_d": d,
+        "paired_cohens_d_ci_lo": d_lo,
+        "paired_cohens_d_ci_hi": d_hi,
+        "cliffs_delta": cd,
+    }
+
+
 def jonckheere_terpstra(groups: list[np.ndarray]) -> tuple[float, float]:
     """Jonckheere-Terpstra trend test for ordered groups.
 
