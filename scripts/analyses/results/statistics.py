@@ -108,6 +108,85 @@ def distribution_stats(arr: np.ndarray) -> dict:
     }
 
 
+def wilcoxon_signed_rank(
+    a: np.ndarray, b: np.ndarray
+) -> tuple[float, float]:
+    """Wilcoxon signed-rank test for paired samples.
+
+    Returns (statistic, p_value).  If all differences are zero, returns (0, 1.0).
+    """
+    diffs = np.asarray(a) - np.asarray(b)
+    if np.all(diffs == 0):
+        return (0.0, 1.0)
+    result = stats.wilcoxon(diffs, alternative="two-sided")
+    return (float(result.statistic), float(result.pvalue))
+
+
+def tost_equivalence(
+    a: np.ndarray, b: np.ndarray, sesoi: float = 0.5
+) -> tuple[float, float, float]:
+    """Two One-Sided Tests (TOST) for equivalence using paired Cohen's d.
+
+    Tests whether the paired effect size lies within [-sesoi, +sesoi].
+    Returns (p_upper, p_lower, tost_p) where tost_p = max(p_upper, p_lower).
+    Significant tost_p (< alpha) means equivalence within the SESOI bounds.
+    """
+    diffs = np.asarray(a) - np.asarray(b)
+    n = len(diffs)
+    if n < 2:
+        return (1.0, 1.0, 1.0)
+    mean_d = float(np.mean(diffs))
+    sd_d = float(np.std(diffs, ddof=1))
+    if sd_d == 0:
+        # Zero variance in differences — if mean_d is within bounds, perfectly equivalent
+        if abs(mean_d) == 0:
+            return (0.0, 0.0, 0.0)
+        return (1.0, 1.0, 1.0)
+    se = sd_d / np.sqrt(n)
+    df = n - 1
+    # Convert SESOI from Cohen's d units to raw-score units
+    delta = sesoi * sd_d
+    # Upper test: H0: mean_diff >= delta → H1: mean_diff < delta
+    t_upper = (mean_d - delta) / se
+    p_upper = float(stats.t.cdf(t_upper, df))
+    # Lower test: H0: mean_diff <= -delta → H1: mean_diff > -delta
+    t_lower = (mean_d + delta) / se
+    p_lower = float(1.0 - stats.t.cdf(t_lower, df))
+    tost_p = max(p_upper, p_lower)
+    return (p_upper, p_lower, tost_p)
+
+
+def paired_cohens_d(a: np.ndarray, b: np.ndarray) -> float:
+    """Cohen's d for paired samples (d_z): mean(diff) / sd(diff)."""
+    diffs = np.asarray(a) - np.asarray(b)
+    n = len(diffs)
+    if n < 2:
+        return 0.0
+    sd = float(np.std(diffs, ddof=1))
+    if sd == 0:
+        return 0.0
+    return float(np.mean(diffs) / sd)
+
+
+def paired_cohens_d_ci(
+    a: np.ndarray, b: np.ndarray, alpha: float = 0.05
+) -> tuple[float, float]:
+    """Wald-type CI for paired Cohen's d_z.
+
+    Uses the approximate SE: sqrt(1/n + d^2 / (2*n)).
+    """
+    diffs = np.asarray(a) - np.asarray(b)
+    n = len(diffs)
+    if n < 2:
+        return (0.0, 0.0)
+    d = paired_cohens_d(a, b)
+    se_d = np.sqrt(1.0 / n + d**2 / (2.0 * n))
+    df = n - 1
+    t_crit_lo = float(stats.t.ppf(alpha / 2, df))
+    t_crit_hi = float(stats.t.ppf(1 - alpha / 2, df))
+    return (d + t_crit_lo * se_d, d + t_crit_hi * se_d)
+
+
 def jonckheere_terpstra(groups: list[np.ndarray]) -> tuple[float, float]:
     """Jonckheere-Terpstra trend test for ordered groups.
 

@@ -26,6 +26,10 @@ from analyses.results.statistics import (
     distribution_stats,
     holm_bonferroni,
     jonckheere_terpstra,
+    paired_cohens_d,
+    paired_cohens_d_ci,
+    tost_equivalence,
+    wilcoxon_signed_rank,
 )
 
 # ---------------------------------------------------------------------------
@@ -196,3 +200,100 @@ class TestTransferEntropyConstantSignals:
         y = np.array([1.0, 2.0])
         result = transfer_entropy_lag1(x, y, bins=3, permutations=10, rng=rng)
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# analyses.results.statistics — Paired tests + TOST
+# ---------------------------------------------------------------------------
+
+
+class TestWilcoxonSignedRank:
+    def test_basic_paired_difference(self):
+        """Paired data with consistent positive shift should produce small p-value."""
+        a = np.array([10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 24.0])
+        b = np.array([8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0])
+        stat, p = wilcoxon_signed_rank(a, b)
+        assert p < 0.05
+        assert stat >= 0
+
+    def test_identical_arrays_p_one(self):
+        """Identical paired data should produce p ≈ 1 (no difference)."""
+        a = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        _, p = wilcoxon_signed_rank(a, a)
+        assert p > 0.9
+
+    def test_returns_tuple(self):
+        a = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        b = np.array([1.1, 2.1, 3.1, 4.1, 5.1])
+        result = wilcoxon_signed_rank(a, b)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+
+class TestTOSTEquivalence:
+    def test_within_bounds_significant(self):
+        """Data with negligible effect should produce significant TOST (p < 0.05)."""
+        rng = np.random.default_rng(42)
+        a = rng.normal(100, 10, size=30)
+        b = a + rng.normal(0, 1, size=30)  # tiny shift
+        p_upper, p_lower, tost_p = tost_equivalence(a, b, sesoi=0.5)
+        assert tost_p < 0.05  # equivalence demonstrated
+        assert p_upper >= 0.0
+        assert p_lower >= 0.0
+
+    def test_outside_bounds_not_significant(self):
+        """Data with large effect should NOT produce significant TOST."""
+        rng = np.random.default_rng(42)
+        a = rng.normal(100, 10, size=30)
+        b = a + 20  # huge shift (d >> 0.5)
+        _, _, tost_p = tost_equivalence(a, b, sesoi=0.5)
+        assert tost_p > 0.05
+
+    def test_returns_three_p_values(self):
+        a = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        b = np.array([1.1, 2.1, 3.1, 4.1, 5.1])
+        result = tost_equivalence(a, b, sesoi=0.5)
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+
+
+class TestPairedCohensD:
+    def test_zero_for_identical(self):
+        a = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        assert paired_cohens_d(a, a) == pytest.approx(0.0)
+
+    def test_known_large_effect(self):
+        """Consistent shift relative to within-pair variability → large |d|."""
+        # b2 > a, so a-b2 is negative → d should be large negative
+        a = np.array([10.0, 20.0, 30.0, 40.0, 50.0])
+        b2 = np.array([11.0, 21.5, 31.0, 41.5, 51.0])
+        d = paired_cohens_d(a, b2)
+        assert abs(d) > 1.0
+
+    def test_direction(self):
+        # Add slight variability so sd_diff > 0
+        a = np.array([5.0, 6.0, 7.0, 8.0, 9.0])
+        b = np.array([1.0, 2.1, 2.9, 4.0, 5.1])
+        assert paired_cohens_d(a, b) > 0
+
+    def test_too_small(self):
+        assert paired_cohens_d(np.array([1.0]), np.array([2.0])) == 0.0
+
+
+class TestPairedCohensDCI:
+    def test_ci_contains_point_estimate(self):
+        rng = np.random.default_rng(42)
+        a = rng.normal(10, 2, size=20)
+        b = rng.normal(10, 2, size=20)
+        d = paired_cohens_d(a, b)
+        lo, hi = paired_cohens_d_ci(a, b)
+        assert lo <= d <= hi
+
+    def test_wider_at_lower_alpha(self):
+        """99% CI should be wider than 95% CI."""
+        rng = np.random.default_rng(42)
+        a = rng.normal(10, 2, size=20)
+        b = rng.normal(10, 2, size=20)
+        lo95, hi95 = paired_cohens_d_ci(a, b, alpha=0.05)
+        lo99, hi99 = paired_cohens_d_ci(a, b, alpha=0.01)
+        assert (hi99 - lo99) >= (hi95 - lo95)
