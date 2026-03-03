@@ -361,7 +361,10 @@ def run_analysis(
     print(f"Orthogonality: partial_corr(AUC, diversity | energy) = {orth_val}")
 
     analysis = {
-        "data_sources": {k: str(v) for k, v in condition_files.items()},
+        "data_sources": {
+            k: str(v.relative_to(_ROOT)) if isinstance(v, Path) else str(v)
+            for k, v in condition_files.items()
+        },
         "summaries": summaries,
         "pairwise_vs_baseline": comparisons,
         "memory_stability": memory_stability,

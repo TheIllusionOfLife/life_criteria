@@ -1,9 +1,9 @@
 {
   "data_sources": {
-    "baseline": "/Users/yuyamukai/Research/life_criteria/experiments/criterion8_baseline.json",
-    "criterion8_on": "/Users/yuyamukai/Research/life_criteria/experiments/criterion8_criterion8_on.json",
-    "criterion8_ablated": "/Users/yuyamukai/Research/life_criteria/experiments/criterion8_criterion8_ablated.json",
-    "sham": "/Users/yuyamukai/Research/life_criteria/experiments/criterion8_sham.json"
+    "baseline": "experiments/criterion8_baseline.json",
+    "criterion8_on": "experiments/criterion8_criterion8_on.json",
+    "criterion8_ablated": "experiments/criterion8_criterion8_ablated.json",
+    "sham": "experiments/criterion8_sham.json"
   },
   "summaries": {
     "baseline": {

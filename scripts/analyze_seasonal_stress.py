@@ -58,8 +58,10 @@ def _per_cycle_survival(result: dict, period: int = _CYCLE_PERIOD) -> list[float
     Winter ends at steps: period, 2*period, 3*period, ...
     With period=1000: winter phases end at 1000, 2000, ..., 10000.
     """
-    cycle_end_steps = [period * (i + 1) for i in range(10_000 // period)]
     sample_map = {s["step"]: s["alive_count"] for s in result.get("samples", [])}
+    max_step = max(sample_map.keys()) if sample_map else 0
+    n_cycles = max_step // period if period > 0 else 0
+    cycle_end_steps = [period * (i + 1) for i in range(n_cycles)]
     return [float(sample_map.get(step, 0)) for step in cycle_end_steps]
 
 

@@ -205,9 +205,12 @@ def _bootstrap_delta_r2(
 
 
 def _cv_delta_r2(
-    X: np.ndarray, y: np.ndarray, z: np.ndarray, k: int = 5
+    X_raw: np.ndarray, y: np.ndarray, z: np.ndarray, k: int = 5
 ) -> float:
-    """K-fold cross-validated ΔR² (mean across folds)."""
+    """K-fold cross-validated ΔR² (mean across folds).
+
+    Standardizes features within each fold to prevent data leakage.
+    """
     rng = np.random.default_rng(42)
     n = len(y)
     indices = rng.permutation(n)
@@ -223,14 +226,23 @@ def _cv_delta_r2(
         if len(train_idx) < 3 or len(test_idx) < 1:
             continue
 
+        # Standardize using train-fold statistics only
+        X_train_raw = X_raw[train_idx]
+        X_test_raw = X_raw[test_idx]
+        train_mean = X_train_raw.mean(axis=0)
+        train_std = X_train_raw.std(axis=0)
+        train_std[train_std == 0] = 1.0
+        X_train = (X_train_raw - train_mean) / train_std
+        X_test = (X_test_raw - train_mean) / train_std
+
         # Train reduced model
-        X_train_r = X[train_idx]
-        X_train_f = np.column_stack([X[train_idx], z[train_idx]])
+        X_train_r = X_train
+        X_train_f = np.column_stack([X_train, z[train_idx]])
         y_train = y[train_idx]
 
         # Test
-        X_test_r = X[test_idx]
-        X_test_f = np.column_stack([X[test_idx], z[test_idx]])
+        X_test_r = X_test
+        X_test_f = np.column_stack([X_test, z[test_idx]])
         y_test = y[test_idx]
 
         # Fit + predict
@@ -288,8 +300,8 @@ def analyze_candidate(name: str, files_map: dict) -> dict | None:
     # Bootstrap CI
     boot_lo, boot_hi = _bootstrap_delta_r2(X_norm, y, z)
 
-    # Cross-validated ΔR²
-    cv_delta = _cv_delta_r2(X_norm, y, z)
+    # Cross-validated ΔR² (uses raw X; standardizes within each fold)
+    cv_delta = _cv_delta_r2(X, y, z)
 
     result = {
         "candidate": name,

@@ -163,9 +163,10 @@ def paired_cohens_d(a: np.ndarray, b: np.ndarray) -> float:
     if n < 2:
         return 0.0
     sd = float(np.std(diffs, ddof=1))
+    mean = float(np.mean(diffs))
     if sd == 0:
-        return 0.0
-    return float(np.mean(diffs) / sd)
+        return float(np.copysign(np.inf, mean)) if mean != 0 else 0.0
+    return float(mean / sd)
 
 
 def paired_cohens_d_ci(
@@ -197,6 +198,11 @@ def run_paired_comparison(
     """
     a = np.asarray(a, dtype=float)
     b = np.asarray(b, dtype=float)
+    if len(a) != len(b):
+        raise ValueError(
+            f"run_paired_comparison requires equal-length arrays "
+            f"(got {len(a)} vs {len(b)})"
+        )
     w_stat, w_p = wilcoxon_signed_rank(a, b)
     p_upper, p_lower, tost_p = tost_equivalence(a, b, sesoi=sesoi)
     d = paired_cohens_d(a, b)
