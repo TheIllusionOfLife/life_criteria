@@ -79,7 +79,8 @@ impl World {
         // Pass 3: update EMA memory trace (or sham override) and compute corrections
         // -------------------------------------------------------------------
         self.memory_org_corrections_buffer.clear();
-        self.memory_org_corrections_buffer.resize(n_orgs, [0.0f32; 2]);
+        self.memory_org_corrections_buffer
+            .resize(n_orgs, [0.0f32; 2]);
 
         for (org_idx, org) in self.organisms.iter_mut().enumerate() {
             if !org.alive {
@@ -106,7 +107,8 @@ impl World {
                 let eff_target = (base_target + gene_target).clamp(0.0, 1.0);
 
                 // Proportional correction toward target, scaled by dt
-                self.memory_org_corrections_buffer[org_idx][i] = eff_gain * (eff_target - org.memory[i]) * dt;
+                self.memory_org_corrections_buffer[org_idx][i] =
+                    eff_gain * (eff_target - org.memory[i]) * dt;
             }
         }
 
