@@ -11,18 +11,25 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from figures import (
+    generate_7criteria_ablation,
     generate_ablation_distributions,
     generate_architecture,
+    generate_boxplot_conditions,
+    generate_candidate_space,
     generate_coupling,
     generate_criterion8,
+    generate_criterion8_stress,
     generate_cyclic,
     generate_cyclic_sweep,
     generate_ecology_stress,
+    generate_ema_dynamics,
     generate_evolution,
     generate_evolution_evidence,
+    generate_forest_plot,
     generate_graded,
     generate_homeostasis,
     generate_invariance,
+    generate_kin_fraction_timeseries,
     generate_lifelikeness_gap,
     generate_lineage,
     generate_midrun_ablation,
@@ -114,6 +121,27 @@ def main() -> None:
 
     print("Figure 22: 8th Criterion — memory results")
     generate_criterion8()
+
+    print("Figure 23: 8th Criterion — stress results")
+    generate_criterion8_stress()
+
+    print("Figure 24: 7-criteria ablation effect sizes")
+    generate_7criteria_ablation()
+
+    print("Figure 25: Boxplot conditions (all experiments)")
+    generate_boxplot_conditions()
+
+    print("Figure 26: Effect size forest plot with TOST bounds")
+    generate_forest_plot()
+
+    print("Figure 27: EMA memory dynamics")
+    generate_ema_dynamics()
+
+    print("Figure 28: Kin fraction time series")
+    generate_kin_fraction_timeseries()
+
+    print("Figure 29: Candidate space taxonomy")
+    generate_candidate_space()
 
     print("Done.")
 

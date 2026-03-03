@@ -37,6 +37,14 @@ from figures.fig_spatial import generate_spatial
 from figures.fig_timeseries import generate_timeseries
 from figures.fig_trait_evolution import generate_trait_evolution
 
+# Peer-review revision figures
+from figures.fig_7criteria_ablation import generate_7criteria_ablation
+from figures.fig_boxplot_conditions import generate_boxplot_conditions
+from figures.fig_candidate_space import generate_candidate_space
+from figures.fig_ema_dynamics import generate_ema_dynamics
+from figures.fig_forest_plot import generate_forest_plot
+from figures.fig_kin_fraction_timeseries import generate_kin_fraction_timeseries
+
 __all__ = [
     "generate_criterion8",
     "generate_criterion8_stress",
@@ -61,4 +69,11 @@ __all__ = [
     "generate_ecology_stress",
     "generate_trait_evolution",
     "generate_lifelikeness_gap",
+    # Peer-review revision figures
+    "generate_7criteria_ablation",
+    "generate_boxplot_conditions",
+    "generate_candidate_space",
+    "generate_ema_dynamics",
+    "generate_forest_plot",
+    "generate_kin_fraction_timeseries",
 ]
