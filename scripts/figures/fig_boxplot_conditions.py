@@ -91,10 +91,20 @@ def generate_boxplot_conditions():
          _CANDIDATE_A_COLORS, "Candidate A — Famine"),
         ("stress_boom_bust", ["baseline", "criterion8_on", "criterion8_ablated", "sham"],
          _CANDIDATE_A_COLORS, "Candidate A — Boom-Bust"),
+        ("seasonal_A", ["baseline", "criterion8_on", "criterion8_ablated", "sham"],
+         _CANDIDATE_A_COLORS, "Candidate A — Seasonal"),
         ("candidateB_famine", ["baseline", "candidateB_on", "candidateB_ablated", "sham"],
          _CANDIDATE_B_COLORS, "Candidate B — Famine"),
         ("candidateB_boom_bust", ["baseline", "candidateB_on", "candidateB_ablated", "sham"],
          _CANDIDATE_B_COLORS, "Candidate B — Boom-Bust"),
+        ("seasonal_B", ["baseline", "candidateB_on", "candidateB_ablated", "sham"],
+         _CANDIDATE_B_COLORS, "Candidate B — Seasonal"),
+        ("relaxed_cap_famine", ["baseline", "candidateB_on", "candidateB_ablated", "sham"],
+         _CANDIDATE_B_COLORS, "Candidate B — Famine (cap=400)"),
+        ("relaxed_cap_boom_bust", ["baseline", "candidateB_on", "candidateB_ablated", "sham"],
+         _CANDIDATE_B_COLORS, "Candidate B — Boom-Bust (cap=400)"),
+        ("relaxed_cap_seasonal", ["baseline", "candidateB_on", "candidateB_ablated", "sham"],
+         _CANDIDATE_B_COLORS, "Candidate B — Seasonal (cap=400)"),
     ]
 
     # Only plot panels with data

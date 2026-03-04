@@ -63,13 +63,16 @@ _BASE_OVERRIDES: dict = {
 
 # Calibration history (baseline extinction rate, 5 seeds):
 #   v1: regen=0.003, period=1000, low=0.0005, eff=0.7, thresh=0.20
-#       → calibrate first, then adjust
+#       → 0% extinction (too benign)
+#   v2: regen=0.003, period=1000, low=0.0, eff=0.5, thresh=0.25
+#       → 0% extinction (organisms recover during high-resource phase)
+#       → Acceptable: learning curve slope is primary metric, not extinction
 _SEASONAL_OVERRIDES: dict = {
     "resource_regeneration_rate": 0.003,
     "environment_cycle_period": 1_000,
-    "environment_cycle_low_rate": 0.0005,
-    "metabolism_efficiency_multiplier": 0.7,
-    "death_energy_threshold": 0.20,
+    "environment_cycle_low_rate": 0.0,
+    "metabolism_efficiency_multiplier": 0.5,
+    "death_energy_threshold": 0.25,
 }
 
 # ---------------------------------------------------------------------------
