@@ -87,20 +87,27 @@ uv run python scripts/prepare_zenodo_metadata.py \
 zsh -ic 'uv run python scripts/upload_zenodo.py \
   --metadata docs/zenodo_metadata.json \
   --title "Life Criteria: Searching for an Eighth Criterion of Life — Code and Data" \
-  --creator "Anonymous" \
+  --creator "<Last, First; Affiliation; ORCID>" \
   --keyword "artificial life" --keyword "criteria of life" \
   --keyword "ablation study" --keyword "null result" \
   --version v1.0 \
   --language eng'
 
-# Publish (irreversible):
-zsh -ic 'uv run python scripts/upload_zenodo.py \
-  --metadata docs/zenodo_metadata.json ... --publish'
-
-# New version of existing record:
+# Publish (irreversible — review draft first):
 zsh -ic 'uv run python scripts/upload_zenodo.py \
   --metadata docs/zenodo_metadata.json \
-  --new-version 18856743 --publish'
+  --title "Life Criteria: Searching for an Eighth Criterion of Life — Code and Data" \
+  --creator "<Last, First; Affiliation; ORCID>" \
+  --keyword "artificial life" --keyword "criteria of life" \
+  --keyword "ablation study" --keyword "null result" \
+  --version v1.0 \
+  --language eng \
+  --publish'
+
+# New version of existing record (only after the record is published):
+zsh -ic 'uv run python scripts/upload_zenodo.py \
+  --metadata docs/zenodo_metadata.json \
+  --new-version <PUBLISHED_RECORD_ID> --publish'
 ```
 
 Note: `zsh -ic` is required because `ZENODO_TOKEN` is exported in the interactive shell profile.
@@ -114,14 +121,14 @@ Note: `zsh -ic` is required because `ZENODO_TOKEN` is exported in the interactiv
 
 ## Submission Sequence
 
-Steps must happen **in order** (Zenodo records and GitHub Releases are immutable once published):
+Steps must happen **in order** (Zenodo records are immutable once published; treat GitHub Releases as immutable for submission integrity):
 
 1. Merge all paper/code PRs to main
 2. Final "submission-ready" commit on main
 3. Publish Zenodo dataset (draft already uploaded as deposit 18856743)
 4. Update paper with final DOI, compile, commit
-5. Tag release: `git tag -a v1.0 -m "ALIFE 2026 submission"`
-6. Create GitHub Release: `gh release create v1.0 --title "ALIFE 2026" --notes "..."`
+5. Tag release: `git tag -a v1.0 -m "<VENUE> submission"`
+6. Create GitHub Release: `gh release create v1.0 --title "<VENUE>" --notes "..."`
 7. Verify code record at <https://zenodo.org/account/settings/github/>
 8. Submit paper to ALIFE 2026 portal
 

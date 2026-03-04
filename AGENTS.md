@@ -54,7 +54,7 @@ Experiment data follows a split publication model. See `docs/artifact_publicatio
 - **Git**: code, configs, analysis summaries, paper assets, manifests, Zenodo metadata
 - **Zenodo**: raw per-seed experiment outputs (gitignored), compressed archives
 - **Never commit** raw experiment JSONs (`experiments/*.json` is gitignored), staging archives (`zenodo_staging/`), or files >5 MB
-- **Zenodo deposit**: 18856743 (DOI: 10.5281/zenodo.18856743) — currently draft
+- **Zenodo deposit**: 18856743 (DOI: 10.5281/zenodo.18856743)
 - **Scripts**: `scripts/prepare_zenodo_metadata.py` (checksums + metadata), `scripts/upload_zenodo.py` (REST API client)
 - **Token**: `ZENODO_TOKEN` env var required; only available in interactive shell (`zsh -ic`)
 - **Submission sequence**: merge PRs → publish Zenodo → tag → GitHub Release → submit paper
