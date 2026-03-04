@@ -47,7 +47,7 @@ STEPS = 10_000
 SAMPLE_EVERY = 100
 
 _POPULATION_CAP = 400  # relaxed from 100
-_ABLATION_STEP = 5_000
+_ABLATION_STEP = STEPS // 2
 
 _BASE_OVERRIDES: dict = {
     "metabolism_mode": "graph",
@@ -59,7 +59,7 @@ _BASE_OVERRIDES: dict = {
 # ---------------------------------------------------------------------------
 
 _FAMINE_OVERRIDES: dict = {
-    "environment_shift_step": 3_000,
+    "environment_shift_step": STEPS * 3 // 10,
     "environment_shift_resource_rate": 0.0,
     "metabolism_efficiency_multiplier": 0.8,
     "death_energy_threshold": 0.25,
@@ -67,7 +67,7 @@ _FAMINE_OVERRIDES: dict = {
 
 _BOOM_BUST_OVERRIDES: dict = {
     "resource_regeneration_rate": 0.002,
-    "environment_cycle_period": 2_500,
+    "environment_cycle_period": STEPS // 4,
     "environment_cycle_low_rate": 0.0,
     "metabolism_efficiency_multiplier": 0.5,
     "death_energy_threshold": 0.25,
@@ -75,7 +75,7 @@ _BOOM_BUST_OVERRIDES: dict = {
 
 _SEASONAL_OVERRIDES: dict = {
     "resource_regeneration_rate": 0.003,
-    "environment_cycle_period": 1_000,
+    "environment_cycle_period": STEPS // 10,
     "environment_cycle_low_rate": 0.0005,
     "metabolism_efficiency_multiplier": 0.7,
     "death_energy_threshold": 0.20,

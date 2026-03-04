@@ -5,7 +5,7 @@ Scope: Statistical-interpretation claims touched by the Candidate B 10k rerun up
 
 ## Checked claims
 
-1. TOST equivalence interpretation requires pre-specified smallest effect size of interest (SESOI) bounds.
+1. TOST equivalence interpretation requires a pre-specified smallest effect size of interest (SESOI) bounds.
 2. TOST-based equivalence corresponds to rejecting effects outside equivalence bounds (implemented in the manuscript as SESOI-based bounded-null framing).
 3. Using Cohen's medium-effect convention (`d = 0.5`) as a heuristic anchor is consistent with standard practice when explicitly framed as a convention.
 
