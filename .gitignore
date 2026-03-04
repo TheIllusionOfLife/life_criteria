@@ -38,6 +38,9 @@ build/
 !/experiments/stress_manifest.json
 
 
+# Zenodo staging (large archives uploaded separately)
+/zenodo_staging/
+
 # IDE/editor
 .idea/
 .vscode/

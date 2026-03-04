@@ -1,0 +1,23 @@
+{
+  "title": "Life Criteria: Searching for an Eighth Criterion of Life — Code and Data",
+  "description": "Source code, experiment scripts, analysis pipeline, and simulation data for the ALIFE 2026 paper 'Searching for an Eighth Criterion of Life: A Falsifiable Framework and Two Null Results'. Implements all seven biological criteria as ablatable processes in a hybrid swarm-organism simulator, then tests two candidate eighth criteria (within-lifetime memory/EMA and collective kin-sensing) across three perturbation regimes with population cap relaxation experiments.",
+  "upload_type": "software",
+  "creators": [
+    {
+      "name": "Anonymous",
+      "affiliation": ""
+    }
+  ],
+  "license": "MIT",
+  "keywords": [
+    "artificial life",
+    "criteria of life",
+    "ablation study",
+    "null result",
+    "within-lifetime learning",
+    "kin selection",
+    "ALIFE 2026"
+  ],
+  "related_identifiers": [],
+  "language": "eng"
+}

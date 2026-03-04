@@ -19,7 +19,31 @@ def _load_comparisons(analysis_path, comparison_key="pairwise_vs_baseline"):
         return {}
     with open(analysis_path) as f:
         data = json.load(f)
-    # Handle nested regime structure
+    # Handle candidate-nested structure (seasonal_analysis.json)
+    if "candidate_A" in data or "candidate_B" in data:
+        results = {}
+        for cand_key in ("candidate_A", "candidate_B"):
+            cand_data = data.get(cand_key)
+            if not isinstance(cand_data, dict):
+                continue
+            comparisons = cand_data.get(comparison_key, {})
+            cand_label = cand_data.get("candidate", cand_key)
+            for cond, stats in comparisons.items():
+                if "paired_cohens_d" in stats:
+                    results[f"{cond}\n(Cand {cand_label})"] = stats
+        return results
+    # Handle "regimes" wrapper (candidateB_relaxed_cap_analysis.json)
+    if "regimes" in data:
+        results = {}
+        for regime, rdata in data["regimes"].items():
+            if not isinstance(rdata, dict):
+                continue
+            comparisons = rdata.get(comparison_key, {})
+            for cond, stats in comparisons.items():
+                if "paired_cohens_d" in stats:
+                    results[f"{cond}\n({regime})"] = stats
+        return results
+    # Handle nested regime structure (stress_analysis.json)
     if "famine" in data or "boom_bust" in data:
         results = {}
         for regime, rdata in data.items():
@@ -48,6 +72,7 @@ def generate_forest_plot():
         (_EXP_DIR / "candidateB_stress_analysis.json", "Stress (B)"),
         (_EXP_DIR / "candidateB_preshock_analysis.json", "Pre-shock (B)"),
         (_EXP_DIR / "seasonal_analysis.json", "Seasonal"),
+        (_EXP_DIR / "candidateB_relaxed_cap_analysis.json", "Relaxed Cap (B)"),
     ]
 
     all_rows = []  # (label, d, ci_lo, ci_hi)

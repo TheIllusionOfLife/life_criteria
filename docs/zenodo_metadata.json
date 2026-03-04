@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-03-04T02:12:51.868009+00:00",
+  "experiment_name": "life_criteria_all_experiments",
+  "artifact_source_commit": "456c8ff4f15dee129975eec50b0ecde223105f67",
+  "entrypoint": null,
+  "metadata_generation_argv": [
+    "zenodo_staging/life_criteria_experiments_v1.tar.gz",
+    "--experiment-name",
+    "life_criteria_all_experiments",
+    "--steps",
+    "10000",
+    "--seed-start",
+    "100",
+    "--seed-end",
+    "129",
+    "--paper-binding",
+    "tab:results=experiments/criterion8_analysis.json",
+    "--paper-binding",
+    "tab:results=experiments/stress_analysis.json",
+    "--paper-binding",
+    "tab:results=experiments/seasonal_analysis.json",
+    "--paper-binding",
+    "tab:results=experiments/candidateB_relaxed_cap_analysis.json",
+    "--output",
+    "docs/zenodo_metadata.json"
+  ],
+  "seed_range": {
+    "start": 100,
+    "end": 129
+  },
+  "steps": 10000,
+  "artifacts": [
+    {
+      "path": "zenodo_staging/life_criteria_experiments_v1.tar.gz",
+      "size_bytes": 53668686,
+      "sha256": "c39bd5f76f54109715ee7cf7050e9420a7779c15cd1b906457f3da2ab1658759"
+    }
+  ],
+  "paper_bindings": [
+    {
+      "paper_ref": "tab:results",
+      "file_path": "experiments/criterion8_analysis.json"
+    },
+    {
+      "paper_ref": "tab:results",
+      "file_path": "experiments/stress_analysis.json"
+    },
+    {
+      "paper_ref": "tab:results",
+      "file_path": "experiments/seasonal_analysis.json"
+    },
+    {
+      "paper_ref": "tab:results",
+      "file_path": "experiments/candidateB_relaxed_cap_analysis.json"
+    }
+  ]
+}
