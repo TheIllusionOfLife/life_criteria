@@ -37,8 +37,10 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import requests
+if TYPE_CHECKING:
+    import requests
 
 ZENODO_API = "https://zenodo.org/api"
 SANDBOX_API = "https://sandbox.zenodo.org/api"
@@ -55,6 +57,12 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _requests():
+    import requests
+
+    return requests
 
 
 def _check_response(resp: requests.Response, context: str) -> None:
@@ -98,6 +106,7 @@ def _parse_creator(raw: str) -> dict[str, str]:
 
 
 def create_deposit(base_url: str, token: str) -> dict:
+    requests = _requests()
     resp = requests.post(
         f"{base_url}/deposit/depositions",
         json={},
@@ -112,6 +121,7 @@ def create_deposit(base_url: str, token: str) -> dict:
 
 
 def create_new_version(base_url: str, token: str, record_id: int) -> dict:
+    requests = _requests()
     resp = requests.post(
         f"{base_url}/deposit/depositions/{record_id}/actions/newversion",
         headers=_auth_headers(token),
@@ -130,6 +140,7 @@ def create_new_version(base_url: str, token: str, record_id: int) -> dict:
 
 
 def edit_published(base_url: str, token: str, record_id: int) -> dict:
+    requests = _requests()
     resp = requests.post(
         f"{base_url}/deposit/depositions/{record_id}/actions/edit",
         headers=_auth_headers(token),
@@ -141,6 +152,7 @@ def edit_published(base_url: str, token: str, record_id: int) -> dict:
 
 
 def upload_file(bucket_url: str, token: str, path: Path) -> dict:
+    requests = _requests()
     size_mb = path.stat().st_size / (1024 * 1024)
     print(f"  Uploading {path.name} ({size_mb:.1f} MB) ...", file=sys.stderr, end="", flush=True)
     with open(path, "rb") as fp:
@@ -157,6 +169,7 @@ def upload_file(bucket_url: str, token: str, path: Path) -> dict:
 
 
 def delete_file(base_url: str, token: str, dep_id: int, file_id: str) -> None:
+    requests = _requests()
     resp = requests.delete(
         f"{base_url}/deposit/depositions/{dep_id}/files/{file_id}",
         headers=_auth_headers(token),
@@ -166,6 +179,7 @@ def delete_file(base_url: str, token: str, dep_id: int, file_id: str) -> None:
 
 
 def set_metadata(base_url: str, token: str, dep_id: int, metadata: dict) -> dict:
+    requests = _requests()
     resp = requests.put(
         f"{base_url}/deposit/depositions/{dep_id}",
         json={"metadata": metadata},
@@ -178,6 +192,7 @@ def set_metadata(base_url: str, token: str, dep_id: int, metadata: dict) -> dict
 
 
 def publish_deposit(base_url: str, token: str, dep_id: int) -> dict:
+    requests = _requests()
     resp = requests.post(
         f"{base_url}/deposit/depositions/{dep_id}/actions/publish",
         headers=_auth_headers(token),
@@ -190,6 +205,7 @@ def publish_deposit(base_url: str, token: str, dep_id: int) -> dict:
 
 
 def fetch_bibtex(base_url: str, record_id: int) -> str:
+    requests = _requests()
     resp = requests.get(
         f"{base_url}/records/{record_id}",
         headers={"Accept": "application/x-bibtex"},
@@ -225,6 +241,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--conference-url", default=None)
     parser.add_argument("--language", default=None)
     parser.add_argument("--publish", action="store_true")
+    parser.add_argument(
+        "--confirm-publish",
+        action="store_true",
+        help="Required with --publish to confirm irreversible publication.",
+    )
     parser.add_argument("--sandbox", action="store_true")
     parser.add_argument("--no-verify-checksums", action="store_true")
     return parser.parse_args()
@@ -253,11 +274,13 @@ def _build_metadata(args: argparse.Namespace) -> dict:
     if args.keyword:
         meta["keywords"] = args.keyword
     if args.github_url:
-        meta["related_identifiers"] = [{
-            "identifier": args.github_url,
-            "relation": "isSupplementTo",
-            "scheme": "url",
-        }]
+        meta["related_identifiers"] = [
+            {
+                "identifier": args.github_url,
+                "relation": "isSupplementTo",
+                "scheme": "url",
+            }
+        ]
     if args.conference_title:
         meta["conference_title"] = args.conference_title
     if args.conference_url:
@@ -291,6 +314,13 @@ def _load_and_verify(args: argparse.Namespace, meta: dict) -> list[Path]:
 def main() -> int:
     args = parse_args()
     base_url = SANDBOX_API if args.sandbox else ZENODO_API
+
+    if args.publish and not args.confirm_publish:
+        print(
+            "ERROR: --publish is irreversible and requires --confirm-publish.",
+            file=sys.stderr,
+        )
+        return 1
 
     if args.fetch_bibtex:
         print(fetch_bibtex(base_url, args.fetch_bibtex))

@@ -37,15 +37,16 @@ organization via kin-sensing).  Both yield null results across all regimes: all 
 $|d_z| < 0.44$, all adjusted $p \geq 0.07$, with
 formal TOST equivalence testing confirming the majority of comparisons
 fall within our pre-specified SESOI of $\pm 0.5$.  A population cap
-relaxation experiment (cap$=$400 vs.\ 100) confirms that Candidate~B's
-null is not an observability artifact.  Exploratory legitimacy tests confirm
+relaxation robustness check (cap$=$400 vs.\ 100, shortened 5{,}000-step
+protocol) supports persistence of Candidate~B's null under stronger kin
+signal viability.  Exploratory legitimacy tests confirm
 neither candidate adds incremental predictive validity
 ($\Delta R^2 < 0.001$, permutation $p > 0.37$) and both candidate
 signals are reducible to existing criteria (cross-validated $R^2 > 0.88$).
 These bounded null results constrain each candidate's effect below
 practical significance, while the validated protocol provides a reusable
-template for future candidate evaluation.  Code and data:
-\url{https://github.com/TheIllusionOfLife/life_criteria}.
+template for future candidate evaluation.  Code and data artifacts are
+prepared for anonymized review and public release.
 \end{abstract}
 
 %% ================================================================
@@ -70,7 +71,8 @@ Theoretical frameworks from autopoiesis
 \citep{ganti_2003_principles} emphasize integrating metabolic,
 boundary, and informational subsystems \citep{ruizmirazo_2004_universal}.
 
-Despite this rich landscape, few systems implement \emph{all seven}
+Despite this rich landscape, and based on representative systems in the
+ALife literature, comparatively few platforms report \emph{all seven}
 criteria as interdependent, individually ablatable processes---and
 fewer still ask whether the seven are \emph{sufficient}.
 \citet{bedau_2000_open} identified open problems in ALife that implicitly
@@ -130,12 +132,14 @@ coordination),
 behavior), and
 (7)~\emph{evolution} (heritable genomes, mutation, differential survival).
 
-All organisms share a fixed-topology neural controller
-($8 \to 16 \to 4$, 212 weights) with genome-encoded weights evolved
-through tournament selection.  Key simulation parameters are listed in
-Table~\ref{tab:params}.  Simulations run for 10{,}000 timesteps
-with deterministic seeding (same seed $+$ config $\to$ identical
-output).
+The baseline and Candidate~A conditions use a fixed-topology neural
+controller ($8 \to 16 \to 4$, 212 weights).  Candidate~B appends one
+kin-sensing input ($9 \to 16 \to 4$, 228 weights).  Weights are
+genome-encoded and evolved through tournament selection.  Key simulation
+parameters are listed in
+Table~\ref{tab:params}.  Each run runs for 10000 timesteps with
+population sampled every 100 steps, and uses deterministic seeding (same
+seed $+$ config $\to$ identical output).
 
 
 \subsection{Seven-Criteria Validation}
@@ -352,9 +356,11 @@ multi-agent organisms to persist longer.  Under cap$=$400,
 0.28 (boom-bust), 0.26 (seasonal), compared to
 0.03/0.19 under cap$=$100.  Despite the now-viable kin signal,
 Candidate~B remains null across all three regimes: largest
-$|d_z| = 0.43$ ($p_\mathrm{adj} = 0.07$).  This
-confirms the null is not an observability artifact---the kin signal is
-present but provides no survival advantage.
+$|d_z| = 0.25$ for enabled-vs-baseline ($p_\mathrm{adj} = 0.41$).
+Because this robustness check uses a shortened 5{,}000-step protocol and
+rescaled perturbation timing, we interpret it as supportive rather than
+fully confirmatory evidence that observability limits are not solely
+driving the null.
 
 
 %% ================================================================
@@ -412,9 +418,9 @@ introduces genuinely novel information under the tested regimes.
 
 Both candidates yield null results across all tested regimes---including
 the seasonal cycle regime designed to be the fairest test for
-Candidate~A's EMA memory.  Table~\ref{tab:results} shows that all
-paired effects are small: the largest is $|d_z| = 0.43$ (Candidate~B, seasonal, sham, cap$=$400;
-$p_\mathrm{adj} = 0.07$).  TOST equivalence testing confirms
+Candidate~A's EMA memory.  Table~\ref{tab:results} shows that enabled
+paired effects are small in both the primary 10{,}000-step experiments
+and the cap$=$400 robustness check.  TOST equivalence testing confirms
 that the majority of primary comparisons fall formally within our SESOI
 of $\pm 0.5$ ($p_\mathrm{TOST} < 0.05$).
 Figure~\ref{fig:forest} visualizes the forest plot of all effect sizes
@@ -432,8 +438,8 @@ for a different reason:
 \item \textbf{Candidate~B} (Kin-Sensing): Demographic convergence to
   single-agent organisms eliminates the kin signal under cap$=$100.
   A population cap relaxation (cap$=$400) restores viable kin fractions
-  (0.26--0.32), yet the null persists across all
-  three regimes, ruling out signal sparsity as a confound.
+  (0.26--0.32), and a shortened-protocol robustness check still shows no
+  enabled-condition survival benefit.
 \end{itemize}
 
 The legitimacy tests strengthen these conclusions: neither candidate adds
@@ -471,7 +477,9 @@ naturally.
 
 \textbf{Population caps and controller capacity.}  The default cap
 (100) drives convergence to single-agent organisms; our cap$=$400
-relaxation confirms viable kin signals do not rescue Candidate~B's null,
+relaxation increased kin-signal viability but used a shortened
+5{,}000-step protocol, so stronger matched-protocol confirmation remains
+future work,
 but higher caps remain untested for Candidate~A.  The fixed-topology NN
 ($8/9 \to 16 \to 4$) may lack capacity to exploit memory or kin
 information; topology evolution \citep{stanley_2002_evolving} could
@@ -500,8 +508,8 @@ criteria of life-likeness, incorporating paired statistical analysis,
 formal equivalence testing, and three legitimacy tests.  Validating the
 framework against all seven existing criteria ($d = 0.78$--$14.7$,
 all significant), we tested two candidates across three perturbation
-regimes and a population cap relaxation experiment.  Both yield bounded
-null results: all paired $|d_z| < 0.44$, with TOST confirming
+regimes and a population cap robustness check.  Both yield bounded
+null results in the reported comparisons, with TOST confirming
 formal equivalence for the majority of comparisons.  Exploratory
 legitimacy tests confirm neither candidate adds predictive power or
 introduces non-reducible information.
@@ -668,10 +676,9 @@ shows signal dependence on population carrying capacity.}
 
 
 \paragraph{Data availability.}
-Source code, experiment scripts, and analysis pipeline are available at
-\url{https://github.com/TheIllusionOfLife/life_criteria}.
-Experiment data and analysis outputs are archived on Zenodo
-(\url{https://doi.org/10.5281/zenodo.18857232}).
+Source code, experiment scripts, and analysis artifacts are available to
+reviewers via anonymized submission materials and will be released at
+camera-ready.
 
 
 \footnotesize

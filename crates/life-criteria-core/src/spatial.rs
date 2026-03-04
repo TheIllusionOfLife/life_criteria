@@ -4,6 +4,7 @@ use crate::agent::Agent;
 #[derive(Clone, Debug)]
 pub struct GridEntry {
     pub id: u32,
+    pub organism_id: u16,
     pub position: [f64; 2],
 }
 
@@ -29,7 +30,7 @@ pub struct UniformGrid {
 impl UniformGrid {
     /// Build a grid from an iterator of (id, position) pairs.
     fn build(
-        agents: impl Iterator<Item = (u32, [f64; 2])> + Clone,
+        agents: impl Iterator<Item = (u32, u16, [f64; 2])> + Clone,
         sensing_radius: f64,
         world_size: f64,
     ) -> Self {
@@ -41,7 +42,7 @@ impl UniformGrid {
         // Pass 1: count agents per cell
         let mut counts = vec![0usize; num_cells];
         let mut total = 0usize;
-        for (_id, pos) in agents.clone() {
+        for (_id, _organism_id, pos) in agents.clone() {
             let cell = cell_index(pos, cell_size, grid_dim);
             counts[cell] += 1;
             total += 1;
@@ -57,15 +58,20 @@ impl UniformGrid {
         let mut entries = vec![
             GridEntry {
                 id: 0,
+                organism_id: 0,
                 position: [0.0; 2],
             };
             total
         ];
         let mut cursors = vec![0usize; num_cells];
-        for (id, position) in agents {
+        for (id, organism_id, position) in agents {
             let cell = cell_index(position, cell_size, grid_dim);
             let idx = offsets[cell] + cursors[cell];
-            entries[idx] = GridEntry { id, position };
+            entries[idx] = GridEntry {
+                id,
+                organism_id,
+                position,
+            };
             cursors[cell] += 1;
         }
 
@@ -105,7 +111,7 @@ fn for_each_unique_neighbor(
     radius: f64,
     self_id: u32,
     world_size: f64,
-    mut visitor: impl FnMut(u32),
+    mut visitor: impl FnMut(&GridEntry),
 ) {
     assert!(
         world_size.is_finite() && world_size > 0.0,
@@ -154,7 +160,7 @@ fn for_each_unique_neighbor(
                 let ex = wrapped_delta(entry.position[0] - center[0], world_size);
                 let ey = wrapped_delta(entry.position[1] - center[1], world_size);
                 if ex * ex + ey * ey <= r_sq {
-                    visitor(entry.id);
+                    visitor(entry);
                 }
             }
         }
@@ -164,7 +170,7 @@ fn for_each_unique_neighbor(
 /// Build a uniform grid from all agent positions.
 pub fn build_index(agents: &[Agent], sensing_radius: f64, world_size: f64) -> UniformGrid {
     UniformGrid::build(
-        agents.iter().map(|a| (a.id, a.position)),
+        agents.iter().map(|a| (a.id, a.organism_id, a.position)),
         sensing_radius,
         world_size,
     )
@@ -186,7 +192,7 @@ pub fn build_index_active(
                     .copied()
                     .unwrap_or(false)
             })
-            .map(|a| (a.id, a.position)),
+            .map(|a| (a.id, a.organism_id, a.position)),
         sensing_radius,
         world_size,
     )
@@ -203,20 +209,12 @@ pub fn count_neighbors_split(
     radius: f64,
     self_id: u32,
     self_organism_id: u16,
-    agent_id_to_org: &std::collections::HashMap<u32, u16>,
     world_size: f64,
 ) -> (usize, usize) {
     let mut kin = 0usize;
     let mut non_kin = 0usize;
-    for_each_unique_neighbor(grid, center, radius, self_id, world_size, |neighbor_id| {
-        // Look up neighbor's organism_id via the ID→organism map.
-        // Agent IDs are not guaranteed to be contiguous slice indices
-        // (pruning compacts the vector without remapping IDs).
-        let is_kin = agent_id_to_org
-            .get(&neighbor_id)
-            .map(|&org| org == self_organism_id)
-            .unwrap_or(false);
-        if is_kin {
+    for_each_unique_neighbor(grid, center, radius, self_id, world_size, |entry| {
+        if entry.organism_id == self_organism_id {
             kin += 1;
         } else {
             non_kin += 1;
@@ -249,8 +247,8 @@ pub fn query_neighbors(
     world_size: f64,
 ) -> Vec<u32> {
     let mut result = Vec::new();
-    for_each_unique_neighbor(grid, center, radius, self_id, world_size, |id| {
-        result.push(id);
+    for_each_unique_neighbor(grid, center, radius, self_id, world_size, |entry| {
+        result.push(entry.id);
     });
     result.sort_unstable();
     result
@@ -447,10 +445,6 @@ mod tests {
         assert_eq!(count_neighbors(&grid, [1.0, 1.0], 10.0, 0, 10.0), 1);
     }
 
-    fn build_id_to_org(agents: &[Agent]) -> std::collections::HashMap<u32, u16> {
-        agents.iter().map(|a| (a.id, a.organism_id)).collect()
-    }
-
     #[test]
     fn count_neighbors_split_distinguishes_kin_and_non_kin() {
         // Agents 0,1 belong to organism 0; agent 2 belongs to organism 1
@@ -460,9 +454,8 @@ mod tests {
             Agent::new(2, 1, [5.5, 5.0]),
         ];
         let grid = build_default(&agents);
-        let map = build_id_to_org(&agents);
         // Query from agent 0's perspective (organism 0)
-        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, &map, 100.0);
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, 100.0);
         assert_eq!(kin, 1, "agent 1 is kin (same organism)");
         assert_eq!(non_kin, 1, "agent 2 is non-kin (different organism)");
     }
@@ -476,8 +469,7 @@ mod tests {
             Agent::new(2, 0, [5.5, 5.0]),
         ];
         let grid = build_default(&agents);
-        let map = build_id_to_org(&agents);
-        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, &map, 100.0);
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, 100.0);
         assert_eq!(kin, 2);
         assert_eq!(non_kin, 0);
     }
@@ -486,8 +478,7 @@ mod tests {
     fn count_neighbors_split_no_neighbors() {
         let agents = vec![Agent::new(0, 0, [5.0, 5.0]), Agent::new(1, 1, [50.0, 50.0])];
         let grid = build_default(&agents);
-        let map = build_id_to_org(&agents);
-        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, &map, 100.0);
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 0, 0, 100.0);
         assert_eq!(kin, 0);
         assert_eq!(non_kin, 0);
     }
@@ -496,16 +487,15 @@ mod tests {
     fn count_neighbors_split_non_contiguous_ids() {
         // Simulate post-pruning state: agent IDs are sparse (100, 500, 1000)
         // but the agents vector only has 3 elements.
-        // Before the HashMap fix, agents.get(500) would be out-of-bounds.
+        // Neighbor accounting must remain correct even with sparse IDs.
         let agents = vec![
             Agent::new(100, 0, [5.0, 5.0]),
             Agent::new(500, 0, [6.0, 5.0]),
             Agent::new(1000, 1, [5.5, 5.0]),
         ];
         let grid = build_default(&agents);
-        let map = build_id_to_org(&agents);
         // Query from agent 100's perspective (organism 0)
-        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 100, 0, &map, 100.0);
+        let (kin, non_kin) = count_neighbors_split(&grid, [5.0, 5.0], 2.0, 100, 0, 100.0);
         assert_eq!(kin, 1, "agent 500 is kin (same organism 0)");
         assert_eq!(non_kin, 1, "agent 1000 is non-kin (organism 1)");
     }

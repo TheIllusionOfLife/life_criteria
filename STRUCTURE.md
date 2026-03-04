@@ -56,7 +56,7 @@ See `configs/README.md` for provenance of each file.
 ## Documentation Organization
 
 - Root docs (`README.md`, `AGENTS.md`, `PRODUCT.md`, `TECH.md`, `STRUCTURE.md`) are canonical operational docs
-- `docs/research/plan.md` is the authoritative research plan (8th criterion thesis)
+- `docs/research/research_plan.md` is the authoritative research plan (8th criterion thesis)
 - `docs/archive/research/` and `docs/archive/paper/` hold historical artifacts from the digital_life project
 - Keep heavy experiment artifacts out of git; track compact summaries and provenance manifests instead
 

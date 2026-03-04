@@ -65,6 +65,14 @@ class TestHolmBonferroni:
         # raw[1]=0.001 is smallest: corrected[1] = 0.001*2 = 0.002
         assert corrected[1] == pytest.approx(0.002)
 
+    def test_nan_safe_and_ignored_in_ranking(self):
+        raw = [0.01, float("nan"), 0.04]
+        corrected = holm_bonferroni(raw)
+        assert corrected[1] != corrected[1]  # NaN stays NaN
+        # finite values ranked with m=2, not n=3
+        assert corrected[0] == pytest.approx(0.02)
+        assert corrected[2] == pytest.approx(0.04)
+
 
 class TestCohensD:
     def test_identical_groups_zero(self):
