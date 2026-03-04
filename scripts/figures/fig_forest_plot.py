@@ -22,7 +22,8 @@ def _load_comparisons(analysis_path, comparison_key="pairwise_vs_baseline"):
     # Handle candidate-nested structure (seasonal_analysis.json)
     if "candidate_A" in data or "candidate_B" in data:
         results = {}
-        for cand_key, cand_data in data.items():
+        for cand_key in ("candidate_A", "candidate_B"):
+            cand_data = data.get(cand_key)
             if not isinstance(cand_data, dict):
                 continue
             comparisons = cand_data.get(comparison_key, {})
