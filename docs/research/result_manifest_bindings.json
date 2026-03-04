@@ -12,6 +12,11 @@
       "note": "Candidate A/B paired statistics and corrected p-values"
     },
     {
+      "paper_ref": "tab:results",
+      "manifest": "experiments/candidateB_relaxed_cap_analysis.json",
+      "note": "Candidate B cap=400 matched-protocol robustness statistics"
+    },
+    {
       "paper_ref": "fig:7criteria",
       "manifest": "experiments/final_graph_statistics.json",
       "note": "Seven-criteria ablation effect sizes"
@@ -20,6 +25,16 @@
       "paper_ref": "fig:forest",
       "manifest": "experiments/stress_analysis.json",
       "note": "Forest plot source for stress comparisons"
+    },
+    {
+      "paper_ref": "fig:forest",
+      "manifest": "experiments/candidateB_preshock_analysis.json",
+      "note": "Candidate B pre-shock paired effects"
+    },
+    {
+      "paper_ref": "fig:forest",
+      "manifest": "experiments/candidateB_relaxed_cap_analysis.json",
+      "note": "Candidate B cap=400 robustness paired effects"
     },
     {
       "paper_ref": "fig:ema",

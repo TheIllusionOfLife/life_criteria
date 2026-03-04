@@ -31,6 +31,8 @@ build/
 /experiments/*_part_*.json
 # Keep manifest-bound source artifacts trackable.
 !/experiments/coupling_analysis.json
+!/experiments/candidateB_preshock_analysis.json
+!/experiments/candidateB_relaxed_cap_analysis.json
 !/experiments/final_graph_statistics.json
 !/experiments/final_statistics.json
 !/experiments/criterion8_manifest.json
