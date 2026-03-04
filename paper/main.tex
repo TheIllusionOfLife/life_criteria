@@ -37,9 +37,10 @@ organization via kin-sensing).  Both yield null results across all regimes: all 
 $|d_z| < 0.44$, all adjusted $p \geq 0.07$, with
 formal TOST equivalence testing confirming the majority of comparisons
 fall within our pre-specified SESOI of $\pm 0.5$.  A population cap
-relaxation robustness check (cap$=$400 vs.\ 100, shortened 5{,}000-step
-protocol) supports persistence of Candidate~B's null under stronger kin
-signal viability.  Exploratory legitimacy tests confirm
+relaxation robustness check (cap$=$400 vs.\ 100, matched 10{,}000-step
+protocol) supports persistence of Candidate~B's enabled-condition null
+under stronger kin-signal viability, with a seasonal sham-condition
+exception noted as a robustness caveat.  Exploratory legitimacy tests confirm
 neither candidate adds incremental predictive validity
 ($\Delta R^2 < 0.001$, permutation $p > 0.37$) and both candidate
 signals are reducible to existing criteria (cross-validated $R^2 > 0.88$).
@@ -352,15 +353,14 @@ principle but becomes degenerate under the tested demographic regime.
 To test whether Candidate~B's null is an artifact of the population cap,
 we relaxed \texttt{max\_alive\_organisms} from 100 to 400, allowing
 multi-agent organisms to persist longer.  Under cap$=$400,
-\texttt{kin\_fraction} increased dramatically: 0.32 (famine),
-0.28 (boom-bust), 0.26 (seasonal), compared to
-0.03/0.19 under cap$=$100.  Despite the now-viable kin signal,
-Candidate~B remains null across all three regimes: largest
-$|d_z| = 0.25$ for enabled-vs-baseline ($p_\mathrm{adj} = 0.41$).
-Because this robustness check uses a shortened 5{,}000-step protocol and
-rescaled perturbation timing, we interpret it as supportive rather than
-fully confirmatory evidence that observability limits are not solely
-driving the null.
+\texttt{kin\_fraction} increased substantially: 0.24 (famine),
+0.14 (boom-bust), 0.22 (seasonal), compared to
+0.03/0.19 under cap$=$100.  Under this matched 10{,}000-step protocol,
+enabled-vs-baseline effects remain bounded in all three regimes
+(largest $|d_z| = 0.23$, $p_\mathrm{adj} \ge 0.30$).  One caveat is that
+the seasonal \emph{sham} arm exceeds SESOI ($d_z = 0.54$,
+$p_\mathrm{adj} = 0.004$), indicating compute-matched controls are not
+uniformly null at higher population capacity.
 
 
 %% ================================================================
@@ -424,7 +424,8 @@ and the cap$=$400 robustness check.  TOST equivalence testing confirms
 that the majority of primary comparisons fall formally within our SESOI
 of $\pm 0.5$ ($p_\mathrm{TOST} < 0.05$).
 Figure~\ref{fig:forest} visualizes the forest plot of all effect sizes
-with SESOI bounds.
+with SESOI bounds; one cap$=$400 seasonal sham comparison lies outside
+SESOI and is treated as a robustness caveat rather than candidate gain.
 
 Importantly, these are \emph{diagnosed} nulls.  Each candidate fails
 for a different reason:
@@ -438,7 +439,7 @@ for a different reason:
 \item \textbf{Candidate~B} (Kin-Sensing): Demographic convergence to
   single-agent organisms eliminates the kin signal under cap$=$100.
   A population cap relaxation (cap$=$400) restores viable kin fractions
-  (0.26--0.32), and a shortened-protocol robustness check still shows no
+  (0.14--0.24), and matched-protocol reruns still show no
   enabled-condition survival benefit.
 \end{itemize}
 
@@ -477,9 +478,10 @@ naturally.
 
 \textbf{Population caps and controller capacity.}  The default cap
 (100) drives convergence to single-agent organisms; our cap$=$400
-relaxation increased kin-signal viability but used a shortened
-5{,}000-step protocol, so stronger matched-protocol confirmation remains
-future work,
+relaxation increased kin-signal viability under a matched 10{,}000-step
+protocol, but one seasonal sham comparison exceeded SESOI and highlights
+that compute-matched controls are not uniformly null at higher capacity.
+Stronger control-focused follow-up remains future work,
 but higher caps remain untested for Candidate~A.  The fixed-topology NN
 ($8/9 \to 16 \to 4$) may lack capacity to exploit memory or kin
 information; topology evolution \citep{stanley_2002_evolving} could
@@ -622,9 +624,9 @@ Bold TOST indicates formal equivalence ($p < 0.05$).}
 \quad Sham    & Seasonal & $0.10$  & $[-0.27, 0.48]$ & $0.90$ & $\mathbf{0.019}$ & 0 \\
 \midrule
 \multicolumn{7}{@{}l}{\textit{Candidate B: Kin-Sensing (cap$=$400)}} \\
-\quad Enabled & Famine  & $0.23$  & $[-0.15, 0.61]$ & $0.40$ & $0.076$ & 90.0 \\
-\quad Enabled & Boom-bust & $0.07$  & $[-0.30, 0.44]$ & $1.00$ & $\mathbf{0.013}$ & 83.3 \\
-\quad Enabled & Seasonal & $0.25$  & $[-0.13, 0.63]$ & $0.41$ & $0.093$ & 0 \\
+\quad Enabled & Famine  & $0.23$  & $[-0.15, 0.61]$ & $0.76$ & $0.074$ & 86.7 \\
+\quad Enabled & Boom-bust & $0.22$  & $[-0.16, 0.59]$ & $0.95$ & $0.066$ & 100.0 \\
+\quad Enabled & Seasonal & $0.23$  & $[-0.15, 0.61]$ & $0.30$ & $0.073$ & 0 \\
 \bottomrule
 \end{tabular}
 \end{table*}

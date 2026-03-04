@@ -21,7 +21,7 @@ Tiers
   --tier calibration : 5 seeds (0-4) for timing/feasibility check
   --tier 1           : 30 seeds (100-129) held-out final test
 
-Steps: 5,000 (shortened to manage compute with cap=400)
+Steps: 10,000 (matched to primary stress protocols)
 
 Usage
 -----
@@ -43,11 +43,11 @@ from experiment_common import log, make_config_dict, run_seeds_parallel, run_sin
 # Experiment parameters
 # ---------------------------------------------------------------------------
 
-STEPS = 5_000
-SAMPLE_EVERY = 50
+STEPS = 10_000
+SAMPLE_EVERY = 100
 
 _POPULATION_CAP = 400  # relaxed from 100
-_ABLATION_STEP = 2_500  # proportional to shorter run
+_ABLATION_STEP = STEPS // 2
 
 _BASE_OVERRIDES: dict = {
     "metabolism_mode": "graph",
@@ -59,7 +59,7 @@ _BASE_OVERRIDES: dict = {
 # ---------------------------------------------------------------------------
 
 _FAMINE_OVERRIDES: dict = {
-    "environment_shift_step": 1_500,  # proportional to 5k-step run (was 3k/10k)
+    "environment_shift_step": STEPS * 3 // 10,
     "environment_shift_resource_rate": 0.0,
     "metabolism_efficiency_multiplier": 0.8,
     "death_energy_threshold": 0.25,
@@ -67,7 +67,7 @@ _FAMINE_OVERRIDES: dict = {
 
 _BOOM_BUST_OVERRIDES: dict = {
     "resource_regeneration_rate": 0.002,
-    "environment_cycle_period": 1_250,  # proportional to 5k (was 2500/10k)
+    "environment_cycle_period": STEPS // 4,
     "environment_cycle_low_rate": 0.0,
     "metabolism_efficiency_multiplier": 0.5,
     "death_energy_threshold": 0.25,
@@ -75,7 +75,7 @@ _BOOM_BUST_OVERRIDES: dict = {
 
 _SEASONAL_OVERRIDES: dict = {
     "resource_regeneration_rate": 0.003,
-    "environment_cycle_period": 500,  # proportional to 5k (was 1000/10k)
+    "environment_cycle_period": STEPS // 10,
     "environment_cycle_low_rate": 0.0005,
     "metabolism_efficiency_multiplier": 0.7,
     "death_energy_threshold": 0.20,
@@ -124,7 +124,7 @@ TIER_SEEDS: dict[str, list[int]] = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Candidate B pop-cap relaxation (cap=400, 5k steps).",
+        description="Candidate B pop-cap relaxation (cap=400, 10k steps).",
     )
     parser.add_argument(
         "--regime",
