@@ -12,7 +12,7 @@ Artifact publication splits across two channels:
 2. **Zenodo record** (heavy, immutable, citable):
    - Raw per-seed experiment outputs (94 JSON files, ~517 MB uncompressed)
    - Compressed archive: `zenodo_staging/life_criteria_experiments_v1.tar.gz`
-   - Deposit ID: 18856743, DOI: 10.5281/zenodo.18856743
+   - Deposit ID: 18857232, DOI: 10.5281/zenodo.18857232 (published)
 
 ## What Must Not Be Committed to Git
 
@@ -115,7 +115,7 @@ Note: `zsh -ic` is required because `ZENODO_TOKEN` is exported in the interactiv
 ### Step 4: Update repo references
 
 1. Update DOI in `paper/main.tex` data availability section
-2. Add `@misc` entry to references or use `--fetch-bibtex 18856743`
+2. Add `@misc` entry to references or use `--fetch-bibtex 18857232`
 3. Re-run `prepare_zenodo_metadata.py` with `--zenodo-doi <DOI>`
 4. Commit metadata files
 
@@ -125,7 +125,7 @@ Steps must happen **in order** (Zenodo records are immutable once published; tre
 
 1. Merge all paper/code PRs to main
 2. Final "submission-ready" commit on main
-3. Publish Zenodo dataset (draft already uploaded as deposit 18856743)
+3. Verify Zenodo dataset record (deposit 18857232, already published)
 4. Update paper with final DOI, compile, commit
 5. Tag release: `git tag -a v1.0 -m "<VENUE> submission"`
 6. Create GitHub Release: `gh release create v1.0 --title "<VENUE>" --notes "..."`
