@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import json
 
-import life_criteria
 import pytest
+
+life_criteria = pytest.importorskip("life_criteria")
 
 # ---------------------------------------------------------------------------
 # Helpers

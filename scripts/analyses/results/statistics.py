@@ -108,9 +108,7 @@ def distribution_stats(arr: np.ndarray) -> dict:
     }
 
 
-def wilcoxon_signed_rank(
-    a: np.ndarray, b: np.ndarray
-) -> tuple[float, float]:
+def wilcoxon_signed_rank(a: np.ndarray, b: np.ndarray) -> tuple[float, float]:
     """Wilcoxon signed-rank test for paired samples.
 
     Returns (statistic, p_value).  If all differences are zero, returns (0, 1.0).
@@ -119,6 +117,20 @@ def wilcoxon_signed_rank(
     if np.all(diffs == 0):
         return (0.0, 1.0)
     result = stats.wilcoxon(diffs, alternative="two-sided")
+    return (float(result.statistic), float(result.pvalue))
+
+
+def mann_whitney_u(a: np.ndarray, b: np.ndarray) -> tuple[float, float]:
+    """Two-sided Mann-Whitney U test.
+
+    Returns (statistic, p_value). If either sample has <2 observations,
+    returns (NaN, NaN).
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    if len(a) < 2 or len(b) < 2:
+        return (float("nan"), float("nan"))
+    result = stats.mannwhitneyu(a, b, alternative="two-sided")
     return (float(result.statistic), float(result.pvalue))
 
 
@@ -169,9 +181,7 @@ def paired_cohens_d(a: np.ndarray, b: np.ndarray) -> float:
     return float(mean / sd)
 
 
-def paired_cohens_d_ci(
-    a: np.ndarray, b: np.ndarray, alpha: float = 0.05
-) -> tuple[float, float]:
+def paired_cohens_d_ci(a: np.ndarray, b: np.ndarray, alpha: float = 0.05) -> tuple[float, float]:
     """Wald-type CI for paired Cohen's d_z.
 
     Uses the approximate SE: sqrt(1/n + d^2 / (2*n)).
@@ -188,9 +198,7 @@ def paired_cohens_d_ci(
     return (d + t_crit_lo * se_d, d + t_crit_hi * se_d)
 
 
-def run_paired_comparison(
-    a: np.ndarray, b: np.ndarray, sesoi: float = 0.5
-) -> dict:
+def run_paired_comparison(a: np.ndarray, b: np.ndarray, sesoi: float = 0.5) -> dict:
     """Run full paired comparison suite: Wilcoxon + TOST + paired d + CI + Cliff's delta.
 
     Arguments a and b must be seed-matched (same length, same seed order).
@@ -200,8 +208,7 @@ def run_paired_comparison(
     b = np.asarray(b, dtype=float)
     if len(a) != len(b):
         raise ValueError(
-            f"run_paired_comparison requires equal-length arrays "
-            f"(got {len(a)} vs {len(b)})"
+            f"run_paired_comparison requires equal-length arrays (got {len(a)} vs {len(b)})"
         )
     w_stat, w_p = wilcoxon_signed_rank(a, b)
     p_upper, p_lower, tost_p = tost_equivalence(a, b, sesoi=sesoi)

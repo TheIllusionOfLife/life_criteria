@@ -32,10 +32,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-from scipy.stats import mannwhitneyu
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from analyses.results.statistics import run_paired_comparison
+from analyses.results.statistics import (
+    cohens_d,
+    holm_bonferroni,
+    mann_whitney_u,
+    run_paired_comparison,
+)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -177,45 +181,9 @@ def _kin_fraction_trajectory(result: dict) -> list[float]:
 # ---------------------------------------------------------------------------
 
 
-def _cohen_d(a: list[float], b: list[float]) -> float | None:
-    """Pooled-variance Cohen's d (positive = a > b)."""
-    na, nb = len(a), len(b)
-    if na < 2 or nb < 2:
-        return None
-    var_a = float(np.var(a, ddof=1))
-    var_b = float(np.var(b, ddof=1))
-    pooled_sd = float(np.sqrt(((na - 1) * var_a + (nb - 1) * var_b) / (na + nb - 2)))
-    if pooled_sd == 0.0:
-        return None
-    return (float(np.mean(a)) - float(np.mean(b))) / pooled_sd
-
-
-def _holm_bonferroni(p_values: list[float]) -> list[float]:
-    """Holm-Bonferroni step-down correction.  NaN-safe."""
-    n = len(p_values)
-    if n == 0:
-        return []
-    adjusted = [float("nan")] * n
-    finite = [(i, p) for i, p in enumerate(p_values) if not np.isnan(p)]
-    if not finite:
-        return adjusted
-    finite.sort(key=lambda x: x[1])
-    m = len(finite)
-    previous_adj = 0.0
-    for rank, (orig_idx, p) in enumerate(finite):
-        multiplier = m - rank
-        adj = min(1.0, max(previous_adj, p * multiplier))
-        adjusted[orig_idx] = adj
-        previous_adj = adj
-    return adjusted
-
-
 def _mwu_test(a: list[float], b: list[float]) -> tuple[float, float]:
     """Mann-Whitney U test (two-sided)."""
-    if len(a) < 2 or len(b) < 2:
-        return float("nan"), float("nan")
-    result = mannwhitneyu(a, b, alternative="two-sided")
-    return float(result.statistic), float(result.pvalue)
+    return mann_whitney_u(np.asarray(a, dtype=float), np.asarray(b, dtype=float))
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +253,11 @@ def _analyze_famine(loaded: dict[str, list[dict]]) -> dict:
     for cond in comparison_conds:
         other = summaries[cond]["post_shock_auc"]["per_seed"]
         u, p = _mwu_test(other, baseline_post_aucs)
-        d = _cohen_d(other, baseline_post_aucs)
+        d = (
+            cohens_d(np.asarray(other, dtype=float), np.asarray(baseline_post_aucs, dtype=float))
+            if len(other) >= 2 and len(baseline_post_aucs) >= 2
+            else None
+        )
         raw_pvalues.append(p)
         paired = run_paired_comparison(np.array(other), np.array(baseline_post_aucs))
         comparisons[cond] = {
@@ -296,9 +268,9 @@ def _analyze_famine(loaded: dict[str, list[dict]]) -> dict:
             **paired,
         }
 
-    adjusted = _holm_bonferroni(raw_pvalues)
+    adjusted = holm_bonferroni(raw_pvalues)
     paired_raw = [comparisons[c]["wilcoxon_p"] for c in comparison_conds]
-    paired_adj = _holm_bonferroni(paired_raw)
+    paired_adj = holm_bonferroni(paired_raw)
     for adj_p, padj_p, cond in zip(adjusted, paired_adj, comparison_conds, strict=True):
         comparisons[cond]["vs_baseline_mwu_p_adj"] = adj_p
         comparisons[cond]["significant_adj005"] = adj_p < 0.05 if not np.isnan(adj_p) else None
@@ -376,7 +348,11 @@ def _analyze_boom_bust(loaded: dict[str, list[dict]]) -> dict:
     for cond in comparison_conds:
         other = summaries[cond]["survival_auc"]["per_seed"]
         u, p = _mwu_test(other, baseline_aucs)
-        d = _cohen_d(other, baseline_aucs)
+        d = (
+            cohens_d(np.asarray(other, dtype=float), np.asarray(baseline_aucs, dtype=float))
+            if len(other) >= 2 and len(baseline_aucs) >= 2
+            else None
+        )
         raw_pvalues.append(p)
         paired = run_paired_comparison(np.array(other), np.array(baseline_aucs))
         comparisons[cond] = {
@@ -387,9 +363,9 @@ def _analyze_boom_bust(loaded: dict[str, list[dict]]) -> dict:
             **paired,
         }
 
-    adjusted = _holm_bonferroni(raw_pvalues)
+    adjusted = holm_bonferroni(raw_pvalues)
     paired_raw = [comparisons[c]["wilcoxon_p"] for c in comparison_conds]
-    paired_adj = _holm_bonferroni(paired_raw)
+    paired_adj = holm_bonferroni(paired_raw)
     for adj_p, padj_p, cond in zip(adjusted, paired_adj, comparison_conds, strict=True):
         comparisons[cond]["vs_baseline_mwu_p_adj"] = adj_p
         comparisons[cond]["significant_adj005"] = adj_p < 0.05 if not np.isnan(adj_p) else None
@@ -407,7 +383,14 @@ def _analyze_boom_bust(loaded: dict[str, list[dict]]) -> dict:
         cond_slopes_valid = [s for s in cond_slopes if s is not None]
         if len(cond_slopes_valid) >= 2 and len(baseline_slopes_valid) >= 2:
             u, p = _mwu_test(cond_slopes_valid, baseline_slopes_valid)
-            d = _cohen_d(cond_slopes_valid, baseline_slopes_valid)
+            d = (
+                cohens_d(
+                    np.asarray(cond_slopes_valid, dtype=float),
+                    np.asarray(baseline_slopes_valid, dtype=float),
+                )
+                if len(cond_slopes_valid) >= 2 and len(baseline_slopes_valid) >= 2
+                else None
+            )
         else:
             u, p, d = float("nan"), float("nan"), None
         learning_comparison[cond] = {

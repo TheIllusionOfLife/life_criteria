@@ -16,13 +16,11 @@ DEFAULT_PAPER = PROJECT_ROOT / "paper" / "main.tex"
 DEFAULT_MANIFEST = PROJECT_ROOT / "docs" / "research" / "final_graph_manifest_reference.json"
 DEFAULT_BINDINGS = PROJECT_ROOT / "docs" / "research" / "result_manifest_bindings.json"
 EXPERIMENT_SCRIPTS = [
-    PROJECT_ROOT / "scripts" / "experiment_final_graph.py",
-    PROJECT_ROOT / "scripts" / "experiment_pairwise.py",
-    PROJECT_ROOT / "scripts" / "experiment_cyclic.py",
-    PROJECT_ROOT / "scripts" / "experiment_evolution.py",
-    PROJECT_ROOT / "scripts" / "experiment_midrun_ablation.py",
-    PROJECT_ROOT / "scripts" / "experiment_invariance.py",
-    PROJECT_ROOT / "scripts" / "experiment_ecology_stress.py",
+    PROJECT_ROOT / "scripts" / "experiment_criterion8.py",
+    PROJECT_ROOT / "scripts" / "experiment_criterion8_stress.py",
+    PROJECT_ROOT / "scripts" / "experiment_candidateB_stress.py",
+    PROJECT_ROOT / "scripts" / "experiment_candidateB_relaxed_cap.py",
+    PROJECT_ROOT / "scripts" / "experiment_seasonal_stress.py",
 ]
 
 
@@ -37,14 +35,20 @@ def _read_json(path: Path) -> dict:
 
 
 def _extract_reported_timing(tex: str) -> tuple[int | None, int | None]:
+    timing_re = (
+        r"runs for\s+([0-9\{\},]+)\s+timesteps\s+with\s+population\s+"
+        r"sampled\s+every\s+([0-9\{\},]+)"
+    )
     pattern = re.compile(
-        r"runs for\s+(\d+)\s+timesteps\s+with\s+population\s+sampled\s+every\s+(\d+)",
+        timing_re,
         re.IGNORECASE | re.DOTALL,
     )
     m = pattern.search(tex)
     if not m:
         return None, None
-    return int(m.group(1)), int(m.group(2))
+    steps = int(re.sub(r"[^0-9]", "", m.group(1)))
+    sample_every = int(re.sub(r"[^0-9]", "", m.group(2)))
+    return steps, sample_every
 
 
 def _extract_script_paper_refs(paths: list[Path]) -> set[str]:
@@ -312,14 +316,6 @@ def run_checks(paper_path: Path, manifest_path: Path, registry_path: Path) -> di
 
 
 def main() -> int:
-    # Skip gracefully when the paper and manifests haven't been generated yet.
-    # These are produced later in the research pipeline; failing here during
-    # Phase 0 development would block unrelated PRs.
-    required = [DEFAULT_PAPER, DEFAULT_MANIFEST, DEFAULT_BINDINGS]
-    if not all(p.exists() for p in required):
-        missing = [str(p) for p in required if not p.exists()]
-        print(json.dumps({"ok": True, "skipped": True, "missing": missing, "checks": []}, indent=2))
-        return 0
     report = run_checks(DEFAULT_PAPER, DEFAULT_MANIFEST, DEFAULT_BINDINGS)
     print(json.dumps(report, indent=2))
     return 0 if report["ok"] else 1

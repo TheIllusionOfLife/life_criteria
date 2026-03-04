@@ -39,15 +39,6 @@ impl World {
         total_counts.clear();
         total_counts.reserve(agents.len());
 
-        // Build agent ID → organism_id map for kin-sensing lookups.
-        // Agent IDs are not contiguous after pruning, so we cannot use them
-        // as slice indices.
-        let agent_id_to_org: std::collections::HashMap<u32, u16> = if use_kin_sensing {
-            agents.iter().map(|a| (a.id, a.organism_id)).collect()
-        } else {
-            std::collections::HashMap::new()
-        };
-
         let mut nc_sum = 0.0f32;
         let mut with_neighbors = 0usize;
         let mut alive_agents = 0usize;
@@ -78,7 +69,6 @@ impl World {
                     effective_radius,
                     agent.id,
                     agent.organism_id,
-                    &agent_id_to_org,
                     config.world_size,
                 );
                 let total_count = kin_count + non_kin_count;

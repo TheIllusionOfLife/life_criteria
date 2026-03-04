@@ -45,3 +45,5 @@ select = ["E", "F", "I", "UP", "B"]
 # "scripts" exposes sub-packages (analyses/, figures/) as top-level imports,
 # matching how the analysis scripts themselves run (scripts/ is their cwd).
 pythonpath = [".", "scripts"]
+testpaths = ["tests_python"]
+addopts = ["--import-mode=importlib"]

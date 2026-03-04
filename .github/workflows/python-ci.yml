@@ -30,5 +30,8 @@ jobs:
       - name: Run Python tests
         run: uv run pytest tests_python
 
+      - name: Dependency audit (Python)
+        run: uvx pip-audit --strict
+
       - name: Check manuscript consistency
         run: uv run python scripts/check_manuscript_consistency.py
