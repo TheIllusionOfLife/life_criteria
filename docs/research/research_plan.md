@@ -3,7 +3,7 @@
 > **Status: COMPLETED — 2026-03-08**
 > Both candidates (A: EMA memory, B: collective kin-sensing) yielded bounded null results
 > across all three perturbation regimes (famine, boom-bust, seasonal). Research phase complete;
-> paper submitted to ALIFE 2026 Full Paper Track (Round 2 review, March 2026). See `paper/main.tex`
+> paper in pre-submission preparation for ALIFE 2026 (deadline March 30, 2026). See `paper/main.tex`
 > and `docs/peer_reviews/2026-03-08/` for final state.
 
 *(A detailed Markdown document you can iterate on)*
