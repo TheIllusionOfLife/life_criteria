@@ -1,5 +1,11 @@
 # Research Plan (ALIFE Full Paper): Discovering an “8th Functionality” Beyond the Textbook 7
 
+> **Status: COMPLETED — 2026-03-08**
+> Both candidates (A: EMA memory, B: collective kin-sensing) yielded bounded null results
+> across all three perturbation regimes (famine, boom-bust, seasonal). Research phase complete;
+> paper in pre-submission preparation for ALIFE 2026 (deadline March 30, 2026). See `paper/main.tex`
+> and `docs/peer_reviews/2026-03-08/` for final state.
+
 *(A detailed Markdown document you can iterate on)*
 
 This plan assumes your current system already implements the **seven textbook criteria** as **interdependent, ablatable dynamic processes** with a strong experimental framework (held-out seeds, ablations, coupling evidence, proxy controls). 
