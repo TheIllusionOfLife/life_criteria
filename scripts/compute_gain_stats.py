@@ -1,7 +1,7 @@
 """Compute genome gain statistics from criterion8_on experiment data.
 
 Extracts final-timestep memory gain offsets (g_genome) from each seed,
-then reports mean(|g|), std(g), and max(|g|) across all seeds and channels.
+then reports mean(|g|), std(|g|), and max(|g|) across all seeds and channels.
 
 These values are cited in paper/main.tex (Section: Mechanism Verification).
 
@@ -43,7 +43,7 @@ def main() -> None:
     print(f"Values: {len(all_g)} (2 channels x {n_seeds} seeds)")
     print()
     print(f"mean(|g|) = {np.mean(abs_g):.4f}")
-    print(f"std(g)    = {np.std(all_g):.4f}")
+    print(f"std(|g|)  = {np.std(abs_g, ddof=1):.4f}")
     print(f"max(|g|)  = {np.max(abs_g):.4f}")
     print()
     print(f"g0 range: [{min(g0):.4f}, {max(g0):.4f}]")
