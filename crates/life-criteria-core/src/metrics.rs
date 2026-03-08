@@ -348,10 +348,14 @@ pub fn collect_step_metrics(
     // Candidate A genome parameter distributions.
     // Collect gain/target genome values from alive organisms (gated on enable_memory).
     let (
-        memory_gain_is0_mean, memory_gain_is0_std,
-        memory_gain_is1_mean, memory_gain_is1_std,
-        memory_target_is0_mean, memory_target_is0_std,
-        memory_target_is1_mean, memory_target_is1_std,
+        memory_gain_is0_mean,
+        memory_gain_is0_std,
+        memory_gain_is1_mean,
+        memory_gain_is1_std,
+        memory_target_is0_mean,
+        memory_target_is0_std,
+        memory_target_is1_mean,
+        memory_target_is1_std,
     ) = if enable_memory {
         let mut g0: Vec<f32> = Vec::new();
         let mut g1: Vec<f32> = Vec::new();
@@ -366,11 +370,27 @@ pub fn collect_step_metrics(
                 t1.push(mw[3]);
             }
         }
-        let mean_of = |v: &[f32]| if v.is_empty() { 0.0 } else { v.iter().sum::<f32>() / v.len() as f32 };
-        let mg0 = mean_of(&g0); let mg1 = mean_of(&g1);
-        let mt0 = mean_of(&t0); let mt1 = mean_of(&t1);
-        (mg0, std_dev(&g0, mg0), mg1, std_dev(&g1, mg1),
-         mt0, std_dev(&t0, mt0), mt1, std_dev(&t1, mt1))
+        let mean_of = |v: &[f32]| {
+            if v.is_empty() {
+                0.0
+            } else {
+                v.iter().sum::<f32>() / v.len() as f32
+            }
+        };
+        let mg0 = mean_of(&g0);
+        let mg1 = mean_of(&g1);
+        let mt0 = mean_of(&t0);
+        let mt1 = mean_of(&t1);
+        (
+            mg0,
+            std_dev(&g0, mg0),
+            mg1,
+            std_dev(&g1, mg1),
+            mt0,
+            std_dev(&t0, mt0),
+            mt1,
+            std_dev(&t1, mt1),
+        )
     } else {
         (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     };
