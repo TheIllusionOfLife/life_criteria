@@ -20,10 +20,10 @@ A Falsifiable Framework and Two Null Results}
 \begin{document}
 \maketitle
 \blfootnote{\textcopyright{} 2026 Massachusetts Institute of Technology.
-Published under a Creative Commons Attribution 4.0 International (CC BY 4.0) license.}
+Published under a Creative Commons Attribution 4.0 International (CC BY 4.0) license.
+\textbf{Data/Code:} Source code, experiment scripts, and analysis artifacts are available via anonymized submission and will be released at camera-ready.}
 
-\noindent\textbf{Submission type: Full Paper}\\[0.5em]
-\noindent\textbf{Data/Code available at:} Source code, experiment scripts, and analysis artifacts are available to reviewers via anonymized submission materials and will be released publicly at camera-ready.
+\noindent\textbf{Submission type: Full Paper}
 
 \begin{abstract}
 The textbook seven criteria of life---cellular organization, metabolism,
@@ -225,34 +225,21 @@ analyses for comparison with prior work; these secondary results are
 available in the supplementary analysis artifacts but are not
 repeated in the main results narrative to avoid clutter.
 
-\paragraph{Unified inference schema.}
-Table~\ref{tab:results} follows a consistent reporting scheme throughout:
-(1)~\emph{Primary} comparisons use paired Wilcoxon with $d_z$ and
-Holm--Bonferroni correction; (2)~\emph{Equivalence} is assessed via
-TOST against SESOI $\pm 0.5$; (3)~\emph{Secondary} analyses (Mann--Whitney,
-Cliff's~$\delta$) are computed but relegated to supplementary materials;
-(4)~\emph{Exploratory} analyses (orthogonality regression,
-non-reducibility, pre-shock window) use permutation $p$-values without
-family-wise correction and are labelled exploratory throughout.
+\paragraph{Inference tiers.}
+Throughout: \emph{primary} = paired Wilcoxon + $d_z$ + Holm--Bonferroni;
+\emph{equivalence} = TOST vs.\ SESOI $\pm 0.5$; \emph{secondary}
+(Mann--Whitney, Cliff's~$\delta$) in supplementary materials;
+\emph{exploratory} (regression, pre-shock) = permutation $p$ without
+family-wise correction, labelled explicitly.
 
 \paragraph{Equivalence testing.}
 We pre-specify a smallest effect size of interest (SESOI) of $|d| = 0.5$
-(medium effect per Cohen's conventions) and apply \textbf{Two One-Sided
-Tests} (TOST; \citealt{lakens_2017_equivalence}) against bounds
-$\pm 0.5$.  A comparison is considered equivalent to null when
-$\text{TOST}\ p < 0.05$, meaning the 90\% CI for $d_z$ falls entirely
-within $[-0.5, 0.5]$.  In practical terms, $d_z = 0.5$ corresponds to a
-survival AUC difference of approximately one half-standard deviation
-across seeds---a shift large enough to alter population viability
-outcomes at a level an experimenter or evolutionary process would
-plausibly act upon.  Effects below this threshold are treated as
-practically equivalent to zero regardless of statistical significance.
-
-\paragraph{Analysis plan.}
-Primary analyses (survival AUC comparisons) use Holm--Bonferroni
-correction.  Exploratory analyses (orthogonality regression,
-non-reducibility, pre-shock window) are reported as exploratory with
-permutation-based $p$-values but without family-wise correction.
+(medium effect; $d_z = 0.5$ corresponds to approximately one
+half-standard-deviation shift in survival AUC---large enough to alter
+population viability outcomes) and apply \textbf{Two One-Sided Tests}
+(TOST; \citealt{lakens_2017_equivalence}) against bounds $\pm 0.5$.
+A comparison is equivalent to null when TOST $p < 0.05$ (90\% CI for
+$d_z$ falls within $[-0.5, 0.5]$).
 
 
 %% ================================================================
@@ -337,6 +324,11 @@ famine), indicating faithful tracking of environmental turbulence that
 nonetheless destabilizes the correction signal.  The memory encodes
 experience, but evolution does not select for memory-contingent behaviors.
 
+Examining evolved genome parameters confirms this: population-mean memory
+gain offsets ($g_\text{genome}^{(i)}$, Eq.~\ref{eq:ema}) converge near
+zero (mean $|g| < 0.05$) across held-out seeds, indicating that evolution
+selectively ignores the correction channel rather than attempting to use it.
+
 
 %% ================================================================
 \section{Candidate B: Collective Kin-Sensing}
@@ -392,24 +384,15 @@ principle but becomes degenerate under the tested demographic regime.
 
 To test whether Candidate~B's null is an artifact of the demographic
 constraint, we relaxed \texttt{max\_alive\_organisms} from 100 to 400.
-Table~\ref{tab:results} (cap$=$400 block) shows the results side-by-side
-with the default-cap findings:
-
-\begin{itemize}
-\item \textbf{Kin-signal viability}: Under cap$=$400, mean
-  \texttt{kin\_fraction} increased substantially across all regimes
-  (0.03$\to$0.24 famine, 0.19$\to$0.14 boom-bust, $\to$0.22 seasonal),
-  confirming that signal observability was restored.
-\item \textbf{Enabled-condition null persists}: Despite the improved
-  signal, enabled-vs-baseline effects remain bounded in all three regimes
-  (largest $|d_z| = 0.23$, $p_\mathrm{adj} \ge 0.30$)---the same
-  qualitative outcome as cap$=$100.
-\item \textbf{Seasonal sham caveat}: The seasonal sham arm exceeds SESOI
-  ($d_z = 0.54$, $p_\mathrm{adj} = 0.004$), indicating compute-matched
-  controls are not uniformly null at higher population capacity.  This
-  caveat applies to the sham contrast only, not to the enabled-condition
-  primary result.
-\end{itemize}
+Under cap$=$400, mean \texttt{kin\_fraction} increased substantially
+(0.03$\to$0.24 famine, 0.19$\to$0.14 boom-bust, $\to$0.22 seasonal),
+confirming signal observability was restored.  Despite improved signal,
+enabled-vs-baseline effects remain bounded across all three regimes
+(largest $|d_z| = 0.23$, $p_\mathrm{adj} \ge 0.30$)---the same
+qualitative outcome as cap$=$100 (Table~\ref{tab:results}, cap$=$400
+block).  One caveat: the seasonal \emph{sham} arm exceeds SESOI
+($d_z = 0.54$, $p_\mathrm{adj} = 0.004$); this applies to the sham
+contrast only, not the enabled-condition primary result.
 
 
 %% ================================================================
@@ -454,17 +437,13 @@ from existing criteria):
 \end{itemize}
 
 Both candidate signals are almost entirely explained by existing
-criteria.  High signal reducibility (CV $R^2 > 0.88$) indicates the
-candidate signal is predictable from existing criterion proxies.
-However, signal reducibility does not preclude non-reducible survival
-effects---a candidate might produce benefits through signal combinations
-not captured by linear proxy prediction.  Under our tested conditions,
-neither candidate exhibits such decoupling: the survival effects are
-null (Table~\ref{tab:results}) and the signals are reducible, making
-a latent non-reducible benefit implausible.  This interpretation is
-sensitive to proxy feature construction; alternative proxy sets may
-yield different reducibility estimates, and these analyses are therefore
-labelled exploratory.
+criteria.  Note that signal reducibility does not logically preclude
+non-reducible \emph{survival effects}---a candidate might still provide
+benefits not captured by linear proxy prediction.  Under our tested
+conditions, neither candidate shows such decoupling: survival effects are
+null and signals are reducible, making a latent non-reducible benefit
+implausible.  These analyses are labelled exploratory due to sensitivity
+to proxy feature construction.
 
 
 %% ================================================================
@@ -482,37 +461,29 @@ majority of primary comparisons ($p_\mathrm{TOST} < 0.05$); one
 cap$=$400 seasonal sham comparison lies outside SESOI and is treated as
 a robustness caveat, not a candidate gain.
 
-Importantly, these are \emph{diagnosed} nulls with distinct mechanisms:
-
-\begin{itemize}
-\item \textbf{Candidate~A} (Memory): The mechanism operates
-  correctly---EMA converges and encodes sensory history---but the
-  evolutionary landscape does not select for memory-contingent behaviors.
-  Under stress, memory destabilizes homeostasis rather than stabilizing
-  it (variance 3$\times$ higher than sham under famine).
-\item \textbf{Candidate~B} (Kin-Sensing): Demographic convergence to
-  single-agent organisms makes kin-fraction degenerate under cap$=$100.
-  Restoring viable kin fractions (cap$=$400, kin-fraction 0.14--0.24)
-  still yields no enabled-condition survival benefit.
-\end{itemize}
+Importantly, these are \emph{diagnosed} nulls with distinct mechanisms.
+\textbf{Candidate~A}: the EMA mechanism operates correctly and encodes
+sensory history, but the evolutionary landscape does not select for
+memory-contingent behaviors; under stress, memory destabilizes
+homeostasis (variance 3$\times$ higher than sham under famine).
+\textbf{Candidate~B}: demographic convergence to single-agent organisms
+makes kin-fraction degenerate under cap$=$100; restoring viable kin
+fractions (cap$=$400, kin-fraction 0.14--0.24) still yields no
+enabled-condition benefit.
 
 The exploratory legitimacy tests are consistent with these diagnoses:
 neither candidate adds predictive validity ($\Delta R^2 < 0.001$, see
 Table~\ref{tab:results}), and both signals are reducible to existing
 criteria (CV $R^2 > 0.88$).
 
-One testable hypothesis for the cap$=$400 seasonal sham exception is
-that random kin-fraction values act as beneficial exploration noise under
-predictable periodic structure---a stochastic perturbation that may
-assist homeostatic search without requiring accurate kin information.
-Targeted follow-up varying noise injection point and magnitude would
-disambiguate this from a compute-cost artifact.
-
-These bounded nulls reflect absence of detectable benefit under three
-tested perturbation regimes, a fixed NN topology, and specific candidate
-implementations.  They do not exclude the possibility that alternative
-implementations, richer ecologies, or different controller architectures
-could yield positive results for similar candidate classes.
+One testable hypothesis for the seasonal sham exception (cap$=$400) is
+that random kin-fraction noise assists homeostatic search under periodic
+structure without requiring accurate kin information; targeted follow-up
+varying noise injection point would disambiguate this from a compute-cost
+artifact.  More broadly, these bounded nulls reflect three specific
+perturbation regimes and a fixed NN topology---they do not exclude that
+alternative implementations or richer ecologies could yield positive
+results for similar candidate classes.
 
 \subsection{Candidate Space and Design Implications}
 

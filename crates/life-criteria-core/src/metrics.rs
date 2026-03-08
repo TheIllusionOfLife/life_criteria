@@ -45,6 +45,24 @@ pub struct StepMetrics {
     pub agents_with_neighbors_frac: f32,
     /// Mean total neighbor count across alive agents.
     pub neighbor_count_mean: f32,
+    // Candidate A genome parameter distributions (alive organisms; 0.0 when memory disabled).
+    // Layout matches memory_weights(): [gain_is0, gain_is1, target_is0, target_is1].
+    /// Population mean of evolved memory gain (channel 0).
+    pub memory_gain_is0_mean: f32,
+    /// Population std-dev of evolved memory gain (channel 0).
+    pub memory_gain_is0_std: f32,
+    /// Population mean of evolved memory gain (channel 1).
+    pub memory_gain_is1_mean: f32,
+    /// Population std-dev of evolved memory gain (channel 1).
+    pub memory_gain_is1_std: f32,
+    /// Population mean of evolved memory target (channel 0).
+    pub memory_target_is0_mean: f32,
+    /// Population std-dev of evolved memory target (channel 0).
+    pub memory_target_is0_std: f32,
+    /// Population mean of evolved memory target (channel 1).
+    pub memory_target_is1_mean: f32,
+    /// Population std-dev of evolved memory target (channel 1).
+    pub memory_target_is1_std: f32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -327,6 +345,36 @@ pub fn collect_step_metrics(
     // Spatial cohesion: mean pairwise agent distance per organism (toroidal-aware)
     let spatial_cohesion_mean = compute_spatial_cohesion(agents, organisms, world_size);
 
+    // Candidate A genome parameter distributions.
+    // Collect gain/target genome values from alive organisms (gated on enable_memory).
+    let (
+        memory_gain_is0_mean, memory_gain_is0_std,
+        memory_gain_is1_mean, memory_gain_is1_std,
+        memory_target_is0_mean, memory_target_is0_std,
+        memory_target_is1_mean, memory_target_is1_std,
+    ) = if enable_memory {
+        let mut g0: Vec<f32> = Vec::new();
+        let mut g1: Vec<f32> = Vec::new();
+        let mut t0: Vec<f32> = Vec::new();
+        let mut t1: Vec<f32> = Vec::new();
+        for org in organisms.iter().filter(|o| o.alive) {
+            let mw = org.genome.memory_weights();
+            if mw.len() >= 4 {
+                g0.push(mw[0]);
+                g1.push(mw[1]);
+                t0.push(mw[2]);
+                t1.push(mw[3]);
+            }
+        }
+        let mean_of = |v: &[f32]| if v.is_empty() { 0.0 } else { v.iter().sum::<f32>() / v.len() as f32 };
+        let mg0 = mean_of(&g0); let mg1 = mean_of(&g1);
+        let mt0 = mean_of(&t0); let mt1 = mean_of(&t1);
+        (mg0, std_dev(&g0, mg0), mg1, std_dev(&g1, mg1),
+         mt0, std_dev(&t0, mt0), mt1, std_dev(&t1, mt1))
+    } else {
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    };
+
     // Memory trace: mean and std of memory[0] and memory[1] across alive organisms.
     // Gated on enable_memory: when memory is disabled org.memory holds the
     // initialisation value (memory_target), not a learned trace, so we report 0.0
@@ -384,5 +432,13 @@ pub fn collect_step_metrics(
         kin_fraction_mean,
         agents_with_neighbors_frac,
         neighbor_count_mean,
+        memory_gain_is0_mean,
+        memory_gain_is0_std,
+        memory_gain_is1_mean,
+        memory_gain_is1_std,
+        memory_target_is0_mean,
+        memory_target_is0_std,
+        memory_target_is1_mean,
+        memory_target_is1_std,
     }
 }
