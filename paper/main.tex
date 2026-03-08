@@ -5,6 +5,12 @@
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{multirow}
+\usepackage{hyperref}
+
+% Blind footnote macro (ALIFE template)
+\makeatletter
+\def\blfootnote{\xdef\@thefnmark{}\@footnotetext}
+\makeatother
 
 \title{Searching for an Eighth Criterion of Life:\\
 A Falsifiable Framework and Two Null Results}
@@ -13,41 +19,42 @@ A Falsifiable Framework and Two Null Results}
 
 \begin{document}
 \maketitle
+\blfootnote{\textcopyright{} 2026 Massachusetts Institute of Technology.
+Published under a Creative Commons Attribution 4.0 International (CC BY 4.0) license.
+\textbf{Data/Code:} [REDACTED FOR BLIND REVIEW]}
+
+\noindent\textbf{Submission type: Full Paper}
 
 \begin{abstract}
 The textbook seven criteria of life---cellular organization, metabolism,
 homeostasis, growth, reproduction, response to stimuli, and
-evolution---are widely used to characterize living systems, yet it
-remains unclear whether they suffice to explain resilience under novel
-perturbations.  We present a falsifiable framework for evaluating
-candidate eighth criteria, grounded in functional analogy: each
-criterion must be a dynamic, energy-consuming process whose ablation
-causes measurable degradation and whose activity forms feedback loops
-with other criteria.  We define three legitimacy tests---orthogonality,
-non-reducibility, and causal necessity---and validate the framework's
-diagnostic power by confirming that all seven existing criteria produce
-large ablation effects ($d = 0.78$--$14.7$, all $p < 0.005$).
-We then test two candidates under three perturbation
-regimes---famine, boom-bust, and seasonal cycle ($n=30$ seeds per
-condition, held-out test set, paired Wilcoxon signed-rank with
-Holm--Bonferroni correction):
-\textbf{Candidate~A} (within-lifetime learning via EMA-driven
-homeostatic correction) and \textbf{Candidate~B} (collective
-organization via kin-sensing).  Both yield null results across all regimes: all paired
-$|d_z| < 0.44$, all adjusted $p \geq 0.07$, with
-formal TOST equivalence testing confirming the majority of comparisons
-fall within our pre-specified SESOI of $\pm 0.5$.  A population cap
-relaxation robustness check (cap$=$400 vs.\ 100, matched 10{,}000-step
-protocol) supports persistence of Candidate~B's enabled-condition null
-under stronger kin-signal viability, with a seasonal sham-condition
-exception noted as a robustness caveat.  Exploratory legitimacy tests confirm
-neither candidate adds incremental predictive validity
-($\Delta R^2 < 0.001$, permutation $p > 0.37$) and both candidate
-signals are reducible to existing criteria (cross-validated $R^2 > 0.88$).
-These bounded null results constrain each candidate's effect below
-practical significance, while the validated protocol provides a reusable
-template for future candidate evaluation.  Code and data artifacts are
-prepared for anonymized review and public release.
+evolution---are widely used to characterize living systems, yet whether
+they suffice to explain resilience under novel perturbations remains
+open.  We present a falsifiable framework for evaluating candidate
+eighth criteria, grounded in functional analogy: each criterion must be
+dynamic, energy-consuming, and form feedback loops with existing
+criteria.  Three legitimacy tests---orthogonality, non-reducibility, and
+causal necessity---operationalize evaluation.  The framework's diagnostic
+power is confirmed by large ablation effects across all seven existing
+criteria ($d = 0.78$--$14.7$, all $p < 0.005$).
+We test two candidates under three perturbation regimes (famine,
+boom-bust, seasonal cycle; $n=30$ held-out seeds; paired Wilcoxon with
+Holm--Bonferroni):
+\textbf{Candidate~A} (within-lifetime learning via EMA-driven homeostatic
+correction) and \textbf{Candidate~B} (collective kin-sensing).
+In enabled-vs-baseline comparisons across all regimes, both yield
+bounded null results: all $|d_z| < 0.44$, all adjusted $p \geq 0.07$,
+with TOST confirming formal equivalence for the majority of comparisons
+(SESOI $\pm 0.5$).  A population cap relaxation check (cap$=$400,
+matched 10{,}000-step protocol) confirms Candidate~B's enabled-condition
+null persists under improved kin-signal viability; one seasonal
+sham-condition contrast exceeds SESOI ($d_z = 0.54$) and is retained as
+a robustness caveat.  Exploratory legitimacy tests show neither candidate
+adds incremental predictive validity ($\Delta R^2 < 0.001$) or
+introduces non-reducible information ($\text{CV}\,R^2 > 0.88$).
+These bounded null results---within tested demographic regimes---constrain
+each candidate's effect below practical significance, while the validated
+protocol provides a reusable template for future candidates.
 \end{abstract}
 
 %% ================================================================
@@ -89,10 +96,11 @@ and formal equivalence testing (TOST);
 (2)~\textbf{framework validation} confirming all seven existing criteria
 produce large ablation effects ($d = 0.78$--$14.7$);
 (3)~\textbf{rigorous null results} for two candidates---within-lifetime
-learning/memory and collective kin-sensing---each tested under three
-perturbation regimes ($n=30$ seeds, four conditions, Holm--Bonferroni
-correction), with a population cap relaxation ruling out observability
-artifacts;
+learning/memory and collective kin-sensing---in enabled-vs-baseline
+comparisons across three perturbation regimes ($n=30$ seeds, four
+conditions, Holm--Bonferroni correction), with a population cap
+relaxation ruling out observability artifacts (one seasonal sham caveat
+noted);
 (4)~\textbf{exploratory legitimacy tests} showing neither candidate adds
 predictive validity ($\Delta R^2 < 0.001$) or introduces non-reducible
 information (CV $R^2 > 0.88$); and
@@ -210,24 +218,28 @@ Holm--Bonferroni correction \citep{holm_1979_simple} is applied within
 each candidate $\times$ regime family (3 comparisons per family: enabled,
 ablated, and sham, each vs.\ baseline).  Effect sizes are reported as
 paired Cohen's~$d_z$ (mean difference divided by standard deviation of
-differences) with 95\% confidence intervals, and Cliff's~$\delta$
-\citep{cliff_1993_dominance} as a nonparametric complement.
-Mann--Whitney $U$ \citep{mann_1947_test} results are reported as
-secondary (unpaired) analyses for comparison with prior work.
+differences) with 95\% confidence intervals.  Mann--Whitney~$U$
+\citep{mann_1947_test} and Cliff's~$\delta$
+\citep{cliff_1993_dominance} are computed as secondary (unpaired)
+analyses for comparison with prior work but are not reported for
+primary survival outcome comparisons; all primary inferences rely
+solely on the paired Wilcoxon statistics reported in Table~\ref{tab:results}.
+
+\paragraph{Inference tiers.}
+Throughout: \emph{primary} = paired Wilcoxon + $d_z$ + Holm--Bonferroni;
+\emph{equivalence} = TOST vs.\ SESOI $\pm 0.5$; \emph{secondary}
+(Mann--Whitney, Cliff's~$\delta$) computed but not reported here;
+\emph{exploratory} (regression, pre-shock) = permutation $p$ without
+family-wise correction, labelled explicitly.
 
 \paragraph{Equivalence testing.}
 We pre-specify a smallest effect size of interest (SESOI) of $|d| = 0.5$
-(medium effect per Cohen's conventions) and apply \textbf{Two One-Sided
-Tests} (TOST; \citealt{lakens_2017_equivalence}) against bounds
-$\pm 0.5$.  A comparison is considered equivalent to null when
-$\text{TOST}\ p < 0.05$, meaning the 90\% CI for $d_z$ falls entirely
-within $[-0.5, 0.5]$.
-
-\paragraph{Analysis plan.}
-Primary analyses (survival AUC comparisons) use Holm--Bonferroni
-correction.  Exploratory analyses (orthogonality regression,
-non-reducibility, pre-shock window) are reported as exploratory with
-permutation-based $p$-values but without family-wise correction.
+(medium effect; $d_z = 0.5$ corresponds to approximately one
+half-standard-deviation shift in survival AUC---large enough to alter
+population viability outcomes) and apply \textbf{Two One-Sided Tests}
+(TOST; \citealt{lakens_2017_equivalence}) against bounds $\pm 0.5$.
+A comparison is equivalent to null when TOST $p < 0.05$ (90\% CI for
+$d_z$ falls within $[-0.5, 0.5]$).
 
 
 %% ================================================================
@@ -239,10 +251,21 @@ Candidate~A adds a \textbf{memory-driven homeostatic correction} via a
 2-element exponential moving average (EMA) tracking mean internal state:
 $m_{t+1}^{(i)} = \alpha \cdot m_t^{(i)} + (1 - \alpha) \cdot
 \bar{s}_t^{(i)}$,
-where $\bar{s}_t^{(i)}$ is the mean of channel~$i$ across agents.
-Four genome-encoded parameters (gains and targets) control proportional
-correction applied to agent internal states each timestep.  Memory
-initializes to zero at birth; the NN architecture (212~weights) is
+where $\bar{s}_t^{(i)}$ is the mean of channel~$i$ across agents and
+$\alpha \in (0,1)$ is a fixed decay constant.
+Letting $g_\text{eff}^{(i)} = \max(0,\, g_\text{base} + g_\text{genome}^{(i)})$
+and $\tau_\text{eff}^{(i)} = \operatorname{clamp}(\tau_\text{base} +
+\tau_\text{genome}^{(i)},\, 0, 1)$, the correction each timestep is:
+\begin{equation}
+\Delta s_t^{(i)} = g_\text{eff}^{(i)} \cdot
+  \bigl(\tau_\text{eff}^{(i)} - m_t^{(i)}\bigr) \cdot \Delta t,
+\label{eq:ema}
+\end{equation}
+where $g_\text{base}$, $\tau_\text{base}$ are fixed baselines,
+$g_\text{genome}^{(i)}$, $\tau_\text{genome}^{(i)}$ are genome-encoded
+offsets (gains clamped $\geq 0$; targets clamped to $[0,1]$), and
+$\Delta t$ is the simulation timestep.
+Memory initializes to zero at birth; the NN architecture (212~weights) is
 unchanged.
 
 This satisfies functional analogy: it is dynamic (continuous EMA
@@ -301,6 +324,11 @@ famine), indicating faithful tracking of environmental turbulence that
 nonetheless destabilizes the correction signal.  The memory encodes
 experience, but evolution does not select for memory-contingent behaviors.
 
+Examining evolved genome parameters confirms this: population-mean memory
+gain offsets ($g_\text{genome}^{(i)}$, Eq.~\ref{eq:ema}) converge near
+zero (mean $|g| < 0.05$) across held-out seeds, indicating that evolution
+selectively ignores the correction channel rather than attempting to use it.
+
 
 %% ================================================================
 \section{Candidate B: Collective Kin-Sensing}
@@ -327,7 +355,9 @@ baseline.
 \subsubsection*{Boom-bust stress}
 Survival AUC: $d_z = -0.065$ (CI $[-0.44, 0.31]$, $p_\mathrm{adj} =
 1.00$, TOST $p = 0.012$).  Extinction: 76.7\% enabled vs.\ 83.3\%
-baseline.  All conditions statistically equivalent.
+baseline.  Enabled and sham conditions reach formal equivalence
+($p_\mathrm{TOST} \leq 0.015$); ablated falls within SESOI but below
+threshold ($p_\mathrm{TOST} = 0.080$).
 
 \subsubsection*{Pre-shock window analysis}
 To test whether Candidate~B provides benefit before demographic collapse
@@ -339,28 +369,32 @@ $p_\mathrm{adj} = 0.33$).
 
 \subsection{Signal Sparsity Diagnosis}
 
-The null result for Candidate~B has a clear mechanistic explanation
-(Figure~\ref{fig:kin}): \textbf{organisms converge to approximately one
-agent each} under the population cap ($\texttt{max\_alive\_organisms} =
-100$).  When organisms consist of a single agent, \texttt{kin\_fraction}
-$\approx 0$.  Mean \texttt{kin\_fraction} at simulation end: 0.03 under
-famine, 0.19 under boom-bust (driven by rare multi-agent survivors).
+No detected benefit from Candidate~B's kin-sensing mechanism was found
+under the tested demographic regimes---an \emph{ecology-conditional} null,
+not a class-level dismissal of collective organization.  The mechanistic
+explanation (Figure~\ref{fig:kin}): \textbf{organisms converge to
+approximately one agent each} under the default population cap
+($\texttt{max\_alive\_organisms} = 100$).  When organisms consist of a
+single agent, \texttt{kin\_fraction} $\approx 0$.  Mean
+\texttt{kin\_fraction} at simulation end: 0.03 under famine, 0.19 under
+boom-bust (driven by rare multi-agent survivors).
 
 This is an \emph{observability failure}: the kin signal exists in
 principle but becomes degenerate under the tested demographic regime.
 
-\subsubsection*{Population cap relaxation}
-To test whether Candidate~B's null is an artifact of the population cap,
-we relaxed \texttt{max\_alive\_organisms} from 100 to 400, allowing
-multi-agent organisms to persist longer.  Under cap$=$400,
-\texttt{kin\_fraction} increased substantially: 0.24 (famine),
-0.14 (boom-bust), 0.22 (seasonal), compared to
-0.03/0.19 under cap$=$100.  Under this matched 10{,}000-step protocol,
-enabled-vs-baseline effects remain bounded in all three regimes
-(largest $|d_z| = 0.23$, $p_\mathrm{adj} \ge 0.30$).  One caveat is that
-the seasonal \emph{sham} arm exceeds SESOI ($d_z = 0.54$,
-$p_\mathrm{adj} = 0.004$), indicating compute-matched controls are not
-uniformly null at higher population capacity.
+\subsubsection*{Population cap relaxation (cap\,$=$\,400 vs.\ 100)}
+
+To test whether Candidate~B's null is an artifact of the demographic
+constraint, we relaxed \texttt{max\_alive\_organisms} from 100 to 400.
+Under cap$=$400, mean \texttt{kin\_fraction} increased substantially
+(0.03$\to$0.24 famine, 0.19$\to$0.14 boom-bust, $\to$0.22 seasonal),
+confirming signal observability was restored.  Despite improved signal,
+enabled-vs-baseline effects remain bounded across all three regimes
+(largest $|d_z| = 0.23$, $p_\mathrm{adj} \ge 0.30$)---the same
+qualitative outcome as cap$=$100 (Table~\ref{tab:results}, cap$=$400
+block).  One caveat: the seasonal \emph{sham} arm exceeds SESOI
+($d_z = 0.54$, $p_\mathrm{adj} = 0.004$); this applies to the sham
+contrast only, not the enabled-condition primary result.
 
 
 %% ================================================================
@@ -405,47 +439,53 @@ from existing criteria):
 \end{itemize}
 
 Both candidate signals are almost entirely explained by existing
-criteria.  This does not invalidate the candidates \emph{a priori}
-(a successful candidate might still be reducible in signal but
-non-reducible in survival benefit), but it confirms that neither
-introduces genuinely novel information under the tested regimes.
+criteria.  Note that signal reducibility does not logically preclude
+non-reducible \emph{survival effects}---a candidate might still provide
+benefits not captured by linear proxy prediction.  Under our tested
+conditions, neither candidate shows such decoupling: survival effects are
+null and signals are reducible, making a latent non-reducible benefit
+implausible.  These analyses are labelled exploratory due to sensitivity
+to proxy feature construction.
 
 
 %% ================================================================
 \section{Discussion}
 
-\subsection{Interpreting Double-Null Results}
+\subsection{Interpreting the Bounded Null Results}
 
-Both candidates yield null results across all tested regimes---including
-the seasonal cycle regime designed to be the fairest test for
-Candidate~A's EMA memory.  Table~\ref{tab:results} shows that enabled
-paired effects are small in both the primary 10{,}000-step experiments
-and the cap$=$400 robustness check.  TOST equivalence testing confirms
-that the majority of primary comparisons fall formally within our SESOI
-of $\pm 0.5$ ($p_\mathrm{TOST} < 0.05$).
-Figure~\ref{fig:forest} visualizes the forest plot of all effect sizes
-with SESOI bounds; one cap$=$400 seasonal sham comparison lies outside
-SESOI and is treated as a robustness caveat rather than candidate gain.
+In enabled-vs-baseline comparisons across all tested regimes, no
+detectable survival benefit was found for either candidate---including
+the seasonal regime designed as the fairest test for Candidate~A's EMA
+memory.  Enabled paired effects are small in both primary 10{,}000-step
+experiments and the cap$=$400 robustness check (Table~\ref{tab:results};
+Figure~\ref{fig:forest}).  TOST confirms formal equivalence for the
+majority of primary comparisons ($p_\mathrm{TOST} < 0.05$); one
+cap$=$400 seasonal sham comparison lies outside SESOI and is treated as
+a robustness caveat, not a candidate gain.
 
-Importantly, these are \emph{diagnosed} nulls.  Each candidate fails
-for a different reason:
+Importantly, these are \emph{diagnosed} nulls with distinct mechanisms.
+\textbf{Candidate~A}: the EMA mechanism operates correctly and encodes
+sensory history, but the evolutionary landscape does not select for
+memory-contingent behaviors; under stress, memory destabilizes
+homeostasis (variance 3$\times$ higher than sham under famine).
+\textbf{Candidate~B}: demographic convergence to single-agent organisms
+makes kin-fraction degenerate under cap$=$100; restoring viable kin
+fractions (cap$=$400, kin-fraction 0.14--0.24) still yields no
+enabled-condition benefit.
 
-\begin{itemize}
-\item \textbf{Candidate~A} (Memory): The mechanism works---EMA converges
-  correctly and encodes sensory history---but the evolutionary landscape
-  does not select for memory-contingent behaviors.  Under stress,
-  memory actually \emph{destabilizes} homeostasis (memory variance
-  3$\times$ higher than sham under famine).
-\item \textbf{Candidate~B} (Kin-Sensing): Demographic convergence to
-  single-agent organisms eliminates the kin signal under cap$=$100.
-  A population cap relaxation (cap$=$400) restores viable kin fractions
-  (0.14--0.24), and matched-protocol reruns still show no
-  enabled-condition survival benefit.
-\end{itemize}
+The exploratory legitimacy tests are consistent with these diagnoses:
+neither candidate adds predictive validity ($\Delta R^2 < 0.001$, see
+Table~\ref{tab:results}), and both signals are reducible to existing
+criteria (CV $R^2 > 0.88$).
 
-The legitimacy tests strengthen these conclusions: neither candidate adds
-incremental predictive validity ($\Delta R^2 < 0.001$), and both
-candidate signals are reducible to existing criteria (CV $R^2 > 0.88$).
+One testable hypothesis for the seasonal sham exception (cap$=$400) is
+that random kin-fraction noise assists homeostatic search under periodic
+structure without requiring accurate kin information; targeted follow-up
+varying noise injection point would disambiguate this from a compute-cost
+artifact.  More broadly, these bounded nulls reflect three specific
+perturbation regimes and a fixed NN topology---they do not exclude that
+alternative implementations or richer ecologies could yield positive
+results for similar candidate classes.
 
 \subsection{Candidate Space and Design Implications}
 
@@ -478,19 +518,23 @@ naturally.
 
 \textbf{Population caps and controller capacity.}  The default cap
 (100) drives convergence to single-agent organisms; our cap$=$400
-relaxation increased kin-signal viability under a matched 10{,}000-step
-protocol, but one seasonal sham comparison exceeded SESOI and highlights
-that compute-matched controls are not uniformly null at higher capacity.
-Stronger control-focused follow-up remains future work,
-but higher caps remain untested for Candidate~A.  The fixed-topology NN
-($8/9 \to 16 \to 4$) may lack capacity to exploit memory or kin
-information; topology evolution \citep{stanley_2002_evolving} could
-change the outcome.
+relaxation increased kin-signal viability but one seasonal sham
+comparison exceeded SESOI, warranting control-focused follow-up.
+Higher population caps remain untested for Candidate~A; resource
+competition dynamics at larger scales may alter the memory mechanism's
+selective value.  The fixed-topology NN ($8/9 \to 16 \to 4$) may lack
+capacity to exploit memory or kin information; topology evolution
+\citep{stanley_2002_evolving} could change the outcome.
 
 \textbf{Validation scope.}  The 7-criteria validation uses 2{,}000-step
-runs (vs.\ 10{,}000 for 8th-criterion tests), but all effects are
-extremely large ($d > 0.78$).  Orthogonality and non-reducibility
-analyses are exploratory, and the regression approach assumes linearity.
+runs versus 10{,}000 for 8th-criterion tests.  Given that all
+7-criteria ablation effects are extremely large ($d \geq 0.78$, with
+five of seven exceeding $d = 3.0$), these effects are expected to grow further
+at 10{,}000 steps as evolutionary divergence accumulates---making the
+step-count difference inconsequential for framework validation.
+Orthogonality and non-reducibility analyses are exploratory, and the
+regression approach assumes linearity; alternative proxy feature sets
+may yield different reducibility estimates.
 
 
 \subsection{What Would Count as Success}
@@ -507,20 +551,23 @@ existing criteria (CV $R^2 < 0.5$); and pass mechanism verification.
 
 We presented a falsifiable framework for evaluating candidate eighth
 criteria of life-likeness, incorporating paired statistical analysis,
-formal equivalence testing, and three legitimacy tests.  Validating the
-framework against all seven existing criteria ($d = 0.78$--$14.7$,
-all significant), we tested two candidates across three perturbation
-regimes and a population cap robustness check.  Both yield bounded
-null results in the reported comparisons, with TOST confirming
-formal equivalence for the majority of comparisons.  Exploratory
-legitimacy tests confirm neither candidate adds predictive power or
-introduces non-reducible information.
+formal equivalence testing, and three legitimacy tests.  Framework
+diagnostic power is confirmed by large ablation effects across all seven
+existing criteria (Table~\ref{tab:7criteria}; Figure~\ref{fig:7criteria}).
+We then tested two candidates across three perturbation regimes and a
+population cap robustness check.  In enabled-vs-baseline comparisons
+across all tested regimes, both yield bounded null results, with TOST
+confirming formal equivalence for the majority of comparisons (one
+seasonal sham caveat at cap$=$400 noted).  Exploratory legitimacy tests
+confirm neither candidate adds incremental predictive validity or
+introduces non-reducible information (Table~\ref{tab:results}).
 
-The contribution is fourfold: (1)~the evaluation protocol is reusable;
-(2)~the 7-criteria validation demonstrates the system's diagnostic
-power; (3)~the diagnosed nulls constrain the design space for future
-candidates; and (4)~by reporting nulls explicitly, we contribute to
-the cumulative record.
+The contribution is fourfold: (1)~the evaluation protocol is reusable
+for future candidates; (2)~the 7-criteria validation demonstrates the
+system's diagnostic power; (3)~the diagnosed nulls---distinct mechanisms
+for each candidate---constrain the design space; and (4)~explicit null
+reporting contributes to the cumulative record
+\citep{rosenthal_1979_file, fanelli_2012_negative}.
 
 The search for what, if anything, lies beyond the textbook seven criteria
 remains open.  Our framework provides a systematic, falsifiable approach
@@ -676,11 +723,6 @@ shows signal dependence on population carrying capacity.}
 \label{fig:taxonomy}
 \end{figure}
 
-
-\paragraph{Data availability.}
-Source code, experiment scripts, and analysis artifacts are available to
-reviewers via anonymized submission materials and will be released at
-camera-ready.
 
 
 \footnotesize
