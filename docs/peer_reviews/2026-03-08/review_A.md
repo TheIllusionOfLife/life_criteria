@@ -79,7 +79,7 @@
   - 容量増（隠れ層増）や、NEAT的なトポロジ進化など、軽い追試があると強い。
 
 ### 5.4 sham（compute-matched）統制の例外と解釈
-- cap=400 seasonal で sham が SEOSOI 外に出るのは重要な警告。
+- cap=400 seasonal で sham が SESOI 外に出るのは重要な警告。
 - 「compute-matched sham が常に無害ではない」理由（例：ノイズが探索を助ける等）を、
   - 追加の統制（別シャム、別乱数、異なるノイズ注入点）で切り分けたい。
 
