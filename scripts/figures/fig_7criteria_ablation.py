@@ -59,7 +59,9 @@ def generate_7criteria_ablation():
         conditions.append(cond)
         d_values.append(abs(d))  # absolute value for visualization
         colors_list.append(COLORS.get(cond, "#999999"))
-        p_adj = comp.get("p_corrected") or comp.get("p_adjusted", 1.0)
+        p_adj = comp.get("p_corrected")
+        if p_adj is None:
+            p_adj = comp.get("p_adjusted", 1.0)
         if p_adj < 0.001:
             significances.append("***")
         elif p_adj < 0.01:
