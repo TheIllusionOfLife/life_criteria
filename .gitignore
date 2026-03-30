@@ -59,6 +59,8 @@ TECH.md
 .claude/
 docs/archive/
 docs/research/
+!docs/research/final_graph_manifest_reference.json
+!docs/research/result_manifest_bindings.json
 docs/peer_reviews/
 docs/artifact_publication_policy.md
 docs/alife_official_docs/
