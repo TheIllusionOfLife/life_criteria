@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Life Criteria: Searching for an Eighth Criterion of Life"
+version: 1.0.0
+date-released: 2026-03-31
+license: MIT
+doi: 10.5281/zenodo.18857232
+url: https://github.com/TheIllusionOfLife/life_criteria
+authors:
+  - family-names: Mukai
+    given-names: Yuya
+    affiliation: Mukai Entertainment
+keywords:
+  - artificial life
+  - criteria of life
+  - ablation study
+  - null result
+  - within-lifetime learning
+  - kin selection
+  - ALIFE 2026
+preferred-citation:
+  type: conference-paper
+  title: "Searching for an Eighth Criterion of Life: A Falsifiable Framework and Two Null Results"
+  authors:
+    - family-names: Mukai
+      given-names: Yuya
+      affiliation: Mukai Entertainment
+  year: 2026
+  collection-title: "Proceedings of the 2026 Artificial Life Conference (ALIFE 2026)"
+  publisher:
+    name: MIT Press

@@ -49,3 +49,19 @@ build/
 *.swp
 *.swo
 out/
+
+# Internal development docs (not for public readers)
+CLAUDE.md
+AGENTS.md
+PRODUCT.md
+STRUCTURE.md
+TECH.md
+.claude/
+docs/archive/
+docs/research/
+docs/peer_reviews/
+docs/artifact_publication_policy.md
+docs/alife_official_docs/
+docs/alife2026_submission_guide.md
+docs/README.md
+docs/zenodo_metadata.json
