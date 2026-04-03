@@ -168,6 +168,15 @@ This confirms that the simulator implements each criterion as a
 genuinely functional process whose removal causes measurable
 degradation, a prerequisite for meaningful eighth-criterion testing.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_7criteria_ablation.pdf}
+\caption{Seven-criteria ablation: Cohen's~$d$ for each single-criterion
+ablation vs.\ normal baseline.  All 7 significant ($d = 0.78$--$14.7$),
+demonstrating framework diagnostic power.}
+\label{fig:7criteria}
+\end{figure}
+
 
 \subsection{Extending to an Eighth Criterion}
 
@@ -334,6 +343,15 @@ gain offsets ($g_\text{genome}^{(i)}$, Eq.~\ref{eq:ema}) converge near
 zero (mean $|\bar{g}| = 0.0015 \pm 0.0019$, $\max = 0.0097$, $n=30$ seeds) across held-out seeds, indicating that evolution
 selectively ignores the correction channel rather than attempting to use it.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_ema_dynamics.pdf}
+\caption{EMA memory dynamics.  (A)~Memory trace converges for enabled
+condition but not sham.  (B)~Late-window variance by regime: memory
+stabilizes under normal conditions but destabilizes under stress.}
+\label{fig:ema}
+\end{figure}
+
 
 %% ================================================================
 \section{Candidate B: Collective Kin-Sensing}
@@ -400,6 +418,15 @@ qualitative outcome as cap$=$100 (Table~\ref{tab:results}, cap$=$400
 block).  One caveat: the seasonal \emph{sham} arm exceeds SESOI
 ($d_z = 0.54$, $p_\mathrm{adj} = 0.004$); this applies to the sham
 contrast only, not the enabled-condition primary result.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_kin_fraction_timeseries.pdf}
+\caption{Kin fraction signal degeneration.  (A)~Kin fraction collapses
+post-shock as organisms converge to single agents.  (B)~Cap comparison
+shows signal dependence on population carrying capacity.}
+\label{fig:kin}
+\end{figure}
 
 
 %% ================================================================
@@ -468,6 +495,15 @@ majority of primary comparisons ($p_\mathrm{TOST} < 0.05$); one
 cap$=$400 seasonal sham point estimate exceeds SESOI and is treated as
 a robustness caveat, not a candidate gain.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_forest_plot.pdf}
+\caption{Forest plot: paired Cohen's~$d_z$ with 95\% CIs for all
+8th-criterion comparisons.  Green shading: SESOI region ($\pm 0.5$).
+Green points: CI falls within SESOI (formal equivalence).}
+\label{fig:forest}
+\end{figure}
+
 These are \emph{diagnosed} nulls with distinct mechanisms.
 \textbf{Candidate~A}: the EMA mechanism operates correctly and encodes
 sensory history, but evolution does not select for
@@ -500,6 +536,14 @@ Our two candidates represent distinct branches of a broader taxonomy
 Untested categories include anticipatory regulation (predictive coding,
 immune-like recognition) and alternative implementations (synaptic
 plasticity, niche construction).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_candidate_space.pdf}
+\caption{Candidate space taxonomy.  Solid boxes: tested candidates
+(both null).  Dashed boxes: untested alternatives for future work.}
+\label{fig:taxonomy}
+\end{figure}
 
 Three design lessons emerge.
 \textbf{Signal viability precedes signal utility}: Candidate~B's
@@ -684,53 +728,10 @@ Bold TOST indicates formal equivalence ($p < 0.05$).}
 \end{tabular}
 \end{table*}
 
-% Figures
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_7criteria_ablation.pdf}
-\caption{Seven-criteria ablation: Cohen's~$d$ for each single-criterion
-ablation vs.\ normal baseline.  All 7 significant ($d = 0.78$--$14.7$),
-demonstrating framework diagnostic power.}
-\label{fig:7criteria}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_forest_plot.pdf}
-\caption{Forest plot: paired Cohen's~$d_z$ with 95\% CIs for all
-8th-criterion comparisons.  Green shading: SESOI region ($\pm 0.5$).
-Green points: CI falls within SESOI (formal equivalence).}
-\label{fig:forest}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_ema_dynamics.pdf}
-\caption{EMA memory dynamics.  (A)~Memory trace converges for enabled
-condition but not sham.  (B)~Late-window variance by regime: memory
-stabilizes under normal conditions but destabilizes under stress.}
-\label{fig:ema}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_kin_fraction_timeseries.pdf}
-\caption{Kin fraction signal degeneration.  (A)~Kin fraction collapses
-post-shock as organisms converge to single agents.  (B)~Cap comparison
-shows signal dependence on population carrying capacity.}
-\label{fig:kin}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_candidate_space.pdf}
-\caption{Candidate space taxonomy.  Solid boxes: tested candidates
-(both null).  Dashed boxes: untested alternatives for future work.}
-\label{fig:taxonomy}
-\end{figure}
 
 
 
+\clearpage
 \section{Acknowledgements}
 This research received no external funding.
 
