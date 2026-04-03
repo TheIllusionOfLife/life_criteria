@@ -1,7 +1,7 @@
 # Life Criteria
 
-[![Software DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19351504.svg)](https://doi.org/10.5281/zenodo.19351504)
-[![Dataset DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18857232.svg)](https://doi.org/10.5281/zenodo.18857232)
+[![Software DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19351503.svg)](https://doi.org/10.5281/zenodo.19351503)
+[![Dataset DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18857229.svg)](https://doi.org/10.5281/zenodo.18857229)
 
 Code and data for the paper: *Searching for an Eighth Criterion of Life: A Falsifiable Framework and Two Null Results* (ALIFE 2026).
 
