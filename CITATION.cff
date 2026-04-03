@@ -5,7 +5,11 @@ title: "Life Criteria: Searching for an Eighth Criterion of Life"
 version: 1.0.0
 date-released: 2026-03-31
 license: MIT
-doi: 10.5281/zenodo.18857232
+doi: 10.5281/zenodo.19351504
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.18857232
+    description: "Dataset DOI (Experiment data archive)"
 url: https://github.com/TheIllusionOfLife/life_criteria
 repository-code: https://github.com/TheIllusionOfLife/life_criteria
 authors:
